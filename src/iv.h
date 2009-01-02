@@ -32,10 +32,6 @@
 extern "C" {
 #endif
 
-#ifndef ECANCELED
-#define ECANCELED	ESHUTDOWN
-#endif
-
 struct iv_fd;
 struct iv_task;
 struct iv_timer;
