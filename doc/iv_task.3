@@ -1,0 +1,51 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_task 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_register_task, iv_unregister_task \- deal with ivykis tasks
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.nf
+struct iv_task
+{
+        void                    *cookie;
+        void                    (*handler)(void *);
+};
+.fi
+.sp
+.BI "INIT_IV_TASK(struct iv_task *" task ");"
+.br
+.BI "void iv_register_task(struct iv_task *" task ");"
+.br
+.BI "void iv_unregister_task(struct iv_task *" task ");"
+.br
+.SH DESCRIPTION
+The functions
+.B iv_register_task
+and
+.B iv_unregister_task
+register, respectively unregister, a task with the ivykis core.  A task
+is like a timer, but with an immediate timeout.  Tasks are mainly used for
+scheduling code for execution where it is not appropriate to directly run
+that code in the calling context (for example, because the current context
+might be run as a callback function where the caller expects certain
+conditions to remain invariant after the callback completes.)
+.PP
+The application is allowed to change the
+.B ->cookie
+and
+.B ->handler
+members at any time.
+.PP
+There is no limit on the number of tasks registered at once.
+.PP
+See
+.BR iv_examples (3)
+for programming examples.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)

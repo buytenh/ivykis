@@ -1,0 +1,39 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_time 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_validate_now, iv_invalidate_now, now \- ivykis time handling
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.BI "extern struct timespec " now ";"
+.br
+.BI "void iv_validate_now(void);"
+.br
+.BI "void iv_invalidate_now(void);"
+.br
+.SH DESCRIPTION
+.B now
+is a global variable that reflects the current time-of-day.  Applications
+written to the ivykis API generally require to know the current time-of-day
+in many places, and therefore effort is done to cache this quantity.
+.PP
+The contents of
+.B now
+might be stale.  Calling the function
+.B iv_validate_now
+ensures that the current contents of
+.B now
+are up-to-date.
+.PP
+The function
+.B iv_invalidate_now
+is called to invalidate the currently cached time-of-day.  This function
+should be called after any operation that takes a significant amount of
+wall clock time.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)

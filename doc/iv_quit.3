@@ -1,0 +1,23 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_quit 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_quit \- signal ivykis to exit the main loop
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.BI "void iv_quit(void);"
+.br
+.SH DESCRIPTION
+.B iv_quit
+signals ivykis to exit the currently-running main loop.  If called
+from any callback function, it will cause the
+.BR iv_main (3)
+function to return, usually terminating the application.  It is
+not meant to be used casually.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)

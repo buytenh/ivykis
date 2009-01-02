@@ -1,0 +1,55 @@
+#!/bin/sh
+
+usage="Usage: ivykis-config [--cflags] [--debug] [--libs] [--static-libs]"
+
+if test $# -eq 0; then
+	echo "${usage}" 1>&2
+	exit 1
+fi
+
+CFLAGS=0
+DEBUG=0
+LIBS=0
+STATICLIBS=0
+
+while test $# -gt 0; do
+	case $1 in
+	--cflags)
+		CFLAGS=1
+		;;
+
+	--debug)
+		DEBUG=1
+		;;
+
+	--libs)
+		LIBS=1
+		;;
+
+	--static-libs)
+		STATICLIBS=1
+		;;
+
+	*)
+		echo "${usage}" 1>&2
+		exit 1
+		;;
+	esac
+	shift
+done
+
+if [ $CFLAGS != 0 -a $DEBUG != 0 ]
+then
+	echo -n "-DIV_DEBUG=1 "
+fi
+
+if [ $LIBS != 0 -o $STATICLIBS != 0 ]
+then
+	if [ $DEBUG != 0 ]
+	then
+		echo -n "-livykis-debug "
+	else
+		echo -n "-livykis "
+	fi
+fi
+echo

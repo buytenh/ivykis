@@ -1,0 +1,11 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=/usr/lib
+includedir=/usr/include
+
+
+Name: libivykis
+Version: 0.8
+Description: event handling library
+Requires:
+Libs: -L${libdir} -livykis

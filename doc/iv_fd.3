@@ -1,0 +1,134 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_fd 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_register_fd, iv_unregister_fd, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.nf
+struct iv_fd
+{
+        int                     fd;
+        void                    *cookie;
+        void                    (*handler_in)(void *);
+        void                    (*handler_out)(void *);
+        void                    (*handler_err)(void *);
+};
+.fi
+.sp
+.BI "INIT_IV_FD(struct iv_fd *" fd ");"
+.br
+.BI "void iv_register_fd(struct iv_fd *" fd ");"
+.br
+.BI "void iv_unregister_fd(struct iv_fd *" fd ");"
+.br
+.BI "void iv_fd_set_handler_in(struct iv_fd *" fd ", void (*" handler ")(void *));"
+.br
+.BI "void iv_fd_set_handler_out(struct iv_fd *" fd ", void (*" handler ")(void *));"
+.br
+.BI "void iv_fd_set_handler_err(struct iv_fd *" fd ", void (*" handler ")(void *));"
+.br
+.SH DESCRIPTION
+The functions
+.B iv_register_fd
+and
+.B iv_unregister_fd
+register, respectively unregister, a file descriptor with the ivykis
+core.  When a file descriptor that is registered with ivykis becomes
+ready for input or output, or an error condition occurs on that file
+descriptor, and a callback function for that event has been set, that
+callback function will be called.  And conversely, when a file
+descriptor that is already ready for input or output or already has an
+error condition set is registered with ivykis, and the corresponding
+callback function has been set, the callback function will be called
+in the next iteration of the ivykis event loop.
+.PP
+Before a file descriptor is registered, it must have been
+initialised by calling
+.B INIT_IV_FD
+on it, and must have had its
+.B ->fd
+member field set to a valid OS file descriptor.  The
+.B ->handler_in, ->handler_out
+and
+.B ->handler_err
+member fields are addresses of callback functions that are called when
+the specified file descriptor becomes ready for input or output or an
+error condition occurs.  If any handler function is set to
+.B NULL,
+it indicates that the application is not interested in being notified
+of the corresponding event.
+.PP
+An application is not allowed to change the
+.B ->fd
+member while a file descriptor is registered.
+.PP
+.B iv_fd_set_handler_in
+changes the callback function to be called when descriptor
+.B fd
+becomes ready for input.  An application is not allowed to directly
+change the
+.B ->handler_in
+member after the file descriptor has been registered, this function
+has to be used instead.  Conversely, it is not allowed to use this
+function before the file descriptor has been registered.
+.PP
+.B iv_fd_set_handler_out
+is identical to
+.B iv_fd_set_handler_in,
+only it deals with the callback function for output readiness
+.B (->handler_out).
+.PP
+.B iv_fd_set_handler_err
+is identical to
+.B iv_fd_set_handler_in
+and
+.B iv_fd_set_handler_out,
+only it deals with the callback function for error conditions
+.B (->handler_err).
+.PP
+When a handler function was NULL, and was set to a non-NULL value
+by calling
+.B iv_fd_set_handler_in, iv_fd_set_handler_out
+or
+.B iv_fd_set_handler_err,
+and the file descriptor was already ready for input or output, or
+already had an error condition set, an event is generated, and the
+specified callback function will be called in the next iteration of
+the event loop.  The application does not need to poll the file
+descriptor to see if a condition was already raised.
+.PP
+Callback functions are passed a
+.B cookie
+value as their first and sole argument.  If the application wishes to
+use this facility for transferring data to the callback function, it
+should set the
+.B ->cookie
+member of a file descriptor to a value of type
+.B void *.
+This value can be modified directly by the application at any time
+without calling a helper function.
+.PP
+When a file descriptor is registered with ivykis, it is transparently
+set to non-blocking mode.
+.PP
+An application is allowed to unregister a file descriptor from within
+its own callback function, and even to free the memory corresponding
+to that file descriptor from that callback function.
+.PP
+When dealing with file descriptors, applications must use special
+versions of standard I/O primitives.  See
+.BR iv_wrappers (3)
+for details.
+.PP
+See
+.BR iv_examples (3)
+for programming examples.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3),
+.BR iv_wrappers (3)

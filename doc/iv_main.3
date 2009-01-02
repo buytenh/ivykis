@@ -1,0 +1,22 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_main 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_main \- enter the ivykis main loop
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.BI "void iv_main(void);"
+.br
+.SH DESCRIPTION
+.B iv_main (3)
+enters the ivykis main loop.  The ivykis main loop consists of checking
+the status of the registered file descriptors, timers and tasks, and
+either calling callback functions corresponding to active objects, or
+blocking until an event arrives.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)

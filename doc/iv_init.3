@@ -1,0 +1,20 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_init 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_init \- initialise ivykis
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.BI "void iv_init(void);"
+.br
+.SH DESCRIPTION
+.B iv_init
+initialises the ivykis core.  It should be called before any other
+ivykis function is called.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)

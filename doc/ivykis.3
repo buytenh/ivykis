@@ -1,0 +1,79 @@
+.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH ivykis 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.SH NAME
+ivykis \- library for asynchronous I/O readiness notification
+.SH DESCRIPTION
+ivykis is a library for asynchronous I/O readiness notification.
+It is a thin, portable wrapper around OS-provided mechanisms such as
+/dev/epoll, /dev/poll,
+.BR kqueue (2),
+.BR poll (2),
+POSIX realtime signals,
+.BR select (2),
+and
+.BR epoll_create (2).
+.PP
+ivykis was mainly designed for building high-performance network
+servers, but can be used as building block for any kind of
+event-driven application that uses
+.BR poll (2)able
+file descriptors as its inputs.
+.PP
+Whereas some programming models dictate using blocking I/O and
+dealing with each unit of input (for example, a file descriptor) by
+starting a dedicated thread, programs written to the ivykis API are
+generally single-threaded and never block on I/O.  All input and
+output is done in a nonblocking fashion, with I/O readiness
+notification done via callback functions.
+.PP
+The two main event-generating entities in ivykis are file descriptors
+and timers.  File descriptors generate an event when they become
+readable or writable, while timers generate an event when the system
+time increments past a certain pre-set time.  Events associated with
+file descriptors are level-triggered -- a callback function set up to
+handle a certain event will be called in a loop until the condition
+generating the event is cleared.
+.PP
+As mentioned, applications using ivykis are generally single-threaded.
+Callbacks are strictly serialised within a thread, and nonpreemptable.
+This makes programming ivykis applications rather easy, generally having
+avoided the need for any kind of locking of shared data.
+.PP
+Currently, there can be only one set of file descriptors and timers
+per process, which generally means that in a multi-threaded application,
+there can be only one thread that deals with ivykis and runs the ivykis
+event loop.  This limitation might be lifted in the future, giving
+each thread its own set of file descriptors and timers.
+.PP
+In ivykis, almost all code (all code that is not initialisation code)
+runs from callback functions.  Callback functions are not allowed to block.
+If a particular piece of code wants to perform a certain operation
+that can block, it either has to schedule it to run in a separate
+thread, or it has to do the operation in a nonblocking fashion instead.
+For example, registering an input callback function instead of blocking
+on a read, registering a timer instead of calling
+.BR sleep (2),
+etc.
+.PP
+In case of an internal error, ivykis will use
+.BR syslog (3)
+to report the error, and subsequently call
+.BR abort (3)
+to abort the execution of the current application.  If the application
+wishes to make such errors go to standard error, or set any other relevant
+syslog options, it should call
+.BR openlog (3)
+before initialising ivykis.
+.SH "SEE ALSO"
+.BR iv_examples (3),
+.BR iv_fd (3),
+.BR iv_timer (3),
+.BR iv_task (3),
+.BR iv_wrappers (3),
+.BR iv_init (3),
+.BR iv_main (3),
+.BR iv_time (3)
