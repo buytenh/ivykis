@@ -50,7 +50,7 @@ static struct iv_fd *find_fd(int fd)
 	struct list_head *lh;
 	struct iv_fd *ret = NULL;
 
-	list_for_each (lh, &all[hash]) {
+	list_for_each(lh, &all[hash]) {
 		struct iv_fd *f;
 
 		f = list_entry(lh, struct iv_fd, list_all);
@@ -87,7 +87,7 @@ static int iv_select_init(int maxfd)
 	readfds = (fd_set *)(fdsets + 2 * setsize);
 	writefds = (fd_set *)(fdsets + 3 * setsize);
 
-	for (i=0;i<HASH_SIZE;i++)
+	for (i = 0; i < HASH_SIZE; i++)
 		INIT_LIST_HEAD(&all[i]);
 	fd_max = 0;
 	memset(readfds_master, 0, 2*setsize);
@@ -95,20 +95,22 @@ static int iv_select_init(int maxfd)
 	return 0;
 }
 
-static void iv_select_poll(int timeout)
+static void iv_select_poll(int msec)
 {
 	int i;
 	int ret;
 
-	/* @@@ This is ugly and dependent on clock tick granularity.  */
-	if (timeout)
-		timeout += (1000/100) - 1;
+	/*
+	 * @@@ This is ugly and dependent on clock tick granularity.
+	 */
+	if (msec)
+		msec += (1000/100) - 1;
 
 	do {
 		struct timeval to;
 
-		to.tv_sec = timeout / 1000;
-		to.tv_usec = 1000 * (timeout % 1000);
+		to.tv_sec = msec / 1000;
+		to.tv_usec = 1000 * (msec % 1000);
 
 		memcpy(readfds, readfds_master, (fd_max/8) + 1);
 		memcpy(writefds, writefds_master, (fd_max/8) + 1);
@@ -121,7 +123,7 @@ static void iv_select_poll(int timeout)
 		abort();
 	}
 
-	for (i=0;i<=fd_max;i++) {
+	for (i = 0; i <= fd_max; i++) {
 		int pollin;
 		int pollout;
 
@@ -152,13 +154,15 @@ static void iv_select_poll(int timeout)
 
 static void iv_select_register_fd(struct iv_fd *fd)
 {
-	list_add_tail(&(fd->list_all), &all[__fd_hash(fd->fd)]);
+	list_add_tail(&fd->list_all, &all[__fd_hash(fd->fd)]);
 	if (fd->handler_in != NULL)
 		FD_SET(fd->fd, readfds_master);
 	if (fd->handler_out != NULL)
 		FD_SET(fd->fd, writefds_master);
 
-	/* @@@ Room for optimisation here.  */
+	/*
+	 * @@@ Room for optimisation here.
+	 */
 	if (fd->fd > fd_max)
 		fd_max = fd->fd;
 }
@@ -178,7 +182,7 @@ static void iv_select_reregister_fd(struct iv_fd *fd)
 
 static void iv_select_unregister_fd(struct iv_fd *fd)
 {
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 	FD_CLR(fd->fd, readfds_master);
 	FD_CLR(fd->fd, writefds_master);
 }
@@ -191,11 +195,11 @@ static void iv_select_deinit(void)
 
 
 struct iv_poll_method iv_method_select = {
-	name:			"select",
-	init:			iv_select_init,
-	poll:			iv_select_poll,
-	register_fd:		iv_select_register_fd,
-	reregister_fd:		iv_select_reregister_fd,
-	unregister_fd:		iv_select_unregister_fd,
-	deinit:			iv_select_deinit,
+	.name		= "select",
+	.init		= iv_select_init,
+	.poll		= iv_select_poll,
+	.register_fd	= iv_select_register_fd,
+	.reregister_fd	= iv_select_reregister_fd,
+	.unregister_fd	= iv_select_unregister_fd,
+	.deinit		= iv_select_deinit,
 };

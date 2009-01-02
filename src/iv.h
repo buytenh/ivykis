@@ -91,7 +91,7 @@ struct iv_fd
 	(ptr)->handler_in = NULL;			\
 	(ptr)->handler_out = NULL;			\
 	(ptr)->handler_err = NULL;			\
-	INIT_LIST_HEAD(&((ptr)->list_all));		\
+	INIT_LIST_HEAD(&(ptr)->list_all);		\
 } while (0);
 
 
@@ -104,7 +104,7 @@ struct iv_task
 };
 
 #define INIT_IV_TASK(ptr) do {				\
-	INIT_LIST_HEAD(&((ptr)->list));			\
+	INIT_LIST_HEAD(&(ptr)->list);			\
 } while (0);
 
 

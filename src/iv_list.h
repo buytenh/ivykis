@@ -18,8 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* This file contains a doubly linked list implementation API-compatible
- * with the one found in the Linux kernel (in include/linux/list.h).  */
+/*
+ * This file contains a doubly linked list implementation API-compatible
+ * with the one found in the Linux kernel (in include/linux/list.h).
+ */
 
 #ifndef __IV_LIST_H
 #define __IV_LIST_H
@@ -40,7 +42,7 @@ struct list_head {
 	(lh)->prev = (lh); \
 } while (0)
 
-static __inline__ void list_add(struct list_head *lh, struct list_head *head)
+static inline void list_add(struct list_head *lh, struct list_head *head)
 {
 	lh->next = head->next;
 	lh->prev = head;
@@ -48,8 +50,7 @@ static __inline__ void list_add(struct list_head *lh, struct list_head *head)
 	head->next = lh;
 }
 
-static __inline__ void list_add_tail(struct list_head *lh,
-				     struct list_head *head)
+static inline void list_add_tail(struct list_head *lh, struct list_head *head)
 {
 	lh->next = head;
 	lh->prev = head->prev;
@@ -57,7 +58,7 @@ static __inline__ void list_add_tail(struct list_head *lh,
 	head->prev = lh;
 }
 
-static __inline__ void list_del(struct list_head *lh)
+static inline void list_del(struct list_head *lh)
 {
 	lh->prev->next = lh->next;
 	lh->next->prev = lh->prev;
@@ -65,20 +66,20 @@ static __inline__ void list_del(struct list_head *lh)
 	lh->next = NULL;
 }
 
-static __inline__ void list_del_init(struct list_head *lh)
+static inline void list_del_init(struct list_head *lh)
 {
 	lh->prev->next = lh->next;
 	lh->next->prev = lh->prev;
 	INIT_LIST_HEAD(lh);
 }
 
-static __inline__ int list_empty(struct list_head *head)
+static inline int list_empty(struct list_head *head)
 {
 	return head->next == head;
 }
 
 #define list_entry(lh, type, member) \
-	((type *)((char *)(lh)-(unsigned long)(&((type *)0)->member)))
+	((type *)((char *)(lh) - (unsigned long)(&((type *)0)->member)))
 
 #define list_for_each(lh, head) \
 	for (lh = (head)->next; lh != (head); lh = lh->next)

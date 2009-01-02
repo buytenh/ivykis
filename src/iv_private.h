@@ -35,7 +35,7 @@ struct iv_poll_method
 {
 	char	*name;
 	int	(*init)(int maxfd);
-	void	(*poll)(int timeout);
+	void	(*poll)(int msec);
 	void	(*register_fd)(struct iv_fd *fd);
 	void	(*reregister_fd)(struct iv_fd *fd);
 	void	(*unregister_fd)(struct iv_fd *fd);

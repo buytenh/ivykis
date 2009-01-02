@@ -98,7 +98,7 @@ static int wanted_bit(struct iv_fd *fd, int handler, int band, int regd)
 	int wanted;
 
 	wanted = 0;
-	if (!list_empty(&(fd->list_all))) {
+	if (!list_empty(&fd->list_all)) {
 		int ready;
 
 		ready = !!(fd->flags & 1 << band);
@@ -147,14 +147,14 @@ static void queue_write(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredOut;
 }
 
-static void iv_kqueue_lt_poll(int timeout)
+static void iv_kqueue_lt_poll(int msec)
 {
 	struct timespec to;
 	int i;
 	int ret;
 
-	to.tv_sec = timeout / 1000;
-	to.tv_nsec = 1000000 * (timeout % 1000);
+	to.tv_sec = msec / 1000;
+	to.tv_nsec = 1000000 * (msec % 1000);
 
 	do {
 		ret = kevent(kqueue_fd, upload_queue, upload_entries,
@@ -169,7 +169,7 @@ static void iv_kqueue_lt_poll(int timeout)
 
 	upload_entries = 0;
 
-	for (i=0;i<ret;i++) {
+	for (i = 0; i < ret; i++) {
 		struct iv_fd *fd;
 
 		fd = batch[i].udata;
@@ -191,7 +191,7 @@ static void iv_kqueue_lt_poll(int timeout)
 
 static void iv_kqueue_lt_register_fd(struct iv_fd *fd)
 {
-	list_add_tail(&(fd->list_all), &all);
+	list_add_tail(&fd->list_all, &all);
 
 	if (fd->handler_in != NULL)
 		queue_read(fd);
@@ -207,7 +207,7 @@ static void iv_kqueue_lt_reregister_fd(struct iv_fd *fd)
 
 static void iv_kqueue_lt_unregister_fd(struct iv_fd *fd)
 {
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 	queue_read(fd);
 	queue_write(fd);
 }
@@ -221,12 +221,12 @@ static void iv_kqueue_lt_deinit(void)
 
 
 struct iv_poll_method iv_method_kqueue_lt = {
-	name:			"kqueue_lt",
-	init:			iv_kqueue_lt_init,
-	poll:			iv_kqueue_lt_poll,
-	register_fd:		iv_kqueue_lt_register_fd,
-	reregister_fd:		iv_kqueue_lt_reregister_fd,
-	unregister_fd:		iv_kqueue_lt_unregister_fd,
-	deinit:			iv_kqueue_lt_deinit,
+	.name		= "kqueue_lt",
+	.init		= iv_kqueue_lt_init,
+	.poll		= iv_kqueue_lt_poll,
+	.register_fd	= iv_kqueue_lt_register_fd,
+	.reregister_fd	= iv_kqueue_lt_reregister_fd,
+	.unregister_fd	= iv_kqueue_lt_unregister_fd,
+	.deinit		= iv_kqueue_lt_deinit,
 };
 #endif

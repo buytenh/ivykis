@@ -30,16 +30,15 @@
 #include <time.h>
 #include <unistd.h>
 
-struct handle
-{
+struct handle {
 	struct iv_fd fd;
 	int port;
 };
 
 
-int conns = 0;
+static int conns;
 
-void handler(void *_h)
+static void handler(void *_h)
 {
 	struct handle *h = (struct handle *)_h;
 	struct sockaddr_in addr;
@@ -47,7 +46,7 @@ void handler(void *_h)
 	int ret;
 
 	addrlen = sizeof(addr);
-	ret = iv_accept(&(h->fd), (struct sockaddr *)&addr, &addrlen);
+	ret = iv_accept(&h->fd, (struct sockaddr *)&addr, &addrlen);
 	if (ret > 0) {
 		char buf[128];
 		int len;
@@ -72,7 +71,7 @@ int main()
 
 	iv_init();
 
-	for (i=0;i<(sizeof(hh)/sizeof(hh[0]));i++) {
+	for (i = 0; i < sizeof(hh) / sizeof(hh[0]); i++) {
 		int sock;
 		struct handle *h = hh + i;
 
@@ -92,13 +91,13 @@ int main()
 
 		listen(sock, 5);
 
-		INIT_IV_FD(&(h->fd));
+		INIT_IV_FD(&h->fd);
 		h->fd.fd = sock;
 		h->fd.handler_in = handler;
 		h->fd.handler_out = NULL;
 		h->fd.cookie = h;
 		h->port = 20000 + i;
-		iv_register_fd(&(h->fd));
+		iv_register_fd(&h->fd);
 	}
 
 	iv_main();

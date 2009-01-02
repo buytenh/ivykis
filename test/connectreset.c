@@ -25,8 +25,7 @@
 #include <string.h>
 
 /* SERVER ********************************************************************/
-struct client_connection
-{
+struct client_connection {
 	struct iv_fd fd;
 	struct iv_timer tim;
 };
@@ -38,7 +37,7 @@ static void timeout(void *_c)
 	struct client_connection *c = (struct client_connection *)_c;
 	struct linger l;
 
-	iv_unregister_fd(&(c->fd));
+	iv_unregister_fd(&c->fd);
 
 	/* Force a TCP RST on close.  */
 	l.l_onoff = 1;
@@ -72,18 +71,18 @@ static void got_connection(void *_dummy)
 		return;
 	}
 
-	INIT_IV_FD(&(c->fd));
+	INIT_IV_FD(&c->fd);
 	c->fd.fd = ret;
 	c->fd.cookie = (void *)c;
-	iv_register_fd(&(c->fd));
+	iv_register_fd(&c->fd);
 
-	INIT_IV_TIMER(&(c->tim));
+	INIT_IV_TIMER(&c->tim);
 	c->tim.cookie = (void *)c;
 	c->tim.handler = timeout;
 	iv_validate_now();
 	c->tim.expires = now;
 	c->tim.expires.tv_sec += 1;
-	iv_register_timer(&(c->tim));
+	iv_register_timer(&c->tim);
 }
 
 static void server_init(void)
@@ -115,8 +114,8 @@ static void server_init(void)
 
 
 /* CLIENT ********************************************************************/
-struct sockaddr_in addr;
-struct iv_fd ifd;
+static struct sockaddr_in addr;
+static struct iv_fd ifd;
 
 static void got_reset(void *_dummy)
 {

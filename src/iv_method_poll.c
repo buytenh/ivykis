@@ -74,20 +74,21 @@ static void internal_unregister(struct iv_fd *fd)
 
 		pfds[index] = pfds[numfds-1];
 		fds[index] = last;
-		last->list_all.next = last->list_all.prev = (void *)(ptrdiff_t)index;
+		last->list_all.next = (void *)(ptrdiff_t)index;
+		last->list_all.prev = (void *)(ptrdiff_t)index;
 	}
 	numfds--;
 
 	fd->list_all.next = fd->list_all.prev = (void *)-1;
 }
 
-static void iv_poll_poll(int timeout)
+static void iv_poll_poll(int msec)
 {
 	int i;
 	int ret;
 
 	do {
-		ret = poll(pfds, numfds, timeout);
+		ret = poll(pfds, numfds, msec);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -96,7 +97,7 @@ static void iv_poll_poll(int timeout)
 		abort();
 	}
 
-	for (i=0;i<numfds;i++) {
+	for (i = 0; i < numfds; i++) {
 		if (pfds[i].revents) {
 			struct iv_fd *fd = fds[i];
 
@@ -157,7 +158,7 @@ static void iv_poll_unregister_fd(struct iv_fd *fd)
 		internal_unregister(fd);
 	}
 
-	INIT_LIST_HEAD(&(fd->list_all));
+	INIT_LIST_HEAD(&fd->list_all);
 }
 
 static void iv_poll_deinit(void)
@@ -168,11 +169,11 @@ static void iv_poll_deinit(void)
 
 
 struct iv_poll_method iv_method_poll = {
-	name:			"poll",
-	init:			iv_poll_init,
-	poll:			iv_poll_poll,
-	register_fd:		iv_poll_register_fd,
-	reregister_fd:		iv_poll_reregister_fd,
-	unregister_fd:		iv_poll_unregister_fd,
-	deinit:			iv_poll_deinit,
+	.name		= "poll",
+	.init		= iv_poll_init,
+	.poll		= iv_poll_poll,
+	.register_fd	= iv_poll_register_fd,
+	.reregister_fd	= iv_poll_reregister_fd,
+	.unregister_fd	= iv_poll_unregister_fd,
+	.deinit		= iv_poll_deinit,
 };

@@ -23,9 +23,9 @@
 #include <iv.h>
 
 #define NUM		1048570
-struct iv_timer		tim[NUM];
+static struct iv_timer	tim[NUM];
 
-void handler(void *_t)
+static void handler(void *_t)
 {
 	struct iv_timer *t = (struct iv_timer *)_t;
 
@@ -47,7 +47,7 @@ int main()
 
 	iv_validate_now();
 
-	for (i=0;i<NUM;i++) {
+	for (i = 0; i < NUM; i++) {
 		INIT_IV_TIMER(tim + i);
 		tim[i].expires = now;
 		tim[i].expires.tv_sec += 1;
@@ -56,9 +56,9 @@ int main()
 			tim[i].expires.tv_sec++;
 			tim[i].expires.tv_nsec -= 1000000000;
 		}
-		tim[i].cookie = (void *)&(tim[i]);
+		tim[i].cookie = (void *)&tim[i];
 		tim[i].handler = handler;
-		iv_register_timer(&(tim[i]));
+		iv_register_timer(&tim[i]);
 	}
 
 	iv_main();

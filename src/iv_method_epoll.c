@@ -45,7 +45,7 @@ static int iv_epoll_init(int maxfd)
 	return 0;
 }
 
-static void iv_epoll_poll(int timeout)
+static void iv_epoll_poll(int msec)
 {
 	struct epoll_event batch[POLL_BATCH_SIZE];
 	int i;
@@ -56,7 +56,7 @@ static void iv_epoll_poll(int timeout)
 
 do_it_again:
 	do {
-		ret = epoll_wait(epoll_fd, batch, maxevents, timeout);
+		ret = epoll_wait(epoll_fd, batch, maxevents, msec);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -65,7 +65,7 @@ do_it_again:
 		abort();
 	}
 
-	for (i=0;i<ret;i++) {
+	for (i = 0; i < ret; i++) {
 		struct iv_fd *fd;
 
 		fd = batch[i].data.ptr;
@@ -78,7 +78,7 @@ do_it_again:
 	}
 
 	if (ret == maxevents) {
-		timeout = 0;
+		msec = 0;
 		goto do_it_again;
 	}
 }
@@ -88,7 +88,7 @@ static void iv_epoll_register_fd(struct iv_fd *fd)
 	struct epoll_event event;
 	int ret;
 
-	list_add_tail(&(fd->list_all), &all);
+	list_add_tail(&fd->list_all, &all);
 
 	event.data.ptr = fd;
 	event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT | EPOLLET;
@@ -103,11 +103,13 @@ static void iv_epoll_register_fd(struct iv_fd *fd)
 	}
 }
 
-/* Deleting an fd from an epoll set causes all pending events to be
+/*
+ * Deleting an fd from an epoll set causes all pending events to be
  * cleared from the queue.  Therefore, we need no barrier operation
  * after the epoll_ctl below.  (Recall that the returned epoll_event
  * structures contain opaque-to-the-kernel userspace pointers, which
- * are dereferenced in the event handler without validation.)  */
+ * are dereferenced in the event handler without validation.)
+ */
 static void iv_epoll_unregister_fd(struct iv_fd *fd)
 {
 	struct epoll_event event;
@@ -125,7 +127,7 @@ static void iv_epoll_unregister_fd(struct iv_fd *fd)
 		abort();
 	}
 
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 }
 
 static void iv_epoll_deinit(void)
@@ -135,12 +137,12 @@ static void iv_epoll_deinit(void)
 
 
 struct iv_poll_method iv_method_epoll = {
-	name:			"epoll",
-	init:			iv_epoll_init,
-	poll:			iv_epoll_poll,
-	register_fd:		iv_epoll_register_fd,
-	reregister_fd:		NULL,
-	unregister_fd:		iv_epoll_unregister_fd,
-	deinit:			iv_epoll_deinit,
+	.name		= "epoll",
+	.init		= iv_epoll_init,
+	.poll		= iv_epoll_poll,
+	.register_fd	= iv_epoll_register_fd,
+	.reregister_fd	= NULL,
+	.unregister_fd	= iv_epoll_unregister_fd,
+	.deinit		= iv_epoll_deinit,
 };
 #endif

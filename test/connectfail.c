@@ -24,10 +24,10 @@
 #include <netinet/in.h>
 #include <string.h>
 
-struct sockaddr_in addr;
-struct iv_fd ifd;
+static struct sockaddr_in addr;
+static struct iv_fd ifd;
 
-void connected(void *_dummy)
+static void connected(void *_dummy)
 {
 	int ret;
 

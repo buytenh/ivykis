@@ -22,9 +22,9 @@
 #include <stdlib.h>
 #include <iv.h>
 
-struct iv_timer tim;
+static struct iv_timer tim;
 
-void handler(void *_t)
+static void handler(void *_t)
 {
 	struct iv_timer *t = (struct iv_timer *)_t;
 

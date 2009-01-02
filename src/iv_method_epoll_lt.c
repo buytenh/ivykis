@@ -115,11 +115,13 @@ static void queue(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredIn;
 }
 
-/* Deleting an fd from an epoll set causes all pending events to be
+/*
+ * Deleting an fd from an epoll set causes all pending events to be
  * cleared from the queue.  Therefore, we need no barrier operation
  * after the epoll_ctl below.  (Recall that the returned epoll_event
  * structures contain opaque-to-the-kernel userspace pointers, which
- * are dereferenced in the event handler without validation.)  */
+ * are dereferenced in the event handler without validation.)
+ */
 static void internal_unregister(struct iv_fd *fd)
 {
 	struct epoll_event event;
@@ -138,13 +140,13 @@ static void internal_unregister(struct iv_fd *fd)
 	}
 }
 
-static void iv_epoll_lt_poll(int timeout)
+static void iv_epoll_lt_poll(int msec)
 {
 	int i;
 	int ret;
 
 	do {
-		ret = epoll_wait(epoll_fd, batch, batch_size, timeout);
+		ret = epoll_wait(epoll_fd, batch, batch_size, msec);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -153,7 +155,7 @@ static void iv_epoll_lt_poll(int timeout)
 		abort();
 	}
 
-	for (i=0;i<ret;i++) {
+	for (i = 0; i < ret; i++) {
 		struct iv_fd *fd;
 
 		fd = batch[i].data.ptr;
@@ -187,7 +189,7 @@ static void iv_epoll_lt_register_fd(struct iv_fd *fd)
 	int wanted;
 	int ret;
 
-	list_add_tail(&(fd->list_all), &all);
+	list_add_tail(&fd->list_all, &all);
 
 	wanted = wanted_bits(fd, 0);
 
@@ -216,7 +218,7 @@ static void iv_epoll_lt_unregister_fd(struct iv_fd *fd)
 {
 	if (!(fd->flags & (1 << FD_ReadyErr)))
 		internal_unregister(fd);
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 }
 
 static void iv_epoll_lt_deinit(void)
@@ -227,12 +229,12 @@ static void iv_epoll_lt_deinit(void)
 
 
 struct iv_poll_method iv_method_epoll_lt = {
-	name:			"epoll_lt",
-	init:			iv_epoll_lt_init,
-	poll:			iv_epoll_lt_poll,
-	register_fd:		iv_epoll_lt_register_fd,
-	reregister_fd:		iv_epoll_lt_reregister_fd,
-	unregister_fd:		iv_epoll_lt_unregister_fd,
-	deinit:			iv_epoll_lt_deinit,
+	.name		= "epoll_lt",
+	.init		= iv_epoll_lt_init,
+	.poll		= iv_epoll_lt_poll,
+	.register_fd	= iv_epoll_lt_register_fd,
+	.reregister_fd	= iv_epoll_lt_reregister_fd,
+	.unregister_fd	= iv_epoll_lt_unregister_fd,
+	.deinit		= iv_epoll_lt_deinit,
 };
 #endif

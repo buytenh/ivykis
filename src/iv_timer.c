@@ -27,8 +27,7 @@
 
 /* time handling ************************************************************/
 struct timespec now;
-static int now_valid = 0;
-
+static int now_valid;
 
 void iv_invalidate_now(void)
 {
@@ -58,16 +57,15 @@ struct ratnode { void *child[SPLIT_NODES]; };
 static int num_timers;
 static struct ratnode *timer_root;
 
-
-static __inline__ int timespec_gt(struct timespec *a, struct timespec *b)
+static inline int timespec_gt(struct timespec *a, struct timespec *b)
 {
 	return !!(a->tv_sec > b->tv_sec ||
 		 (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
 }
 
-static __inline__ int timer_ptr_gt(struct iv_timer *a, struct iv_timer *b)
+static inline int timer_ptr_gt(struct iv_timer *a, struct iv_timer *b)
 {
-	return timespec_gt(&(a->expires), &(b->expires));
+	return timespec_gt(&a->expires, &b->expires);
 }
 
 static struct iv_timer **get_node(int index)
@@ -79,7 +77,7 @@ static struct iv_timer **get_node(int index)
 		return NULL;
 
 	r = &timer_root;
-	for (i=SPLIT_LEVELS-1;i>=0;i--) {
+	for (i = SPLIT_LEVELS - 1; i >= 0; i--) {
 		int bits;
 
 		if (*r == NULL) {
@@ -94,6 +92,43 @@ static struct iv_timer **get_node(int index)
 	}
 
 	return (struct iv_timer **)r;
+}
+
+void iv_timer_init(void)
+{
+	if (get_node(1) == NULL) {
+		syslog(LOG_CRIT, "iv_timer_init: can't alloc memory for "
+				 "root ratnode");
+		abort();
+	}
+}
+
+int iv_pending_timers(void)
+{
+	return !!num_timers;
+}
+
+int iv_get_soonest_timeout(struct timespec *to)
+{
+	if (num_timers) {
+		struct iv_timer *t = *get_node(1);
+
+		iv_validate_now();
+		to->tv_sec = t->expires.tv_sec - now.tv_sec;
+		to->tv_nsec = t->expires.tv_nsec - now.tv_nsec;
+		if (to->tv_nsec < 0) {
+			to->tv_sec--;
+			to->tv_nsec += 1000000000;
+		}
+
+		return !!(to->tv_sec < 0 ||
+			  (to->tv_sec == 0 && to->tv_nsec == 0));
+	}
+
+	to->tv_sec = 3600;
+	to->tv_nsec = 0;
+
+	return 0;
 }
 
 static void pull_up(int index, struct iv_timer **i)
@@ -222,51 +257,15 @@ void iv_unregister_timer(struct iv_timer *t)
 	t->index = -1;
 }
 
-int iv_get_soonest_timeout(struct timespec *to)
-{
-	if (num_timers) {
-		struct iv_timer *t = *get_node(1);
-
-		iv_validate_now();
-		to->tv_sec = t->expires.tv_sec - now.tv_sec;
-		to->tv_nsec = t->expires.tv_nsec - now.tv_nsec;
-		if (to->tv_nsec < 0) {
-			to->tv_sec--;
-			to->tv_nsec += 1000000000;
-		}
-
-		return !!(to->tv_sec < 0 ||
-			  (to->tv_sec == 0 && to->tv_nsec == 0));
-	}
-
-	to->tv_sec = 3600;
-	to->tv_nsec = 0;
-	return 0;
-}
-
-int iv_pending_timers(void)
-{
-	return !!num_timers;
-}
-
 void iv_run_timers(void)
 {
 	while (num_timers) {
 		struct iv_timer *t = *get_node(1);
 
 		iv_validate_now();
-		if (timespec_gt(&(t->expires), &now))
+		if (timespec_gt(&t->expires, &now))
 			break;
 		iv_unregister_timer(t);
 		t->handler(t->cookie);
-	}
-}
-
-void iv_timer_init(void)
-{
-	if (get_node(1) == NULL) {
-		syslog(LOG_CRIT, "iv_timer_init: can't alloc memory for "
-				 "root ratnode");
-		abort();
 	}
 }

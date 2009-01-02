@@ -84,7 +84,7 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
-static void iv_kqueue_poll(int timeout)
+static void iv_kqueue_poll(int msec)
 {
 	struct kevent batch[POLL_BATCH_SIZE];
 	int i;
@@ -94,8 +94,8 @@ static void iv_kqueue_poll(int timeout)
 
 	maxevents = sizeof(batch)/sizeof(batch[0]);
 
-	to.tv_sec = timeout / 1000;
-	to.tv_nsec = 1000000 * (timeout % 1000);
+	to.tv_sec = msec / 1000;
+	to.tv_nsec = 1000000 * (msec % 1000);
 
 do_it_again:
 	do {
@@ -111,7 +111,7 @@ do_it_again:
 
 	upload_entries = 0;
 
-	for (i=0;i<ret;i++) {
+	for (i = 0; i < ret; i++) {
 		struct iv_fd *fd;
 
 		fd = batch[i].udata;
@@ -135,7 +135,7 @@ do_it_again:
 
 static void iv_kqueue_register_fd(struct iv_fd *fd)
 {
-	list_add_tail(&(fd->list_all), &all);
+	list_add_tail(&fd->list_all, &all);
 
 	queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR,
 	      0, 0, (void *)fd);
@@ -145,7 +145,7 @@ static void iv_kqueue_register_fd(struct iv_fd *fd)
 
 static void iv_kqueue_unregister_fd(struct iv_fd *fd)
 {
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 
 	queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
 	queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
@@ -159,12 +159,12 @@ static void iv_kqueue_deinit(void)
 
 
 struct iv_poll_method iv_method_kqueue = {
-	name:			"kqueue",
-	init:			iv_kqueue_init,
-	poll:			iv_kqueue_poll,
-	register_fd:		iv_kqueue_register_fd,
-	reregister_fd:		NULL,
-	unregister_fd:		iv_kqueue_unregister_fd,
-	deinit:			iv_kqueue_deinit,
+	.name		= "kqueue",
+	.init		= iv_kqueue_init,
+	.poll		= iv_kqueue_poll,
+	.register_fd	= iv_kqueue_register_fd,
+	.reregister_fd	= NULL,
+	.unregister_fd	= iv_kqueue_unregister_fd,
+	.deinit		= iv_kqueue_deinit,
 };
 #endif

@@ -24,34 +24,36 @@
 #include <netinet/in.h>
 #include <string.h>
 
-struct connector
-{
+struct connector {
 	struct iv_fd fd;
 	struct sockaddr_in addr;
 };
 
-void create_connector(struct connector *conn, struct sockaddr_in *addr);
+static void create_connector(struct connector *conn, struct sockaddr_in *addr);
 
-void connected(void *c)
+static void connected(void *c)
 {
 	struct connector *conn = (struct connector *)c;
 	int ret;
 
-	ret = iv_connect(&(conn->fd), (struct sockaddr *)&(conn->addr), sizeof(conn->addr));
+	ret = iv_connect(&conn->fd, (struct sockaddr *)&conn->addr,
+			 sizeof(conn->addr));
 	if (ret == -1) {
 		if (errno == EALREADY || errno == EINPROGRESS)
 			return;
 		fprintf(stderr, "blah: %s\n", strerror(errno));
 	}
 
-//	fprintf(stderr, ".");
+#if 0
+	fprintf(stderr, ".");
+#endif
 
-	iv_unregister_fd(&(conn->fd));
+	iv_unregister_fd(&conn->fd);
 	close(conn->fd.fd);
-	create_connector(conn, &(conn->addr));
+	create_connector(conn, &conn->addr);
 }
 
-void create_connector(struct connector *conn, struct sockaddr_in *addr)
+static void create_connector(struct connector *conn, struct sockaddr_in *addr)
 {
 	int fd;
 
@@ -61,12 +63,12 @@ void create_connector(struct connector *conn, struct sockaddr_in *addr)
 		exit(-1);
 	}
 
-	INIT_IV_FD(&(conn->fd));
+	INIT_IV_FD(&conn->fd);
 	conn->fd.fd = fd;
 	conn->fd.cookie = (void *)conn;
 	conn->fd.handler_in = connected;
 	conn->fd.handler_out = NULL;
-	iv_register_fd(&(conn->fd));
+	iv_register_fd(&conn->fd);
 
 	conn->addr = *addr;
 
@@ -84,7 +86,7 @@ int main()
 
 	iv_init();
 
-	for (i=0;i<(sizeof(c)/sizeof(c[0]));i++) {
+	for (i = 0; i < sizeof(c) / sizeof(c[0]); i++) {
 		addr.sin_port = htons(20000 + i);
 		create_connector(&c[i], &addr);
 	}

@@ -53,7 +53,7 @@ static struct iv_fd *find_fd(int fd)
 	struct list_head *lh;
 	struct iv_fd *ret = NULL;
 
-	list_for_each (lh, &all[hash]) {
+	list_for_each(lh, &all[hash]) {
 		struct iv_fd *f;
 
 		f = list_entry(lh, struct iv_fd, list_all);
@@ -97,7 +97,7 @@ static int iv_dev_poll_init(int maxfd)
 		return -1;
 	}
 
-	for (i=0;i<HASH_SIZE;i++)
+	for (i = 0; i < HASH_SIZE; i++)
 		INIT_LIST_HEAD(&all[i]);
 	batch_size = maxfd;
 	upload_entries = 0;
@@ -139,11 +139,15 @@ static int wanted_bits(struct iv_fd *fd, int regd)
 	int handler;
 	int ready;
 
-	/* We are being unregistered?  */
-	if (list_empty(&(fd->list_all)))
+	/*
+	 * We are being unregistered?
+	 */
+	if (list_empty(&fd->list_all))
 		return 0;
 
-	/* Error condition raised?  */
+	/*
+	 * Error condition raised?
+	 */
 	if (fd->flags & (1 << FD_ReadyErr))
 		return 0;
 
@@ -205,16 +209,18 @@ static void queue(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredIn;
 }
 
-static void iv_dev_poll_poll(int timeout)
+static void iv_dev_poll_poll(int msec)
 {
 	int i;
 	int ret;
 
 #if 0
-	/* @@@ Is this necessary?  */
-	/* @@@ This is ugly and dependent on clock tick granularity.  */
-	if (timeout)
-		timeout += (1000/100) - 1;
+	/*
+	 * @@@ Is this necessary?
+	 * @@@ This is ugly and dependent on clock tick granularity.
+	 */
+	if (msec)
+		msec += (1000/100) - 1;
 #endif
 
 	if (upload_entries)
@@ -225,7 +231,7 @@ static void iv_dev_poll_poll(int timeout)
 
 		dvp.dp_fds = batch;
 		dvp.dp_nfds = batch_size;
-		dvp.dp_timeout = timeout;
+		dvp.dp_timeout = msec;
 		ret = ioctl(poll_fd, DP_POLL, &dvp);
 	} while (ret < 0 && errno == EINTR);
 
@@ -235,7 +241,7 @@ static void iv_dev_poll_poll(int timeout)
 		abort();
 	}
 
-	for (i=0;i<ret;i++) {
+	for (i = 0; i < ret; i++) {
 		struct iv_fd *fd;
 
 		fd = find_fd(batch[i].fd);
@@ -272,7 +278,7 @@ static void iv_dev_poll_poll(int timeout)
 
 static void iv_dev_poll_register_fd(struct iv_fd *fd)
 {
-	list_add_tail(&(fd->list_all), &all[__fd_hash(fd->fd)]);
+	list_add_tail(&fd->list_all, &all[__fd_hash(fd->fd)]);
 	queue(fd);
 }
 
@@ -283,7 +289,7 @@ static void iv_dev_poll_reregister_fd(struct iv_fd *fd)
 
 static void iv_dev_poll_unregister_fd(struct iv_fd *fd)
 {
-	list_del_init(&(fd->list_all));
+	list_del_init(&fd->list_all);
 	queue(fd);
 }
 
@@ -297,12 +303,12 @@ static void iv_dev_poll_deinit(void)
 
 
 struct iv_poll_method iv_method_dev_poll = {
-	name:			"dev_poll",
-	init:			iv_dev_poll_init,
-	poll:			iv_dev_poll_poll,
-	register_fd:		iv_dev_poll_register_fd,
-	reregister_fd:		iv_dev_poll_reregister_fd,
-	unregister_fd:		iv_dev_poll_unregister_fd,
-	deinit:			iv_dev_poll_deinit,
+	.name		= "dev_poll",
+	.init		= iv_dev_poll_init,
+	.poll		= iv_dev_poll_poll,
+	.register_fd	= iv_dev_poll_register_fd,
+	.reregister_fd	= iv_dev_poll_reregister_fd,
+	.unregister_fd	= iv_dev_poll_unregister_fd,
+	.deinit		= iv_dev_poll_deinit,
 };
 #endif
