@@ -31,10 +31,11 @@
 #include <sys/types.h>
 #include "iv_private.h"
 
-#define POLL_BATCH_SIZE		(1024)
 #define UPLOAD_QUEUE_SIZE	(1024)
 
 static struct list_head		all;
+static struct kevent		*batch;
+static int			batch_size;
 static int			kqueue_fd;
 static struct kevent		*upload_queue;
 static int			upload_entries;
@@ -46,13 +47,21 @@ static int iv_kqueue_init(int maxfd)
 	if (kqueue_fd < 0)
 		return -1;
 
+	batch = malloc(maxfd * sizeof(*batch));
+	if (batch == NULL) {
+		close(kqueue_fd);
+		return -1;
+	}
+
 	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
 	if (upload_queue == NULL) {
+		free(batch);
 		close(kqueue_fd);
 		return -1;
 	}
 
 	INIT_LIST_HEAD(&all);
+	batch_size = maxfd;
 	upload_entries = 0;
 
 	return 0;
@@ -84,23 +93,72 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
+static int wanted_bit(struct iv_fd_ *fd, int handler, int band, int regd)
+{
+	int wanted;
+
+	wanted = 0;
+	if (!list_empty(&fd->list_all)) {
+		int ready;
+
+		ready = !!(fd->flags & 1 << band);
+		if ((handler && !ready) || ((regd & 1) && (handler || !ready)))
+			wanted = 1;
+	}
+
+	return wanted;
+}
+
+static void queue_read(struct iv_fd_ *fd)
+{
+	int regd;
+	int wanted;
+
+	regd = !!(fd->flags & FD_RegisteredIn);
+	wanted = wanted_bit(fd, !!(fd->handler_in == NULL), FD_ReadyIn, regd);
+
+	if (regd && !wanted) {
+		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
+	} else if (wanted && !regd) {
+		queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
+		      0, 0, (void *)fd);
+	}
+
+	fd->flags &= ~(1 << FD_RegisteredIn);
+	fd->flags |= wanted << FD_RegisteredIn;
+}
+
+static void queue_write(struct iv_fd_ *fd)
+{
+	int regd;
+	int wanted;
+
+	regd = !!(fd->flags & FD_RegisteredOut);
+	wanted = wanted_bit(fd, !!(fd->handler_out == NULL), FD_ReadyOut, regd);
+
+	if (regd && !wanted) {
+		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
+	} else if (wanted && !regd) {
+		queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
+		      0, 0, (void *)fd);
+	}
+
+	fd->flags &= ~(1 << FD_RegisteredOut);
+	fd->flags |= wanted << FD_RegisteredOut;
+}
+
 static void iv_kqueue_poll(int msec)
 {
-	struct kevent batch[POLL_BATCH_SIZE];
-	int i;
-	int maxevents;
-	int ret;
 	struct timespec to;
-
-	maxevents = sizeof(batch)/sizeof(batch[0]);
+	int i;
+	int ret;
 
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
-do_it_again:
 	do {
 		ret = kevent(kqueue_fd, upload_queue, upload_entries,
-			     batch, maxevents, &to);
+			     batch, batch_size, &to);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -117,19 +175,17 @@ do_it_again:
 		fd = batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
 			iv_fd_make_ready(fd, FD_ReadyIn);
+			if (fd->handler_in == NULL)
+				queue_read(fd);
 		} else if (batch[i].filter == EVFILT_WRITE) {
 			iv_fd_make_ready(fd, FD_ReadyOut);
+			if (fd->handler_out == NULL)
+				queue_write(fd);
 		} else {
 			syslog(LOG_CRIT, "iv_kqueue_poll: got message from "
 					 "filter %d", batch[i].filter);
 			abort();
 		}
-	}
-
-	if (ret == maxevents) {
-		to.tv_sec = 0;
-		to.tv_nsec = 0;
-		goto do_it_again;
 	}
 }
 
@@ -137,23 +193,29 @@ static void iv_kqueue_register_fd(struct iv_fd_ *fd)
 {
 	list_add_tail(&fd->list_all, &all);
 
-	queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_CLEAR,
-	      0, 0, (void *)fd);
-	queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_CLEAR,
-	      0, 0, (void *)fd);
+	if (fd->handler_in != NULL)
+		queue_read(fd);
+	if (fd->handler_out != NULL)
+		queue_write(fd);
+}
+
+static void iv_kqueue_reregister_fd(struct iv_fd_ *fd)
+{
+	queue_read(fd);
+	queue_write(fd);
 }
 
 static void iv_kqueue_unregister_fd(struct iv_fd_ *fd)
 {
 	list_del_init(&fd->list_all);
-
-	queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
-	queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
+	queue_read(fd);
+	queue_write(fd);
 }
 
 static void iv_kqueue_deinit(void)
 {
 	free(upload_queue);
+	free(batch);
 	close(kqueue_fd);
 }
 
@@ -163,7 +225,7 @@ struct iv_poll_method iv_method_kqueue = {
 	.init		= iv_kqueue_init,
 	.poll		= iv_kqueue_poll,
 	.register_fd	= iv_kqueue_register_fd,
-	.reregister_fd	= NULL,
+	.reregister_fd	= iv_kqueue_reregister_fd,
 	.unregister_fd	= iv_kqueue_unregister_fd,
 	.deinit		= iv_kqueue_deinit,
 };

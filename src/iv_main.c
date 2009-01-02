@@ -127,11 +127,9 @@ void iv_init(void)
 
 #ifdef linux
 	consider_poll_method(exclude, &iv_method_epoll);
-	consider_poll_method(exclude, &iv_method_epoll_lt);
 #endif
 #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
 	consider_poll_method(exclude, &iv_method_kqueue);
-	consider_poll_method(exclude, &iv_method_kqueue_lt);
 #endif
 #ifdef sun
 	consider_poll_method(exclude, &iv_method_dev_poll);

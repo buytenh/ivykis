@@ -27,10 +27,9 @@
 #include <syslog.h>
 #include "iv_private.h"
 
-#define POLL_BATCH_SIZE		(1024)
-
-
 static struct list_head		all;
+static struct epoll_event	*batch;
+static int			batch_size;
 static int			epoll_fd;
 
 
@@ -40,67 +39,80 @@ static int iv_epoll_init(int maxfd)
 	if (epoll_fd < 0)
 		return -1;
 
+	batch = malloc(maxfd * sizeof(*batch));
+	if (batch == NULL) {
+		close(epoll_fd);
+		return -1;
+	}
+
 	INIT_LIST_HEAD(&all);
+	batch_size = maxfd;
 
 	return 0;
 }
 
-static void iv_epoll_poll(int msec)
+static int wanted_bits(struct iv_fd_ *fd, int regd)
 {
-	struct epoll_event batch[POLL_BATCH_SIZE];
-	int i;
-	int maxevents;
-	int ret;
+	int wanted;
+	int handler;
+	int ready;
 
-	maxevents = sizeof(batch)/sizeof(batch[0]);
+	wanted = 0;
 
-do_it_again:
-	do {
-		ret = epoll_wait(epoll_fd, batch, maxevents, msec);
-	} while (ret < 0 && errno == EINTR);
+	handler = !!(fd->handler_in != NULL);
+	ready = !!(fd->flags & 1 << FD_ReadyIn);
+	if ((handler && !ready) || ((regd & 1) && (handler || !ready)))
+		wanted |= 1;
 
-	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]", errno,
-		       strerror(errno));
-		abort();
-	}
+	handler = !!(fd->handler_out != NULL);
+	ready = !!(fd->flags & 1 << FD_ReadyOut);
+	if ((handler && !ready) || ((regd & 2) && (handler || !ready)))
+		wanted |= 2;
 
-	for (i = 0; i < ret; i++) {
-		struct iv_fd_ *fd;
-
-		fd = batch[i].data.ptr;
-		if (batch[i].events & (EPOLLIN | EPOLLERR | EPOLLHUP))
-			iv_fd_make_ready(fd, FD_ReadyIn);
-		if (batch[i].events & (EPOLLOUT | EPOLLERR))
-			iv_fd_make_ready(fd, FD_ReadyOut);
-		if (batch[i].events & EPOLLERR)
-			iv_fd_make_ready(fd, FD_ReadyErr);
-	}
-
-	if (ret == maxevents) {
-		msec = 0;
-		goto do_it_again;
-	}
+	return wanted;
 }
 
-static void iv_epoll_register_fd(struct iv_fd_ *fd)
+static int bits_to_poll_mask(int bits)
 {
-	struct epoll_event event;
-	int ret;
+	int mask;
 
-	list_add_tail(&fd->list_all, &all);
+	mask = EPOLLERR;
+	if (bits & 1)
+		mask |= EPOLLIN | EPOLLHUP;
+	if (bits & 2)
+		mask |= EPOLLOUT;
 
-	event.data.ptr = fd;
-	event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT | EPOLLET;
-	do {
-		ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd->fd, &event);
-	} while (ret < 0 && errno == EINTR);
+	return mask;
+}
 
-	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_epoll_register_fd: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+static void queue(struct iv_fd_ *fd)
+{
+	int regd;
+	int wanted;
+
+	regd = (fd->flags >> FD_RegisteredIn) & 3;
+	wanted = wanted_bits(fd, regd);
+
+	if (regd != wanted) {
+		struct epoll_event event;
+		int ret;
+
+		event.data.ptr = fd;
+		event.events = bits_to_poll_mask(wanted);
+		do {
+			ret = epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd->fd,
+					&event);
+		} while (ret < 0 && errno == EINTR);
+
+		if (ret < 0) {
+			syslog(LOG_CRIT, "queue: got error %d[%s]", errno,
+			       strerror(errno));
+			abort();
+		}
 	}
+
+	fd->flags &= ~(7 << FD_RegisteredIn);
+	fd->flags |= wanted << FD_RegisteredIn;
 }
 
 /*
@@ -110,7 +122,7 @@ static void iv_epoll_register_fd(struct iv_fd_ *fd)
  * structures contain opaque-to-the-kernel userspace pointers, which
  * are dereferenced in the event handler without validation.)
  */
-static void iv_epoll_unregister_fd(struct iv_fd_ *fd)
+static void internal_unregister(struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int ret;
@@ -122,16 +134,96 @@ static void iv_epoll_unregister_fd(struct iv_fd_ *fd)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_epoll_unregister_fd: got error %d[%s]",
+		syslog(LOG_CRIT, "iv_epoll_unregister_fd: got error "
+				 "%d[%s]", errno, strerror(errno));
+		abort();
+	}
+}
+
+static void iv_epoll_poll(int msec)
+{
+	int i;
+	int ret;
+
+	do {
+		ret = epoll_wait(epoll_fd, batch, batch_size, msec);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
 
+	for (i = 0; i < ret; i++) {
+		struct iv_fd_ *fd;
+
+		fd = batch[i].data.ptr;
+		if (batch[i].events) {
+			int should_queue;
+
+			should_queue = 0;
+			if (batch[i].events & (EPOLLIN | EPOLLERR | EPOLLHUP)) {
+				iv_fd_make_ready(fd, FD_ReadyIn);
+				if (fd->handler_in == NULL)
+					should_queue = 1;
+			}
+			if (batch[i].events & (EPOLLOUT | EPOLLERR)) {
+				iv_fd_make_ready(fd, FD_ReadyOut);
+				if (fd->handler_out == NULL)
+					should_queue = 1;
+			}
+			if (batch[i].events & EPOLLERR) {
+				iv_fd_make_ready(fd, FD_ReadyErr);
+				internal_unregister(fd);
+			} else if (should_queue) {
+				queue(fd);
+			}
+		}
+	}
+}
+
+static void iv_epoll_register_fd(struct iv_fd_ *fd)
+{
+	struct epoll_event event;
+	int wanted;
+	int ret;
+
+	list_add_tail(&fd->list_all, &all);
+
+	wanted = wanted_bits(fd, 0);
+
+	event.data.ptr = fd;
+	event.events = bits_to_poll_mask(wanted);
+	do {
+		ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd->fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		syslog(LOG_CRIT, "iv_epoll_register_fd: got error "
+				 "%d[%s]", errno, strerror(errno));
+		abort();
+	}
+
+	fd->flags |= wanted << FD_RegisteredIn;
+}
+
+static void iv_epoll_reregister_fd(struct iv_fd_ *fd)
+{
+	if (!(fd->flags & (1 << FD_ReadyErr)))
+		queue(fd);
+}
+
+static void iv_epoll_unregister_fd(struct iv_fd_ *fd)
+{
+	if (!(fd->flags & (1 << FD_ReadyErr)))
+		internal_unregister(fd);
 	list_del_init(&fd->list_all);
 }
 
 static void iv_epoll_deinit(void)
 {
+	free(batch);
 	close(epoll_fd);
 }
 
@@ -141,7 +233,7 @@ struct iv_poll_method iv_method_epoll = {
 	.init		= iv_epoll_init,
 	.poll		= iv_epoll_poll,
 	.register_fd	= iv_epoll_register_fd,
-	.reregister_fd	= NULL,
+	.reregister_fd	= iv_epoll_reregister_fd,
 	.unregister_fd	= iv_epoll_unregister_fd,
 	.deinit		= iv_epoll_deinit,
 };

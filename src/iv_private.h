@@ -97,9 +97,7 @@ struct iv_poll_method {
 
 extern struct iv_poll_method iv_method_dev_poll;
 extern struct iv_poll_method iv_method_epoll;
-extern struct iv_poll_method iv_method_epoll_lt;
 extern struct iv_poll_method iv_method_kqueue;
-extern struct iv_poll_method iv_method_kqueue_lt;
 extern struct iv_poll_method iv_method_poll;
 extern struct iv_poll_method iv_method_select;
 
