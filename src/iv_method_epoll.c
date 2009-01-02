@@ -23,9 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <syslog.h>
 #include "iv_private.h"
-#include "epoll.h"
 
 #define POLL_BATCH_SIZE		(1024)
 
