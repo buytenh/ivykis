@@ -134,12 +134,10 @@ static void iv_poll_reregister_fd(struct iv_fd *fd)
 
 	index = (int)(ptrdiff_t)fd->list_all.next;
 	if (index != -1) {
-#if IV_DEBUG
 		if (pfds[index].fd != fd->fd || fds[index] != fd) {
 			syslog(LOG_CRIT, "iv_poll_reregister_fd: index fuckup");
 			abort();
 		}
-#endif
 
 		pfds[index].events = __poll_mask(fd);
 	}
@@ -151,12 +149,10 @@ static void iv_poll_unregister_fd(struct iv_fd *fd)
 
 	index = (int)(ptrdiff_t)fd->list_all.next;
 	if (index != -1) {
-#if IV_DEBUG
 		if (pfds[index].fd != fd->fd || fds[index] != fd) {
 			syslog(LOG_CRIT, "iv_poll_unregister_fd: index fuckup");
 			abort();
 		}
-#endif
 
 		internal_unregister(fd);
 	}

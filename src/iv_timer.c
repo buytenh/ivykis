@@ -126,22 +126,18 @@ void iv_register_timer(struct iv_timer *t)
 	struct iv_timer **p;
 	int index;
 
-#if IV_DEBUG
 	if (t->index != -1) {
 		syslog(LOG_CRIT, "iv_register_timer: called with timer still "
 				 "on the heap");
 		abort();
 	}
-#endif
 
 	index = ++num_timers;
 	p = get_node(index);
-#if IV_DEBUG
 	if (p == NULL) {
 		syslog(LOG_CRIT, "iv_register_timer: timer list overflow");
 		abort();
 	}
-#endif
 
 	*p = t;
 	t->index = index;
@@ -193,7 +189,6 @@ void iv_unregister_timer(struct iv_timer *t)
 	struct iv_timer **m;
 	struct iv_timer **p;
 
-#if IV_DEBUG
 	if (t->index == -1) {
 		syslog(LOG_CRIT, "iv_unregister_timer: called with timer not "
 				 "on the heap");
@@ -205,16 +200,13 @@ void iv_unregister_timer(struct iv_timer *t)
 		       t->index, num_timers);
 		abort();
 	}
-#endif
 
 	p = get_node(t->index);
-#if IV_DEBUG
 	if (*p != t) {
 		syslog(LOG_CRIT, "iv_unregister_timer: unregistered timer "
 				 "index belonging to other timer");
 		abort();
 	}
-#endif
 
 	m = get_node(num_timers);
 	num_timers--;
@@ -227,9 +219,7 @@ void iv_unregister_timer(struct iv_timer *t)
 		push_down((*p)->index, p);
 	}
 
-#if IV_DEBUG
 	t->index = -1;
-#endif
 }
 
 int iv_get_soonest_timeout(struct timespec *to)

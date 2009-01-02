@@ -131,13 +131,11 @@ static void iv_select_poll(int timeout)
 			struct iv_fd *fd;
 
 			fd = find_fd(i);
-#if IV_DEBUG
 			if (fd == NULL) {
 				syslog(LOG_CRIT, "iv_select_poll: just puked "
 						 "on myself... eeeeeeeeeeew");
 				abort();
 			}
-#endif
 
 			if (pollin) {
 				iv_fd_make_ready(fd, FD_ReadyIn);

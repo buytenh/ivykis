@@ -28,31 +28,24 @@ static struct list_head tasks;
 
 void iv_register_task(struct iv_task *t)
 {
-#if IV_DEBUG
 	if (!list_empty(&(t->list))) {
 		syslog(LOG_CRIT, "iv_register_task: called with task still "
 				 "on a list");
 		abort();
 	}
-#endif
 
 	list_add_tail(&(t->list), &tasks);
 }
 
 void iv_unregister_task(struct iv_task *t)
 {
-#if IV_DEBUG
 	if (list_empty(&(t->list))) {
 		syslog(LOG_CRIT, "iv_unregister_task: called with task not "
 				 "on a list");
 		abort();
 	}
-#endif
 
-	list_del(&(t->list));
-#if IV_DEBUG
-	INIT_LIST_HEAD(&(t->list));
-#endif
+	list_del_init(&(t->list));
 }
 
 int iv_pending_tasks(void)
@@ -66,10 +59,7 @@ void iv_run_tasks(void)
 		struct list_head *lh = tasks.next;
 		struct iv_task *t = list_entry(lh, struct iv_task, list);
 
-		list_del(&(t->list));
-#if IV_DEBUG
-		INIT_LIST_HEAD(&(t->list));
-#endif
+		list_del_init(&(t->list));
 		t->handler(t->cookie);
 	}
 }

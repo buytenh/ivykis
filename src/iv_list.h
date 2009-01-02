@@ -61,10 +61,8 @@ static __inline__ void list_del(struct list_head *lh)
 {
 	lh->prev->next = lh->next;
 	lh->next->prev = lh->prev;
-#if IV_DEBUG
 	lh->prev = NULL;
 	lh->next = NULL;
-#endif
 }
 
 static __inline__ void list_del_init(struct list_head *lh)
