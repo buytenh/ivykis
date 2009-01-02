@@ -48,7 +48,6 @@ extern struct iv_poll_method iv_method_epoll_lt;
 extern struct iv_poll_method iv_method_kqueue;
 extern struct iv_poll_method iv_method_kqueue_lt;
 extern struct iv_poll_method iv_method_poll;
-extern struct iv_poll_method iv_method_rtsig;
 extern struct iv_poll_method iv_method_select;
 
 extern struct list_head *active;

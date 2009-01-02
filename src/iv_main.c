@@ -198,9 +198,6 @@ void iv_init(void)
 #ifdef sun
 	consider_poll_method(exclude, &iv_method_dev_poll);
 #endif
-#ifdef linux
-	consider_poll_method(exclude, &iv_method_rtsig);
-#endif
 	consider_poll_method(exclude, &iv_method_poll);
 	consider_poll_method(exclude, &iv_method_select);
 
