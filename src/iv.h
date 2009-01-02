@@ -122,6 +122,7 @@ struct iv_timer {
 void INIT_IV_TIMER(struct iv_timer *);
 void iv_register_timer(struct iv_timer *);
 void iv_unregister_timer(struct iv_timer *);
+int iv_timer_registered(struct iv_timer *);
 
 #ifdef __cplusplus
 }

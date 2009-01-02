@@ -278,3 +278,10 @@ void iv_run_timers(void)
 		t->handler(t->cookie);
 	}
 }
+
+int iv_timer_registered(struct iv_timer *_t)
+{
+	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+
+	return !(t->index == -1);
+}
