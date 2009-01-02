@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -57,18 +57,25 @@ struct ratnode { void *child[SPLIT_NODES]; };
 static int num_timers;
 static struct ratnode *timer_root;
 
+void INIT_IV_TIMER(struct iv_timer *_t)
+{
+	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+
+	t->index = -1;
+}
+
 static inline int timespec_gt(struct timespec *a, struct timespec *b)
 {
 	return !!(a->tv_sec > b->tv_sec ||
 		 (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
 }
 
-static inline int timer_ptr_gt(struct iv_timer *a, struct iv_timer *b)
+static inline int timer_ptr_gt(struct iv_timer_ *a, struct iv_timer_ *b)
 {
 	return timespec_gt(&a->expires, &b->expires);
 }
 
-static struct iv_timer **get_node(int index)
+static struct iv_timer_ **get_node(int index)
 {
 	struct ratnode **r;
 	int i;
@@ -91,7 +98,7 @@ static struct iv_timer **get_node(int index)
 		r = (struct ratnode **)&((*r)->child[bits]);
 	}
 
-	return (struct iv_timer **)r;
+	return (struct iv_timer_ **)r;
 }
 
 void iv_timer_init(void)
@@ -111,7 +118,7 @@ int iv_pending_timers(void)
 int iv_get_soonest_timeout(struct timespec *to)
 {
 	if (num_timers) {
-		struct iv_timer *t = *get_node(1);
+		struct iv_timer_ *t = *get_node(1);
 
 		iv_validate_now();
 		to->tv_sec = t->expires.tv_sec - now.tv_sec;
@@ -131,12 +138,12 @@ int iv_get_soonest_timeout(struct timespec *to)
 	return 0;
 }
 
-static void pull_up(int index, struct iv_timer **i)
+static void pull_up(int index, struct iv_timer_ **i)
 {
 	while (index != 1) {
-		struct iv_timer *et;
+		struct iv_timer_ *et;
 		int parent;
-		struct iv_timer **p;
+		struct iv_timer_ **p;
 
 		parent = index / 2;
 		p = get_node(parent);
@@ -156,9 +163,10 @@ static void pull_up(int index, struct iv_timer **i)
 	}
 }
 
-void iv_register_timer(struct iv_timer *t)
+void iv_register_timer(struct iv_timer *_t)
 {
-	struct iv_timer **p;
+	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+	struct iv_timer_ **p;
 	int index;
 
 	if (t->index != -1) {
@@ -180,18 +188,18 @@ void iv_register_timer(struct iv_timer *t)
 	pull_up(index, p);
 }
 
-static void push_down(int index, struct iv_timer **i)
+static void push_down(int index, struct iv_timer_ **i)
 {
 	while (1) {
-		struct iv_timer *et;
-		struct iv_timer **imin;
+		struct iv_timer_ *et;
+		struct iv_timer_ **imin;
 		int index_min;
 
 		index_min = index;
 		imin = i;
 
 		if (2 * index <= num_timers) {
-			struct iv_timer **p;
+			struct iv_timer_ **p;
 
 			p = get_node(2 * index);
 			if (timer_ptr_gt(*imin, p[0])) {
@@ -219,10 +227,11 @@ static void push_down(int index, struct iv_timer **i)
 	}
 }
 
-void iv_unregister_timer(struct iv_timer *t)
+void iv_unregister_timer(struct iv_timer *_t)
 {
-	struct iv_timer **m;
-	struct iv_timer **p;
+	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+	struct iv_timer_ **m;
+	struct iv_timer_ **p;
 
 	if (t->index == -1) {
 		syslog(LOG_CRIT, "iv_unregister_timer: called with timer not "
@@ -260,12 +269,12 @@ void iv_unregister_timer(struct iv_timer *t)
 void iv_run_timers(void)
 {
 	while (num_timers) {
-		struct iv_timer *t = *get_node(1);
+		struct iv_timer_ *t = *get_node(1);
 
 		iv_validate_now();
 		if (timespec_gt(&t->expires, &now))
 			break;
-		iv_unregister_timer(t);
+		iv_unregister_timer((struct iv_timer *)t);
 		t->handler(t->cookie);
 	}
 }

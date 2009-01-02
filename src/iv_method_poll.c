@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 #include "iv_private.h"
 
 static struct pollfd		*pfds;
-static struct iv_fd		**fds;
+static struct iv_fd_		**fds;
 static int			numfds;
 
 
@@ -37,7 +37,7 @@ static int iv_poll_init(int maxfd)
 	if (pfds == NULL)
 		return -1;
 
-	fds = malloc(maxfd * sizeof(struct iv_fd *));
+	fds = malloc(maxfd * sizeof(struct iv_fd_ *));
 	if (fds == NULL) {
 		free(pfds);
 		return -1;
@@ -48,7 +48,7 @@ static int iv_poll_init(int maxfd)
 	return 0;
 }
 
-static int __poll_mask(struct iv_fd *fd)
+static int __poll_mask(struct iv_fd_ *fd)
 {
 	int mask;
 
@@ -64,13 +64,13 @@ static int __poll_mask(struct iv_fd *fd)
 	return mask;
 }
 
-static void internal_unregister(struct iv_fd *fd)
+static void internal_unregister(struct iv_fd_ *fd)
 {
 	int index;
 
 	index = (int)(ptrdiff_t)fd->list_all.next;
 	if (index != numfds - 1) {
-		struct iv_fd *last = fds[numfds-1];
+		struct iv_fd_ *last = fds[numfds-1];
 
 		pfds[index] = pfds[numfds-1];
 		fds[index] = last;
@@ -99,7 +99,7 @@ static void iv_poll_poll(int msec)
 
 	for (i = 0; i < numfds; i++) {
 		if (pfds[i].revents) {
-			struct iv_fd *fd = fds[i];
+			struct iv_fd_ *fd = fds[i];
 
 			if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
 				iv_fd_make_ready(fd, FD_ReadyIn);
@@ -117,7 +117,7 @@ static void iv_poll_poll(int msec)
 	}
 }
 
-static void iv_poll_register_fd(struct iv_fd *fd)
+static void iv_poll_register_fd(struct iv_fd_ *fd)
 {
 	int index;
 
@@ -129,7 +129,7 @@ static void iv_poll_register_fd(struct iv_fd *fd)
 	fd->list_all.next = fd->list_all.prev = (void *)(ptrdiff_t)index;
 }
 
-static void iv_poll_reregister_fd(struct iv_fd *fd)
+static void iv_poll_reregister_fd(struct iv_fd_ *fd)
 {
 	int index;
 
@@ -144,7 +144,7 @@ static void iv_poll_reregister_fd(struct iv_fd *fd)
 	}
 }
 
-static void iv_poll_unregister_fd(struct iv_fd *fd)
+static void iv_poll_unregister_fd(struct iv_fd_ *fd)
 {
 	int index;
 

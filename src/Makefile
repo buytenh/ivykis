@@ -20,4 +20,4 @@ libivykis.a:	$(OBJS)
 		ranlib libivykis.a
 
 .c.o:		iv.h iv_list.h iv_private.h
-		$(CC) $(CFLAGS) -I. -Wall -fomit-frame-pointer -c -o $@ $<
+		$(CC) $(CFLAGS) -Wall -fomit-frame-pointer -c -o $@ $<

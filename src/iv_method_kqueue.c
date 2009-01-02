@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -112,7 +112,7 @@ do_it_again:
 	upload_entries = 0;
 
 	for (i = 0; i < ret; i++) {
-		struct iv_fd *fd;
+		struct iv_fd_ *fd;
 
 		fd = batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
@@ -133,7 +133,7 @@ do_it_again:
 	}
 }
 
-static void iv_kqueue_register_fd(struct iv_fd *fd)
+static void iv_kqueue_register_fd(struct iv_fd_ *fd)
 {
 	list_add_tail(&fd->list_all, &all);
 
@@ -143,7 +143,7 @@ static void iv_kqueue_register_fd(struct iv_fd *fd)
 	      0, 0, (void *)fd);
 }
 
-static void iv_kqueue_unregister_fd(struct iv_fd *fd)
+static void iv_kqueue_unregister_fd(struct iv_fd_ *fd)
 {
 	list_del_init(&fd->list_all);
 

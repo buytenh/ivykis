@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -66,7 +66,7 @@ do_it_again:
 	}
 
 	for (i = 0; i < ret; i++) {
-		struct iv_fd *fd;
+		struct iv_fd_ *fd;
 
 		fd = batch[i].data.ptr;
 		if (batch[i].events & (EPOLLIN | EPOLLERR | EPOLLHUP))
@@ -83,7 +83,7 @@ do_it_again:
 	}
 }
 
-static void iv_epoll_register_fd(struct iv_fd *fd)
+static void iv_epoll_register_fd(struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int ret;
@@ -110,7 +110,7 @@ static void iv_epoll_register_fd(struct iv_fd *fd)
  * structures contain opaque-to-the-kernel userspace pointers, which
  * are dereferenced in the event handler without validation.)
  */
-static void iv_epoll_unregister_fd(struct iv_fd *fd)
+static void iv_epoll_unregister_fd(struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int ret;

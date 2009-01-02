@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -51,7 +51,7 @@ static int iv_epoll_lt_init(int maxfd)
 	return 0;
 }
 
-static int wanted_bits(struct iv_fd *fd, int regd)
+static int wanted_bits(struct iv_fd_ *fd, int regd)
 {
 	int wanted;
 	int handler;
@@ -85,7 +85,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void queue(struct iv_fd *fd)
+static void queue(struct iv_fd_ *fd)
 {
 	int regd;
 	int wanted;
@@ -122,7 +122,7 @@ static void queue(struct iv_fd *fd)
  * structures contain opaque-to-the-kernel userspace pointers, which
  * are dereferenced in the event handler without validation.)
  */
-static void internal_unregister(struct iv_fd *fd)
+static void internal_unregister(struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int ret;
@@ -156,7 +156,7 @@ static void iv_epoll_lt_poll(int msec)
 	}
 
 	for (i = 0; i < ret; i++) {
-		struct iv_fd *fd;
+		struct iv_fd_ *fd;
 
 		fd = batch[i].data.ptr;
 		if (batch[i].events) {
@@ -183,7 +183,7 @@ static void iv_epoll_lt_poll(int msec)
 	}
 }
 
-static void iv_epoll_lt_register_fd(struct iv_fd *fd)
+static void iv_epoll_lt_register_fd(struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int wanted;
@@ -208,13 +208,13 @@ static void iv_epoll_lt_register_fd(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredIn;
 }
 
-static void iv_epoll_lt_reregister_fd(struct iv_fd *fd)
+static void iv_epoll_lt_reregister_fd(struct iv_fd_ *fd)
 {
 	if (!(fd->flags & (1 << FD_ReadyErr)))
 		queue(fd);
 }
 
-static void iv_epoll_lt_unregister_fd(struct iv_fd *fd)
+static void iv_epoll_lt_unregister_fd(struct iv_fd_ *fd)
 {
 	if (!(fd->flags & (1 << FD_ReadyErr)))
 		internal_unregister(fd);

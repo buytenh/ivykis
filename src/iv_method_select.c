@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -44,16 +44,16 @@ static unsigned int __fd_hash(unsigned int fd)
 	return fd % HASH_SIZE;
 }
 
-static struct iv_fd *find_fd(int fd)
+static struct iv_fd_ *find_fd(int fd)
 {
 	int hash = __fd_hash(fd);
 	struct list_head *lh;
-	struct iv_fd *ret = NULL;
+	struct iv_fd_ *ret = NULL;
 
 	list_for_each(lh, &all[hash]) {
-		struct iv_fd *f;
+		struct iv_fd_ *f;
 
-		f = list_entry(lh, struct iv_fd, list_all);
+		f = list_entry(lh, struct iv_fd_, list_all);
 		if (f->fd == fd) {
 			ret = f;
 			break;
@@ -130,7 +130,7 @@ static void iv_select_poll(int msec)
 		pollin = !!FD_ISSET(i, readfds);
 		pollout = !!FD_ISSET(i, writefds);
 		if (pollin || pollout) {
-			struct iv_fd *fd;
+			struct iv_fd_ *fd;
 
 			fd = find_fd(i);
 			if (fd == NULL) {
@@ -152,7 +152,7 @@ static void iv_select_poll(int msec)
 	}
 }
 
-static void iv_select_register_fd(struct iv_fd *fd)
+static void iv_select_register_fd(struct iv_fd_ *fd)
 {
 	list_add_tail(&fd->list_all, &all[__fd_hash(fd->fd)]);
 	if (fd->handler_in != NULL)
@@ -167,7 +167,7 @@ static void iv_select_register_fd(struct iv_fd *fd)
 		fd_max = fd->fd;
 }
 
-static void iv_select_reregister_fd(struct iv_fd *fd)
+static void iv_select_reregister_fd(struct iv_fd_ *fd)
 {
 	if (fd->handler_in == NULL || fd->flags & (1 << FD_ReadyIn))
 		FD_CLR(fd->fd, readfds_master);
@@ -180,7 +180,7 @@ static void iv_select_reregister_fd(struct iv_fd *fd)
 		FD_SET(fd->fd, writefds_master);
 }
 
-static void iv_select_unregister_fd(struct iv_fd *fd)
+static void iv_select_unregister_fd(struct iv_fd_ *fd)
 {
 	list_del_init(&fd->list_all);
 	FD_CLR(fd->fd, readfds_master);

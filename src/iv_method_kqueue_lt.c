@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -93,7 +93,7 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
-static int wanted_bit(struct iv_fd *fd, int handler, int band, int regd)
+static int wanted_bit(struct iv_fd_ *fd, int handler, int band, int regd)
 {
 	int wanted;
 
@@ -109,7 +109,7 @@ static int wanted_bit(struct iv_fd *fd, int handler, int band, int regd)
 	return wanted;
 }
 
-static void queue_read(struct iv_fd *fd)
+static void queue_read(struct iv_fd_ *fd)
 {
 	int regd;
 	int wanted;
@@ -128,7 +128,7 @@ static void queue_read(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredIn;
 }
 
-static void queue_write(struct iv_fd *fd)
+static void queue_write(struct iv_fd_ *fd)
 {
 	int regd;
 	int wanted;
@@ -170,7 +170,7 @@ static void iv_kqueue_lt_poll(int msec)
 	upload_entries = 0;
 
 	for (i = 0; i < ret; i++) {
-		struct iv_fd *fd;
+		struct iv_fd_ *fd;
 
 		fd = batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
@@ -189,7 +189,7 @@ static void iv_kqueue_lt_poll(int msec)
 	}
 }
 
-static void iv_kqueue_lt_register_fd(struct iv_fd *fd)
+static void iv_kqueue_lt_register_fd(struct iv_fd_ *fd)
 {
 	list_add_tail(&fd->list_all, &all);
 
@@ -199,13 +199,13 @@ static void iv_kqueue_lt_register_fd(struct iv_fd *fd)
 		queue_write(fd);
 }
 
-static void iv_kqueue_lt_reregister_fd(struct iv_fd *fd)
+static void iv_kqueue_lt_reregister_fd(struct iv_fd_ *fd)
 {
 	queue_read(fd);
 	queue_write(fd);
 }
 
-static void iv_kqueue_lt_unregister_fd(struct iv_fd *fd)
+static void iv_kqueue_lt_unregister_fd(struct iv_fd_ *fd)
 {
 	list_del_init(&fd->list_all);
 	queue_read(fd);

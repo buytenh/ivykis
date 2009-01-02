@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@ static struct list_head		arrays[2];
 struct list_head		*active;
 static struct list_head		*expired;
 static unsigned int		epoch;
-static struct iv_fd		*handled_fd;
+static struct iv_fd_		*handled_fd;
 static int			maxfd;
 static struct iv_poll_method	*method;
 static int			numfds;
@@ -157,9 +157,9 @@ void iv_quit(void)
 static void iv_run_active_list(void)
 {
 	while (!list_empty(active)) {
-		struct iv_fd *fd;
+		struct iv_fd_ *fd;
 
-		fd = list_entry(active->next, struct iv_fd, list_active);
+		fd = list_entry(active->next, struct iv_fd_, list_active);
 
 		if (fd->handler_in == NULL && fd->handler_out == NULL &&
 		    fd->handler_err == NULL) {
@@ -241,8 +241,20 @@ void iv_main(void)
 
 
 /* file descriptor handling *************************************************/
-void iv_register_fd(struct iv_fd *fd)
+void INIT_IV_FD(struct iv_fd *_fd)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
+
+	fd->fd = -1;
+	fd->handler_in = NULL;
+	fd->handler_out = NULL;
+	fd->handler_err = NULL;
+	INIT_LIST_HEAD(&fd->list_all);
+}
+
+void iv_register_fd(struct iv_fd *_fd)
+{
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int flags;
 	int yes;
 
@@ -275,8 +287,10 @@ void iv_register_fd(struct iv_fd *fd)
 	method->register_fd(fd);
 }
 
-void iv_unregister_fd(struct iv_fd *fd)
+void iv_unregister_fd(struct iv_fd *_fd)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
+
 	if (list_empty(&fd->list_all)) {
 		syslog(LOG_CRIT, "iv_unregister_fd: called with fd which "
 				 "is not registered");
@@ -291,7 +305,7 @@ void iv_unregister_fd(struct iv_fd *fd)
 		handled_fd = NULL;
 }
 
-static int should_be_active(struct iv_fd *fd)
+static int should_be_active(struct iv_fd_ *fd)
 {
 	if (fd->flags & (1 << FD_ReadyIn) && fd->handler_in != NULL)
 		return 1;
@@ -303,7 +317,7 @@ static int should_be_active(struct iv_fd *fd)
 	return 0;
 }
 
-static void make_active(struct iv_fd *fd)
+static void make_active(struct iv_fd_ *fd)
 {
 	if (list_empty(&fd->list_active)) {
 		list_add_tail(&fd->list_active, active);
@@ -314,14 +328,14 @@ static void make_active(struct iv_fd *fd)
 	}
 }
 
-void iv_fd_make_ready(struct iv_fd *fd, int band)
+void iv_fd_make_ready(struct iv_fd_ *fd, int band)
 {
 	fd->flags |= 1 << band;
 	if (should_be_active(fd))
 		make_active(fd);
 }
 
-static void make_unready(struct iv_fd *fd, int band)
+static void make_unready(struct iv_fd_ *fd, int band)
 {
 	fd->flags &= ~(1 << band);
 	if (!should_be_active(fd))
@@ -331,8 +345,9 @@ static void make_unready(struct iv_fd *fd, int band)
 		method->reregister_fd(fd);
 }
 
-void iv_fd_set_handler_in(struct iv_fd *fd, void (*handler_in)(void *))
+void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	void (*old_handler_in)(void *);
 	int rereg;
 
@@ -362,8 +377,9 @@ void iv_fd_set_handler_in(struct iv_fd *fd, void (*handler_in)(void *))
 		method->reregister_fd(fd);
 }
 
-void iv_fd_set_handler_out(struct iv_fd *fd, void (*handler_out)(void *))
+void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	void (*old_handler_out)(void *);
 	int rereg;
 
@@ -393,8 +409,9 @@ void iv_fd_set_handler_out(struct iv_fd *fd, void (*handler_out)(void *))
 		method->reregister_fd(fd);
 }
 
-void iv_fd_set_handler_err(struct iv_fd *fd, void (*handler_err)(void *))
+void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	void (*old_handler_err)(void *);
 	int rereg;
 
@@ -426,8 +443,9 @@ void iv_fd_set_handler_err(struct iv_fd *fd, void (*handler_err)(void *))
 
 
 /* wrapping *****************************************************************/
-int iv_accept(struct iv_fd *fd, struct sockaddr *addr, socklen_t *addrlen)
+int iv_accept(struct iv_fd *_fd, struct sockaddr *addr, socklen_t *addrlen)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = accept(fd->fd, addr, addrlen);
@@ -437,8 +455,9 @@ int iv_accept(struct iv_fd *fd, struct sockaddr *addr, socklen_t *addrlen)
 	return ret;
 }
 
-int iv_connect(struct iv_fd *fd, struct sockaddr *addr, socklen_t addrlen)
+int iv_connect(struct iv_fd *_fd, struct sockaddr *addr, socklen_t addrlen)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = connect(fd->fd, addr, addrlen);
@@ -450,8 +469,9 @@ int iv_connect(struct iv_fd *fd, struct sockaddr *addr, socklen_t addrlen)
 	return ret;
 }
 
-ssize_t iv_read(struct iv_fd *fd, void *buf, size_t count)
+ssize_t iv_read(struct iv_fd *_fd, void *buf, size_t count)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = read(fd->fd, buf, count);
@@ -461,8 +481,9 @@ ssize_t iv_read(struct iv_fd *fd, void *buf, size_t count)
 	return ret;
 }
 
-ssize_t iv_readv(struct iv_fd *fd, const struct iovec *vector, int count)
+ssize_t iv_readv(struct iv_fd *_fd, const struct iovec *vector, int count)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = readv(fd->fd, vector, count);
@@ -472,8 +493,9 @@ ssize_t iv_readv(struct iv_fd *fd, const struct iovec *vector, int count)
 	return ret;
 }
 
-int iv_recv(struct iv_fd *fd, void *buf, size_t len, int flags)
+int iv_recv(struct iv_fd *_fd, void *buf, size_t len, int flags)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = recv(fd->fd, buf, len, flags);
@@ -483,9 +505,10 @@ int iv_recv(struct iv_fd *fd, void *buf, size_t len, int flags)
 	return ret;
 }
 
-int iv_recvfrom(struct iv_fd *fd, void *buf, size_t len, int flags,
+int iv_recvfrom(struct iv_fd *_fd, void *buf, size_t len, int flags,
 		struct sockaddr *from, socklen_t *fromlen)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = recvfrom(fd->fd, buf, len, flags, from, fromlen);
@@ -495,8 +518,9 @@ int iv_recvfrom(struct iv_fd *fd, void *buf, size_t len, int flags,
 	return ret;
 }
 
-int iv_recvmsg(struct iv_fd *fd, struct msghdr *msg, int flags)
+int iv_recvmsg(struct iv_fd *_fd, struct msghdr *msg, int flags)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = recvmsg(fd->fd, msg, flags);
@@ -506,8 +530,9 @@ int iv_recvmsg(struct iv_fd *fd, struct msghdr *msg, int flags)
 	return ret;
 }
 
-int iv_send(struct iv_fd *fd, const void *msg, size_t len, int flags)
+int iv_send(struct iv_fd *_fd, const void *msg, size_t len, int flags)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = send(fd->fd, msg, len, flags);
@@ -520,8 +545,9 @@ int iv_send(struct iv_fd *fd, const void *msg, size_t len, int flags)
 #ifdef linux
 #include <sys/sendfile.h>
 
-ssize_t iv_sendfile(struct iv_fd *fd, int in_fd, off_t *offset, size_t count)
+ssize_t iv_sendfile(struct iv_fd *_fd, int in_fd, off_t *offset, size_t count)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = sendfile(fd->fd, in_fd, offset, count);
@@ -532,8 +558,9 @@ ssize_t iv_sendfile(struct iv_fd *fd, int in_fd, off_t *offset, size_t count)
 }
 #endif
 
-int iv_sendmsg(struct iv_fd *fd, const struct msghdr *msg, int flags)
+int iv_sendmsg(struct iv_fd *_fd, const struct msghdr *msg, int flags)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = sendmsg(fd->fd, msg, flags);
@@ -543,9 +570,10 @@ int iv_sendmsg(struct iv_fd *fd, const struct msghdr *msg, int flags)
 	return ret;
 }
 
-int iv_sendto(struct iv_fd *fd, const void *msg, size_t len, int flags,
+int iv_sendto(struct iv_fd *_fd, const void *msg, size_t len, int flags,
 	      const struct sockaddr *to, socklen_t tolen)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = sendto(fd->fd, msg, len, flags, to, tolen);
@@ -555,8 +583,9 @@ int iv_sendto(struct iv_fd *fd, const void *msg, size_t len, int flags,
 	return ret;
 }
 
-ssize_t iv_write(struct iv_fd *fd, const void *buf, size_t count)
+ssize_t iv_write(struct iv_fd *_fd, const void *buf, size_t count)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = write(fd->fd, buf, count);
@@ -566,8 +595,9 @@ ssize_t iv_write(struct iv_fd *fd, const void *buf, size_t count)
 	return ret;
 }
 
-ssize_t iv_writev(struct iv_fd *fd, const struct iovec *vector, int count)
+ssize_t iv_writev(struct iv_fd *_fd, const struct iovec *vector, int count)
 {
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int ret;
 
 	ret = writev(fd->fd, vector, count);

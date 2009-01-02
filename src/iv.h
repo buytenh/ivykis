@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -26,32 +26,49 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <iv_list.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct iv_fd;
-struct iv_task;
-struct iv_timer;
-
-extern struct timespec now;
-
+/*
+ * Library initialisation, main loop.
+ */
 void iv_init(void);
+void iv_main(void);
+void iv_quit(void);
+
+
+/*
+ * Time handling.
+ */
+extern struct timespec now;
+void iv_validate_now(void);
+void iv_invalidate_now(void);
+
+
+/*
+ * File descriptor handling.
+ */
+struct iv_fd {
+	union {
+		struct {
+			int	fd;
+			void	*cookie;
+			void	(*handler_in)(void *);
+			void	(*handler_out)(void *);
+			void	(*handler_err)(void *);
+		};
+		void	*pad[16];
+	};
+};
+
+void INIT_IV_FD(struct iv_fd *);
 void iv_register_fd(struct iv_fd *);
 void iv_unregister_fd(struct iv_fd *);
 void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_out(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
-void iv_register_task(struct iv_task *);
-void iv_unregister_task(struct iv_task *);
-void iv_register_timer(struct iv_timer *);
-void iv_unregister_timer(struct iv_timer *);
-void iv_validate_now(void);
-void iv_invalidate_now(void);
-void iv_main(void);
-void iv_quit(void);
 
 int iv_accept(struct iv_fd *, struct sockaddr *, socklen_t *);
 int iv_connect(struct iv_fd *, struct sockaddr *, socklen_t);
@@ -70,56 +87,41 @@ ssize_t iv_write(struct iv_fd *, const void *, size_t);
 ssize_t iv_writev(struct iv_fd *, const struct iovec *, int);
 
 
-/* internals *****************************************************************/
-struct iv_fd
-{
-	int			fd;
-	void			*cookie;
-	void			(*handler_in)(void *);
-	void			(*handler_out)(void *);
-	void			(*handler_err)(void *);
-
-	struct list_head	list_all;
-	struct list_head	list_active;
-	unsigned int		quotum:8,
-				flags:8,
-				epoch:16;
+/*
+ * Task handling.
+ */
+struct iv_task {
+	union {
+		struct {
+			void	*cookie;
+			void	(*handler)(void *);
+		};
+		void	*pad[16];
+	};
 };
 
-#define INIT_IV_FD(ptr) do {				\
-	(ptr)->fd = -1;					\
-	(ptr)->handler_in = NULL;			\
-	(ptr)->handler_out = NULL;			\
-	(ptr)->handler_err = NULL;			\
-	INIT_LIST_HEAD(&(ptr)->list_all);		\
-} while (0);
+void INIT_IV_TASK(struct iv_task *);
+void iv_register_task(struct iv_task *);
+void iv_unregister_task(struct iv_task *);
 
 
-struct iv_task
-{
-	void			*cookie;
-	void			(*handler)(void *);
-
-	struct list_head	list;
+/*
+ * Timer handling.
+ */
+struct iv_timer {
+	union {
+		struct {
+			struct timespec	expires;
+			void		*cookie;
+			void		(*handler)(void *);
+		};
+		void	*pad[16];
+	};
 };
 
-#define INIT_IV_TASK(ptr) do {				\
-	INIT_LIST_HEAD(&(ptr)->list);			\
-} while (0);
-
-
-struct iv_timer
-{
-	struct timespec		expires;
-	void			*cookie;
-	void			(*handler)(void *);
-
-	int			index;
-};
-
-#define INIT_IV_TIMER(ptr) do {				\
-	(ptr)->index = -1;				\
-} while (0);
+void INIT_IV_TIMER(struct iv_timer *);
+void iv_register_timer(struct iv_timer *);
+void iv_unregister_timer(struct iv_timer *);
 
 #ifdef __cplusplus
 }
