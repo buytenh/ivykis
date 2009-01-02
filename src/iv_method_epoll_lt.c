@@ -33,7 +33,7 @@ static int			batch_size;
 static int			epoll_fd;
 
 
-static int iv_sys_epoll_lt_init(int maxfd)
+static int iv_epoll_lt_init(int maxfd)
 {
 	epoll_fd = epoll_create(maxfd);
 	if (epoll_fd < 0)
@@ -132,13 +132,13 @@ static void internal_unregister(struct iv_fd *fd)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_lt_unregister_fd: got error "
+		syslog(LOG_CRIT, "iv_epoll_lt_unregister_fd: got error "
 				 "%d[%s]", errno, strerror(errno));
 		abort();
 	}
 }
 
-static void iv_sys_epoll_lt_poll(int timeout)
+static void iv_epoll_lt_poll(int timeout)
 {
 	int i;
 	int ret;
@@ -148,7 +148,7 @@ static void iv_sys_epoll_lt_poll(int timeout)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_lt_poll: got error %d[%s]",
+		syslog(LOG_CRIT, "iv_epoll_lt_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -181,7 +181,7 @@ static void iv_sys_epoll_lt_poll(int timeout)
 	}
 }
 
-static void iv_sys_epoll_lt_register_fd(struct iv_fd *fd)
+static void iv_epoll_lt_register_fd(struct iv_fd *fd)
 {
 	struct epoll_event event;
 	int wanted;
@@ -198,7 +198,7 @@ static void iv_sys_epoll_lt_register_fd(struct iv_fd *fd)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_lt_register_fd: got error "
+		syslog(LOG_CRIT, "iv_epoll_lt_register_fd: got error "
 				 "%d[%s]", errno, strerror(errno));
 		abort();
 	}
@@ -206,33 +206,33 @@ static void iv_sys_epoll_lt_register_fd(struct iv_fd *fd)
 	fd->flags |= wanted << FD_RegisteredIn;
 }
 
-static void iv_sys_epoll_lt_reregister_fd(struct iv_fd *fd)
+static void iv_epoll_lt_reregister_fd(struct iv_fd *fd)
 {
 	if (!(fd->flags & (1 << FD_ReadyErr)))
 		queue(fd);
 }
 
-static void iv_sys_epoll_lt_unregister_fd(struct iv_fd *fd)
+static void iv_epoll_lt_unregister_fd(struct iv_fd *fd)
 {
 	if (!(fd->flags & (1 << FD_ReadyErr)))
 		internal_unregister(fd);
 	list_del_init(&(fd->list_all));
 }
 
-static void iv_sys_epoll_lt_deinit(void)
+static void iv_epoll_lt_deinit(void)
 {
 	free(batch);
 	close(epoll_fd);
 }
 
 
-struct iv_poll_method iv_method_sys_epoll_lt = {
-	name:			"sys_epoll_lt",
-	init:			iv_sys_epoll_lt_init,
-	poll:			iv_sys_epoll_lt_poll,
-	register_fd:		iv_sys_epoll_lt_register_fd,
-	reregister_fd:		iv_sys_epoll_lt_reregister_fd,
-	unregister_fd:		iv_sys_epoll_lt_unregister_fd,
-	deinit:			iv_sys_epoll_lt_deinit,
+struct iv_poll_method iv_method_epoll_lt = {
+	name:			"epoll_lt",
+	init:			iv_epoll_lt_init,
+	poll:			iv_epoll_lt_poll,
+	register_fd:		iv_epoll_lt_register_fd,
+	reregister_fd:		iv_epoll_lt_reregister_fd,
+	unregister_fd:		iv_epoll_lt_unregister_fd,
+	deinit:			iv_epoll_lt_deinit,
 };
 #endif

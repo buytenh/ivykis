@@ -188,8 +188,8 @@ void iv_init(void)
 		exclude = NULL;
 
 #ifdef linux
-	consider_poll_method(exclude, &iv_method_sys_epoll);
-	consider_poll_method(exclude, &iv_method_sys_epoll_lt);
+	consider_poll_method(exclude, &iv_method_epoll);
+	consider_poll_method(exclude, &iv_method_epoll_lt);
 #endif
 #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
 	consider_poll_method(exclude, &iv_method_kqueue);

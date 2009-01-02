@@ -34,7 +34,7 @@ static struct list_head		all;
 static int			epoll_fd;
 
 
-static int iv_sys_epoll_init(int maxfd)
+static int iv_epoll_init(int maxfd)
 {
 	epoll_fd = epoll_create(maxfd);
 	if (epoll_fd < 0)
@@ -45,7 +45,7 @@ static int iv_sys_epoll_init(int maxfd)
 	return 0;
 }
 
-static void iv_sys_epoll_poll(int timeout)
+static void iv_epoll_poll(int timeout)
 {
 	struct epoll_event batch[POLL_BATCH_SIZE];
 	int i;
@@ -60,7 +60,7 @@ do_it_again:
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_poll: got error %d[%s]", errno,
+		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();
 	}
@@ -83,7 +83,7 @@ do_it_again:
 	}
 }
 
-static void iv_sys_epoll_register_fd(struct iv_fd *fd)
+static void iv_epoll_register_fd(struct iv_fd *fd)
 {
 	struct epoll_event event;
 	int ret;
@@ -97,7 +97,7 @@ static void iv_sys_epoll_register_fd(struct iv_fd *fd)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_register_fd: got error %d[%s]",
+		syslog(LOG_CRIT, "iv_epoll_register_fd: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -108,7 +108,7 @@ static void iv_sys_epoll_register_fd(struct iv_fd *fd)
  * after the epoll_ctl below.  (Recall that the returned epoll_event
  * structures contain opaque-to-the-kernel userspace pointers, which
  * are dereferenced in the event handler without validation.)  */
-static void iv_sys_epoll_unregister_fd(struct iv_fd *fd)
+static void iv_epoll_unregister_fd(struct iv_fd *fd)
 {
 	struct epoll_event event;
 	int ret;
@@ -120,7 +120,7 @@ static void iv_sys_epoll_unregister_fd(struct iv_fd *fd)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_sys_epoll_unregister_fd: got error %d[%s]",
+		syslog(LOG_CRIT, "iv_epoll_unregister_fd: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -128,19 +128,19 @@ static void iv_sys_epoll_unregister_fd(struct iv_fd *fd)
 	list_del_init(&(fd->list_all));
 }
 
-static void iv_sys_epoll_deinit(void)
+static void iv_epoll_deinit(void)
 {
 	close(epoll_fd);
 }
 
 
-struct iv_poll_method iv_method_sys_epoll = {
-	name:			"sys_epoll",
-	init:			iv_sys_epoll_init,
-	poll:			iv_sys_epoll_poll,
-	register_fd:		iv_sys_epoll_register_fd,
+struct iv_poll_method iv_method_epoll = {
+	name:			"epoll",
+	init:			iv_epoll_init,
+	poll:			iv_epoll_poll,
+	register_fd:		iv_epoll_register_fd,
 	reregister_fd:		NULL,
-	unregister_fd:		iv_sys_epoll_unregister_fd,
-	deinit:			iv_sys_epoll_deinit,
+	unregister_fd:		iv_epoll_unregister_fd,
+	deinit:			iv_epoll_deinit,
 };
 #endif
