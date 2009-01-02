@@ -1,5 +1,4 @@
 OBJS =	iv_main.o			\
-	iv_method_dev_epoll.o		\
 	iv_method_dev_poll.o		\
 	iv_method_kqueue.o		\
 	iv_method_kqueue_lt.o		\

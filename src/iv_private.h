@@ -42,7 +42,6 @@ struct iv_poll_method
 	void	(*deinit)(void);
 };
 
-extern struct iv_poll_method iv_method_dev_epoll;
 extern struct iv_poll_method iv_method_dev_poll;
 extern struct iv_poll_method iv_method_kqueue;
 extern struct iv_poll_method iv_method_kqueue_lt;

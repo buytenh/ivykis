@@ -189,7 +189,6 @@ void iv_init(void)
 
 #ifdef linux
 	consider_poll_method(exclude, &iv_method_sys_epoll);
-	consider_poll_method(exclude, &iv_method_dev_epoll);
 	consider_poll_method(exclude, &iv_method_sys_epoll_lt);
 #endif
 #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
