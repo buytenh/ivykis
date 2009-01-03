@@ -26,9 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include "iv_private.h"
 
 #define UPLOAD_QUEUE_SIZE	(1024)
@@ -115,7 +115,7 @@ static void queue_read(struct iv_fd_ *fd)
 	int wanted;
 
 	regd = !!(fd->flags & FD_RegisteredIn);
-	wanted = wanted_bit(fd, !!(fd->handler_in == NULL), FD_ReadyIn, regd);
+	wanted = wanted_bit(fd, !!(fd->handler_in != NULL), FD_ReadyIn, regd);
 
 	if (regd && !wanted) {
 		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
@@ -134,7 +134,7 @@ static void queue_write(struct iv_fd_ *fd)
 	int wanted;
 
 	regd = !!(fd->flags & FD_RegisteredOut);
-	wanted = wanted_bit(fd, !!(fd->handler_out == NULL), FD_ReadyOut, regd);
+	wanted = wanted_bit(fd, !!(fd->handler_out != NULL), FD_ReadyOut, regd);
 
 	if (regd && !wanted) {
 		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
