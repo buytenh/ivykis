@@ -41,8 +41,9 @@ struct iv_fd_ {
 	 */
 	struct list_head	list_all;
 	struct list_head	list_active;
-	unsigned int		quotum:8,
-				flags:8,
+	unsigned		quotum:8,
+				ready_bands:3,
+				registered_bands:3,
 				epoch:16;
 };
 
@@ -77,13 +78,9 @@ struct iv_timer_ {
 /*
  * Misc internal stuff.
  */
-#define FD_ReadyIn		0
-#define FD_ReadyOut		1
-#define FD_ReadyErr		2
-#define FD_ReadyMask		((1 << FD_ReadyIn) | (1 << FD_ReadyOut) | (1 << FD_ReadyErr))
-#define FD_RegisteredIn		3
-#define FD_RegisteredOut	4
-#define FD_RegisteredErr	5
+#define MASKIN		1
+#define MASKOUT		2
+#define MASKERR		4
 
 struct iv_poll_method {
 	char	*name;

@@ -133,11 +133,12 @@ static void flush_upload_queue(void)
 	upload_entries = 0;
 }
 
-static int wanted_bits(struct iv_fd_ *fd, int regd)
+static int wanted_bits(struct iv_fd_ *fd)
 {
 	int wanted;
 	int handler;
 	int ready;
+	int regd;
 
 	/*
 	 * We are being unregistered?
@@ -148,20 +149,22 @@ static int wanted_bits(struct iv_fd_ *fd, int regd)
 	/*
 	 * Error condition raised?
 	 */
-	if (fd->flags & (1 << FD_ReadyErr))
+	if (fd->ready_bands & MASKERR)
 		return 0;
 
-	wanted = 4;
+	wanted = MASKERR;
 
 	handler = !!(fd->handler_in != NULL);
-	ready = !!(fd->flags & (1 << FD_ReadyIn));
-	if ((handler && !ready) || ((regd & 1) && (handler || !ready)))
-		wanted |= 1;
+	ready = !!(fd->ready_bands & MASKIN);
+	regd = !!(fd->registered_bands & MASKIN);
+	if ((handler && !ready) || (regd && (handler || !ready)))
+		wanted |= MASKIN;
 
 	handler = !!(fd->handler_out != NULL);
-	ready = !!(fd->flags & (1 << FD_ReadyOut));
-	if ((handler && !ready) || ((regd & 2) && (handler || !ready)))
-		wanted |= 2;
+	ready = !!(fd->ready_bands & MASKOUT);
+	regd = !!(fd->registered_bands & MASKOUT);
+	if ((handler && !ready) || (regd && (handler || !ready)))
+		wanted |= MASKOUT;
 
 	return wanted;
 }
@@ -184,16 +187,14 @@ static int bits_to_poll_mask(int bits)
 
 static void queue(struct iv_fd_ *fd)
 {
-	int regd;
 	int wanted;
 
 	if (upload_entries > UPLOAD_QUEUE_SIZE - 2)
 		flush_upload_queue();
 
-	regd = (fd->flags >> FD_RegisteredIn) & 7;
-	wanted = wanted_bits(fd, regd);
+	wanted = wanted_bits(fd);
 
-	if (regd & ~wanted) {
+	if (fd->registered_bands & ~wanted) {
 		upload_queue[upload_entries].fd = fd->fd;
 		upload_queue[upload_entries].events = POLLREMOVE;
 		upload_entries++;
@@ -205,8 +206,7 @@ static void queue(struct iv_fd_ *fd)
 		upload_entries++;
 	}
 
-	fd->flags &= ~(7 << FD_RegisteredIn);
-	fd->flags |= wanted << FD_RegisteredIn;
+	fd->registered_bands = wanted;
 }
 
 static void iv_dev_poll_poll(int msec)
@@ -256,17 +256,17 @@ static void iv_dev_poll_poll(int msec)
 
 			should_queue = 0;
 			if (batch[i].revents & (POLLIN | POLLERR | POLLHUP)) {
-				iv_fd_make_ready(fd, FD_ReadyIn);
+				iv_fd_make_ready(fd, MASKIN);
 				if (fd->handler_in == NULL)
 					should_queue = 1;
 			}
 			if (batch[i].revents & (POLLOUT | POLLERR)) {
-				iv_fd_make_ready(fd, FD_ReadyOut);
+				iv_fd_make_ready(fd, MASKOUT);
 				if (fd->handler_out == NULL)
 					should_queue = 1;
 			}
 			if (batch[i].revents & POLLERR) {
-				iv_fd_make_ready(fd, FD_ReadyErr);
+				iv_fd_make_ready(fd, MASKERR);
 				should_queue = 1;
 			}
 

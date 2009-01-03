@@ -51,23 +51,26 @@ static int iv_epoll_init(int maxfd)
 	return 0;
 }
 
-static int wanted_bits(struct iv_fd_ *fd, int regd)
+static int wanted_bits(struct iv_fd_ *fd)
 {
 	int wanted;
 	int handler;
 	int ready;
+	int regd;
 
 	wanted = 0;
 
 	handler = !!(fd->handler_in != NULL);
-	ready = !!(fd->flags & 1 << FD_ReadyIn);
-	if ((handler && !ready) || ((regd & 1) && (handler || !ready)))
-		wanted |= 1;
+	ready = !!(fd->ready_bands & MASKIN);
+	regd = !!(fd->registered_bands & MASKIN);
+	if ((handler && !ready) || (regd && (handler || !ready)))
+		wanted |= MASKIN;
 
 	handler = !!(fd->handler_out != NULL);
-	ready = !!(fd->flags & 1 << FD_ReadyOut);
-	if ((handler && !ready) || ((regd & 2) && (handler || !ready)))
-		wanted |= 2;
+	ready = !!(fd->ready_bands & MASKOUT);
+	regd = !!(fd->registered_bands & MASKOUT);
+	if ((handler && !ready) || (regd && (handler || !ready)))
+		wanted |= MASKOUT;
 
 	return wanted;
 }
@@ -87,13 +90,11 @@ static int bits_to_poll_mask(int bits)
 
 static void queue(struct iv_fd_ *fd)
 {
-	int regd;
 	int wanted;
 
-	regd = (fd->flags >> FD_RegisteredIn) & 3;
-	wanted = wanted_bits(fd, regd);
+	wanted = wanted_bits(fd);
 
-	if (regd != wanted) {
+	if (fd->registered_bands != wanted) {
 		struct epoll_event event;
 		int ret;
 
@@ -109,10 +110,9 @@ static void queue(struct iv_fd_ *fd)
 			       strerror(errno));
 			abort();
 		}
-	}
 
-	fd->flags &= ~(7 << FD_RegisteredIn);
-	fd->flags |= wanted << FD_RegisteredIn;
+		fd->registered_bands = wanted;
+	}
 }
 
 /*
@@ -164,17 +164,17 @@ static void iv_epoll_poll(int msec)
 
 			should_queue = 0;
 			if (batch[i].events & (EPOLLIN | EPOLLERR | EPOLLHUP)) {
-				iv_fd_make_ready(fd, FD_ReadyIn);
+				iv_fd_make_ready(fd, MASKIN);
 				if (fd->handler_in == NULL)
 					should_queue = 1;
 			}
 			if (batch[i].events & (EPOLLOUT | EPOLLERR)) {
-				iv_fd_make_ready(fd, FD_ReadyOut);
+				iv_fd_make_ready(fd, MASKOUT);
 				if (fd->handler_out == NULL)
 					should_queue = 1;
 			}
 			if (batch[i].events & EPOLLERR) {
-				iv_fd_make_ready(fd, FD_ReadyErr);
+				iv_fd_make_ready(fd, MASKERR);
 				internal_unregister(fd);
 			} else if (should_queue) {
 				queue(fd);
@@ -191,7 +191,7 @@ static void iv_epoll_register_fd(struct iv_fd_ *fd)
 
 	list_add_tail(&fd->list_all, &all);
 
-	wanted = wanted_bits(fd, 0);
+	wanted = wanted_bits(fd);
 
 	event.data.ptr = fd;
 	event.events = bits_to_poll_mask(wanted);
@@ -205,18 +205,18 @@ static void iv_epoll_register_fd(struct iv_fd_ *fd)
 		abort();
 	}
 
-	fd->flags |= wanted << FD_RegisteredIn;
+	fd->registered_bands = wanted;
 }
 
 static void iv_epoll_reregister_fd(struct iv_fd_ *fd)
 {
-	if (!(fd->flags & (1 << FD_ReadyErr)))
+	if (!(fd->ready_bands & MASKERR))
 		queue(fd);
 }
 
 static void iv_epoll_unregister_fd(struct iv_fd_ *fd)
 {
-	if (!(fd->flags & (1 << FD_ReadyErr)))
+	if (!(fd->ready_bands & MASKERR))
 		internal_unregister(fd);
 	list_del_init(&fd->list_all);
 }

@@ -170,17 +170,17 @@ static void iv_run_active_list(void)
 		if (fd->quotum--) {
 			handled_fd = fd;
 
-			if (fd->flags & (1 << FD_ReadyErr) &&
+			if (fd->ready_bands & MASKERR &&
 			    fd->handler_err != NULL)
 				fd->handler_err(fd->cookie);
 
 			if (handled_fd != NULL &&
-			    fd->flags & (1 << FD_ReadyIn) &&
+			    fd->ready_bands & MASKIN &&
 			    fd->handler_in != NULL)
 				fd->handler_in(fd->cookie);
 
 			if (handled_fd != NULL &&
-			    fd->flags & (1 << FD_ReadyOut) &&
+			    fd->ready_bands & MASKOUT &&
 			    fd->handler_out != NULL)
 				fd->handler_out(fd->cookie);
 
@@ -279,7 +279,8 @@ void iv_register_fd(struct iv_fd *_fd)
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));
 
 	INIT_LIST_HEAD(&fd->list_active);
-	fd->flags = 0;
+	fd->ready_bands = 0;
+	fd->registered_bands = 0;
 	fd->epoch = epoch - 1;
 
 	numfds++;
@@ -306,11 +307,11 @@ void iv_unregister_fd(struct iv_fd *_fd)
 
 static int should_be_active(struct iv_fd_ *fd)
 {
-	if (fd->flags & (1 << FD_ReadyIn) && fd->handler_in != NULL)
+	if (fd->ready_bands & MASKIN && fd->handler_in != NULL)
 		return 1;
-	if (fd->flags & (1 << FD_ReadyOut) && fd->handler_out != NULL)
+	if (fd->ready_bands & MASKOUT && fd->handler_out != NULL)
 		return 1;
-	if (fd->flags & (1 << FD_ReadyErr) && fd->handler_err != NULL)
+	if (fd->ready_bands & MASKERR && fd->handler_err != NULL)
 		return 1;
 
 	return 0;
@@ -327,16 +328,16 @@ static void make_active(struct iv_fd_ *fd)
 	}
 }
 
-void iv_fd_make_ready(struct iv_fd_ *fd, int band)
+void iv_fd_make_ready(struct iv_fd_ *fd, int bandmask)
 {
-	fd->flags |= 1 << band;
+	fd->ready_bands |= bandmask;
 	if (should_be_active(fd))
 		make_active(fd);
 }
 
-static void make_unready(struct iv_fd_ *fd, int band)
+static void make_unready(struct iv_fd_ *fd, int bandmask)
 {
-	fd->flags &= ~(1 << band);
+	fd->ready_bands &= ~bandmask;
 	if (!should_be_active(fd))
 		list_del_init(&fd->list_active);
 
@@ -362,7 +363,7 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 
 	if (handler_in != NULL) {
 		if (old_handler_in == NULL) {
-			if (fd->flags & (1 << FD_ReadyIn))
+			if (fd->ready_bands & MASKIN)
 				make_active(fd);
 			rereg = 1;
 		}
@@ -394,7 +395,7 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 
 	if (handler_out != NULL) {
 		if (old_handler_out == NULL) {
-			if (fd->flags & (1 << FD_ReadyOut))
+			if (fd->ready_bands & MASKOUT)
 				make_active(fd);
 			rereg = 1;
 		}
@@ -426,7 +427,7 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 
 	if (handler_err != NULL) {
 		if (old_handler_err == NULL) {
-			if (fd->flags & (1 << FD_ReadyErr))
+			if (fd->ready_bands & MASKERR)
 				make_active(fd);
 			rereg = 1;
 		}
@@ -449,7 +450,7 @@ int iv_accept(struct iv_fd *_fd, struct sockaddr *addr, socklen_t *addrlen)
 
 	ret = accept(fd->fd, addr, addrlen);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -460,10 +461,8 @@ int iv_connect(struct iv_fd *_fd, struct sockaddr *addr, socklen_t addrlen)
 	int ret;
 
 	ret = connect(fd->fd, addr, addrlen);
-	if (ret == -1 && (errno == EINPROGRESS || errno == EALREADY)) {
-		make_unready(fd, FD_ReadyIn);
-		make_unready(fd, FD_ReadyOut);
-	}
+	if (ret == -1 && (errno == EINPROGRESS || errno == EALREADY))
+		make_unready(fd, MASKIN | MASKOUT);
 
 	return ret;
 }
@@ -475,7 +474,7 @@ ssize_t iv_read(struct iv_fd *_fd, void *buf, size_t count)
 
 	ret = read(fd->fd, buf, count);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -487,7 +486,7 @@ ssize_t iv_readv(struct iv_fd *_fd, const struct iovec *vector, int count)
 
 	ret = readv(fd->fd, vector, count);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -499,7 +498,7 @@ int iv_recv(struct iv_fd *_fd, void *buf, size_t len, int flags)
 
 	ret = recv(fd->fd, buf, len, flags);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -512,7 +511,7 @@ int iv_recvfrom(struct iv_fd *_fd, void *buf, size_t len, int flags,
 
 	ret = recvfrom(fd->fd, buf, len, flags, from, fromlen);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -524,7 +523,7 @@ int iv_recvmsg(struct iv_fd *_fd, struct msghdr *msg, int flags)
 
 	ret = recvmsg(fd->fd, msg, flags);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyIn);
+		make_unready(fd, MASKIN);
 
 	return ret;
 }
@@ -536,7 +535,7 @@ int iv_send(struct iv_fd *_fd, const void *msg, size_t len, int flags)
 
 	ret = send(fd->fd, msg, len, flags);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }
@@ -551,7 +550,7 @@ ssize_t iv_sendfile(struct iv_fd *_fd, int in_fd, off_t *offset, size_t count)
 
 	ret = sendfile(fd->fd, in_fd, offset, count);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }
@@ -564,7 +563,7 @@ int iv_sendmsg(struct iv_fd *_fd, const struct msghdr *msg, int flags)
 
 	ret = sendmsg(fd->fd, msg, flags);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }
@@ -577,7 +576,7 @@ int iv_sendto(struct iv_fd *_fd, const void *msg, size_t len, int flags,
 
 	ret = sendto(fd->fd, msg, len, flags, to, tolen);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }
@@ -589,7 +588,7 @@ ssize_t iv_write(struct iv_fd *_fd, const void *buf, size_t count)
 
 	ret = write(fd->fd, buf, count);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }
@@ -601,7 +600,7 @@ ssize_t iv_writev(struct iv_fd *_fd, const struct iovec *vector, int count)
 
 	ret = writev(fd->fd, vector, count);
 	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, FD_ReadyOut);
+		make_unready(fd, MASKOUT);
 
 	return ret;
 }

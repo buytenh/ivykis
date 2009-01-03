@@ -140,12 +140,12 @@ static void iv_select_poll(int msec)
 			}
 
 			if (pollin) {
-				iv_fd_make_ready(fd, FD_ReadyIn);
+				iv_fd_make_ready(fd, MASKIN);
 				FD_CLR(fd->fd, readfds_master);
 			}
 
 			if (pollout) {
-				iv_fd_make_ready(fd, FD_ReadyOut);
+				iv_fd_make_ready(fd, MASKOUT);
 				FD_CLR(fd->fd, writefds_master);
 			}
 		}
@@ -169,12 +169,12 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 
 static void iv_select_reregister_fd(struct iv_fd_ *fd)
 {
-	if (fd->handler_in == NULL || fd->flags & (1 << FD_ReadyIn))
+	if (fd->handler_in == NULL || fd->ready_bands & MASKIN)
 		FD_CLR(fd->fd, readfds_master);
 	else
 		FD_SET(fd->fd, readfds_master);
 
-	if (fd->handler_out == NULL || fd->flags & (1 << FD_ReadyOut))
+	if (fd->handler_out == NULL || fd->ready_bands & MASKOUT)
 		FD_CLR(fd->fd, writefds_master);
 	else
 		FD_SET(fd->fd, writefds_master);

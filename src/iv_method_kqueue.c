@@ -93,16 +93,18 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
-static int wanted_bit(struct iv_fd_ *fd, int handler, int band, int regd)
+static int wanted_bit(struct iv_fd_ *fd, int handler, int bandmask)
 {
 	int wanted;
 
 	wanted = 0;
 	if (!list_empty(&fd->list_all)) {
 		int ready;
+		int regd;
 
-		ready = !!(fd->flags & 1 << band);
-		if ((handler && !ready) || ((regd & 1) && (handler || !ready)))
+		ready = !!(fd->ready_bands & bandmask);
+		regd = !!(fd->registered_bands & bandmask);
+		if ((handler && !ready) || (regd && (handler || !ready)))
 			wanted = 1;
 	}
 
@@ -111,40 +113,34 @@ static int wanted_bit(struct iv_fd_ *fd, int handler, int band, int regd)
 
 static void queue_read(struct iv_fd_ *fd)
 {
-	int regd;
 	int wanted;
 
-	regd = !!(fd->flags & FD_RegisteredIn);
-	wanted = wanted_bit(fd, !!(fd->handler_in != NULL), FD_ReadyIn, regd);
+	wanted = wanted_bit(fd, !!(fd->handler_in != NULL), MASKIN);
 
-	if (regd && !wanted) {
+	if ((fd->registered_bands & MASKIN) && !wanted) {
 		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
-	} else if (wanted && !regd) {
+		fd->registered_bands &= ~MASKIN;
+	} else if (wanted && !(fd->registered_bands & MASKIN)) {
 		queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
 		      0, 0, (void *)fd);
+		fd->registered_bands |= MASKIN;
 	}
-
-	fd->flags &= ~(1 << FD_RegisteredIn);
-	fd->flags |= wanted << FD_RegisteredIn;
 }
 
 static void queue_write(struct iv_fd_ *fd)
 {
-	int regd;
 	int wanted;
 
-	regd = !!(fd->flags & FD_RegisteredOut);
-	wanted = wanted_bit(fd, !!(fd->handler_out != NULL), FD_ReadyOut, regd);
+	wanted = wanted_bit(fd, !!(fd->handler_out != NULL), MASKOUT);
 
-	if (regd && !wanted) {
+	if ((fd->registered_bands & MASKOUT) && !wanted) {
 		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
-	} else if (wanted && !regd) {
+		fd->registered_bands &= ~MASKOUT;
+	} else if (wanted && !(fd->registered_bands & MASKOUT)) {
 		queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
 		      0, 0, (void *)fd);
+		fd->registered_bands |= MASKOUT;
 	}
-
-	fd->flags &= ~(1 << FD_RegisteredOut);
-	fd->flags |= wanted << FD_RegisteredOut;
 }
 
 static void iv_kqueue_poll(int msec)
@@ -174,11 +170,11 @@ static void iv_kqueue_poll(int msec)
 
 		fd = batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
-			iv_fd_make_ready(fd, FD_ReadyIn);
+			iv_fd_make_ready(fd, MASKIN);
 			if (fd->handler_in == NULL)
 				queue_read(fd);
 		} else if (batch[i].filter == EVFILT_WRITE) {
-			iv_fd_make_ready(fd, FD_ReadyOut);
+			iv_fd_make_ready(fd, MASKOUT);
 			if (fd->handler_out == NULL)
 				queue_write(fd);
 		} else {

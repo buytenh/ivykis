@@ -53,11 +53,11 @@ static int __poll_mask(struct iv_fd_ *fd)
 	int mask;
 
 	mask = 0;
-	if (!(fd->flags & (1 << FD_ReadyErr))) {
+	if (!(fd->ready_bands & MASKERR)) {
 		mask = POLLERR;
-		if (fd->handler_in != NULL && !(fd->flags & 1 << FD_ReadyIn))
+		if (fd->handler_in != NULL && !(fd->ready_bands & MASKIN))
 			mask |= POLLIN | POLLHUP;
-		if (fd->handler_out != NULL && !(fd->flags & 1 << FD_ReadyOut))
+		if (fd->handler_out != NULL && !(fd->ready_bands & MASKOUT))
 			mask |= POLLOUT;
 	}
 
@@ -102,11 +102,11 @@ static void iv_poll_poll(int msec)
 			struct iv_fd_ *fd = fds[i];
 
 			if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
-				iv_fd_make_ready(fd, FD_ReadyIn);
+				iv_fd_make_ready(fd, MASKIN);
 			if (pfds[i].revents & (POLLOUT | POLLERR))
-				iv_fd_make_ready(fd, FD_ReadyOut);
+				iv_fd_make_ready(fd, MASKOUT);
 			if (pfds[i].revents & POLLERR)
-				iv_fd_make_ready(fd, FD_ReadyErr);
+				iv_fd_make_ready(fd, MASKERR);
 
 			pfds[i].events = __poll_mask(fd);
 			if (pfds[i].events == 0) {
