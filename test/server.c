@@ -73,11 +73,19 @@ int main()
 
 	for (i = 0; i < sizeof(hh) / sizeof(hh[0]); i++) {
 		int sock;
+		int yes;
 		struct handle *h = hh + i;
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock < 0) {
 			perror("socket");
+			return 1;
+		}
+
+		yes = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+			       &yes, sizeof(yes)) < 0) {
+			perror("setsockopt");
 			return 1;
 		}
 
