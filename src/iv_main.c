@@ -27,7 +27,6 @@
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <sys/uio.h>
 #include <unistd.h>
 #include "iv_private.h"
 
@@ -390,103 +389,4 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 	fd->handler_err = handler_err;
 	if (notify)
 		notify_fd(fd);
-}
-
-
-/* wrapping *****************************************************************/
-int iv_accept(struct iv_fd *_fd, struct sockaddr *addr, socklen_t *addrlen)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return accept(fd->fd, addr, addrlen);
-}
-
-int iv_connect(struct iv_fd *_fd, struct sockaddr *addr, socklen_t addrlen)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return connect(fd->fd, addr, addrlen);
-}
-
-ssize_t iv_read(struct iv_fd *_fd, void *buf, size_t count)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return read(fd->fd, buf, count);
-}
-
-ssize_t iv_readv(struct iv_fd *_fd, const struct iovec *vector, int count)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return readv(fd->fd, vector, count);
-}
-
-int iv_recv(struct iv_fd *_fd, void *buf, size_t len, int flags)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return recv(fd->fd, buf, len, flags);
-}
-
-int iv_recvfrom(struct iv_fd *_fd, void *buf, size_t len, int flags,
-		struct sockaddr *from, socklen_t *fromlen)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return recvfrom(fd->fd, buf, len, flags, from, fromlen);
-}
-
-int iv_recvmsg(struct iv_fd *_fd, struct msghdr *msg, int flags)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return recvmsg(fd->fd, msg, flags);
-}
-
-int iv_send(struct iv_fd *_fd, const void *msg, size_t len, int flags)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return send(fd->fd, msg, len, flags);
-}
-
-#ifdef linux
-#include <sys/sendfile.h>
-
-ssize_t iv_sendfile(struct iv_fd *_fd, int in_fd, off_t *offset, size_t count)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return sendfile(fd->fd, in_fd, offset, count);
-}
-#endif
-
-int iv_sendmsg(struct iv_fd *_fd, const struct msghdr *msg, int flags)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return sendmsg(fd->fd, msg, flags);
-}
-
-int iv_sendto(struct iv_fd *_fd, const void *msg, size_t len, int flags,
-	      const struct sockaddr *to, socklen_t tolen)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return sendto(fd->fd, msg, len, flags, to, tolen);
-}
-
-ssize_t iv_write(struct iv_fd *_fd, const void *buf, size_t count)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return write(fd->fd, buf, count);
-}
-
-ssize_t iv_writev(struct iv_fd *_fd, const struct iovec *vector, int count)
-{
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-
-	return writev(fd->fd, vector, count);
 }

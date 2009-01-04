@@ -70,21 +70,7 @@ void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_out(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
 
-int iv_accept(struct iv_fd *, struct sockaddr *, socklen_t *);
-int iv_connect(struct iv_fd *, struct sockaddr *, socklen_t);
-ssize_t iv_read(struct iv_fd *, void *, size_t);
-ssize_t iv_readv(struct iv_fd *, const struct iovec *, int);
-int iv_recv(struct iv_fd *, void *, size_t, int);
-int iv_recvfrom(struct iv_fd *, void *, size_t, int, struct sockaddr *,
-		socklen_t *);
-int iv_recvmsg(struct iv_fd *, struct msghdr *, int);
-ssize_t iv_sendfile(struct iv_fd *, int, off_t *, size_t);
-int iv_send(struct iv_fd *, const void *, size_t, int);
-int iv_sendmsg(struct iv_fd *, const struct msghdr *, int);
-int iv_sendto(struct iv_fd *, const void *, size_t, int,
-	      const struct sockaddr *, socklen_t);
-ssize_t iv_write(struct iv_fd *, const void *, size_t);
-ssize_t iv_writev(struct iv_fd *, const struct iovec *, int);
+#include <iv_fd_compat.h>
 
 
 /*
