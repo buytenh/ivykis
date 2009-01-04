@@ -31,7 +31,7 @@ static void connected(void *_dummy)
 {
 	int ret;
 
-	ret = iv_connect(&ifd, (struct sockaddr *)&addr, sizeof(addr));
+	ret = connect(ifd.fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (ret == -1) {
 		if (errno == EALREADY || errno == EINPROGRESS)
 			return;

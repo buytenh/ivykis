@@ -36,8 +36,8 @@ static void connected(void *c)
 	struct connector *conn = (struct connector *)c;
 	int ret;
 
-	ret = iv_connect(&conn->fd, (struct sockaddr *)&conn->addr,
-			 sizeof(conn->addr));
+	ret = connect(conn->fd.fd, (struct sockaddr *)&conn->addr,
+		      sizeof(conn->addr));
 	if (ret == -1) {
 		if (errno == EALREADY || errno == EINPROGRESS)
 			return;

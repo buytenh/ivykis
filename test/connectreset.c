@@ -56,7 +56,7 @@ static void got_connection(void *_dummy)
 	int ret;
 
 	addrlen = sizeof(addr);
-	ret = iv_accept(&server_socket, (struct sockaddr *)&addr, &addrlen);
+	ret = accept(server_socket.fd, (struct sockaddr *)&addr, &addrlen);
 	if (ret <= 0) {
 		if (ret == 0 || errno != EAGAIN) {
 			perror("accept");
@@ -127,11 +127,11 @@ static void connected(void *_dummy)
 {
 	int ret;
 
-	ret = iv_connect(&ifd, (struct sockaddr *)&addr, sizeof(addr));
+	ret = connect(ifd.fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (ret < 0) {
 		if (errno == EALREADY || errno == EINPROGRESS)
 			return;
-		perror("iv_connect");
+		perror("connect");
 		iv_fd_set_handler_in(&ifd, NULL);
 		iv_fd_set_handler_out(&ifd, NULL);
 		iv_quit();

@@ -46,7 +46,7 @@ static void handler(void *_h)
 	int ret;
 
 	addrlen = sizeof(addr);
-	ret = iv_accept(&h->fd, (struct sockaddr *)&addr, &addrlen);
+	ret = accept(h->fd.fd, (struct sockaddr *)&addr, &addrlen);
 	if (ret > 0) {
 		char buf[128];
 		int len;
