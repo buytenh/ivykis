@@ -210,22 +210,22 @@ void iv_main(void)
 	quit = 0;
 	while (!should_quit()) {
 		struct timespec to;
+		int msec;
+
+		iv_run_timers();
+		iv_run_tasks();
+
+		if (!iv_get_soonest_timeout(&to)) {
+			msec = 1000 * to.tv_sec;
+			msec += (to.tv_nsec + 999999) / 1000000;
+		} else {
+			msec = 0;
+		}
+		method->poll(&active, msec);
 
 		iv_invalidate_now();
 
-		do {
-			iv_run_active_list(&active);
-			iv_run_timers();
-			iv_run_tasks();
-		} while (!list_empty(&active));
-
-		if (!should_quit() && !iv_get_soonest_timeout(&to)) {
-			int msec;
-
-			msec = 1000 * to.tv_sec;
-			msec += (to.tv_nsec + 999999) / 1000000;
-			method->poll(&active, msec);
-		}
+		iv_run_active_list(&active);
 	}
 }
 
