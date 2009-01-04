@@ -1,7 +1,7 @@
-all:		client connectfail connectreset null nullclose server timer timer_rat
+all:		client connectfail connectreset null nullclose server spliceecho timer timer_rat
 
 clean:
-		rm -f client connectfail connectreset null nullclose server timer timer_rat
+		rm -f client connectfail connectreset null nullclose server spliceecho timer timer_rat
 
 client:		client.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o client client.c `../misc/ivykis-config --cflags --libs`
@@ -20,6 +20,9 @@ nullclose:	nullclose.c ../src/libivykis.a
 
 server:		server.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o server server.c `../misc/ivykis-config --cflags --libs`
+
+spliceecho:	spliceecho.c ../src/libivykis.a
+		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o spliceecho spliceecho.c `../misc/ivykis-config --cflags --libs`
 
 timer:		timer.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o timer timer.c `../misc/ivykis-config --cflags --libs`
