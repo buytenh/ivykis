@@ -30,13 +30,13 @@
 
 #define HASH_SIZE		(512)
 
-static struct list_head		*all;
-static int			setsize;
-static int			fd_max;
-static fd_set			*readfds_master;
-static fd_set			*writefds_master;
-static fd_set			*readfds;
-static fd_set			*writefds;
+static struct list_head	*htable;
+static int		setsize;
+static int		fd_max;
+static fd_set		*readfds_master;
+static fd_set		*writefds_master;
+static fd_set		*readfds;
+static fd_set		*writefds;
 
 
 static unsigned int __fd_hash(unsigned int fd)
@@ -50,10 +50,10 @@ static struct iv_fd_ *find_fd(int fd)
 	struct list_head *lh;
 	struct iv_fd_ *ret = NULL;
 
-	list_for_each(lh, &all[hash]) {
+	list_for_each(lh, &htable[hash]) {
 		struct iv_fd_ *f;
 
-		f = list_entry(lh, struct iv_fd_, list_all);
+		f = list_entry(lh, struct iv_fd_, list_hash);
 		if (f->fd == fd) {
 			ret = f;
 			break;
@@ -70,15 +70,15 @@ static int iv_select_init(int maxfd)
 	unsigned char *fdsets;
 	int i;
 
-	all = malloc(HASH_SIZE * sizeof(*all));
-	if (all == NULL)
+	htable = malloc(HASH_SIZE * sizeof(*htable));
+	if (htable == NULL)
 		return -1;
 
 	setsize = (maxfd + 7) / 8;
 
 	fdsets = malloc(4 * setsize);
 	if (fdsets == NULL) {
-		free(all);
+		free(htable);
 		return -1;
 	}
 
@@ -88,14 +88,14 @@ static int iv_select_init(int maxfd)
 	writefds = (fd_set *)(fdsets + 3 * setsize);
 
 	for (i = 0; i < HASH_SIZE; i++)
-		INIT_LIST_HEAD(&all[i]);
+		INIT_LIST_HEAD(&htable[i]);
 	fd_max = 0;
 	memset(readfds_master, 0, 2*setsize);
 
 	return 0;
 }
 
-static void iv_select_poll(int msec)
+static void iv_select_poll(struct list_head *active, int msec)
 {
 	int i;
 	int ret;
@@ -112,9 +112,9 @@ static void iv_select_poll(int msec)
 		to.tv_sec = msec / 1000;
 		to.tv_usec = 1000 * (msec % 1000);
 
-		memcpy(readfds, readfds_master, (fd_max/8) + 1);
-		memcpy(writefds, writefds_master, (fd_max/8) + 1);
-		ret = select(fd_max+1, readfds, writefds, NULL, &to);
+		memcpy(readfds, readfds_master, (fd_max / 8) + 1);
+		memcpy(writefds, writefds_master, (fd_max / 8) + 1);
+		ret = select(fd_max + 1, readfds, writefds, NULL, &to);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -139,26 +139,18 @@ static void iv_select_poll(int msec)
 				abort();
 			}
 
-			if (pollin) {
-				iv_fd_make_ready(fd, MASKIN);
-				FD_CLR(fd->fd, readfds_master);
-			}
+			if (pollin)
+				iv_fd_make_ready(active, fd, MASKIN);
 
-			if (pollout) {
-				iv_fd_make_ready(fd, MASKOUT);
-				FD_CLR(fd->fd, writefds_master);
-			}
+			if (pollout)
+				iv_fd_make_ready(active, fd, MASKOUT);
 		}
 	}
 }
 
 static void iv_select_register_fd(struct iv_fd_ *fd)
 {
-	list_add_tail(&fd->list_all, &all[__fd_hash(fd->fd)]);
-	if (fd->handler_in != NULL)
-		FD_SET(fd->fd, readfds_master);
-	if (fd->handler_out != NULL)
-		FD_SET(fd->fd, writefds_master);
+	list_add_tail(&fd->list_hash, &htable[__fd_hash(fd->fd)]);
 
 	/*
 	 * @@@ Room for optimisation here.
@@ -167,30 +159,30 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 		fd_max = fd->fd;
 }
 
-static void iv_select_reregister_fd(struct iv_fd_ *fd)
+static void iv_select_unregister_fd(struct iv_fd_ *fd)
 {
-	if (fd->handler_in == NULL || fd->ready_bands & MASKIN)
+	list_del_init(&fd->list_hash);
+}
+
+static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
+{
+	if (wanted & MASKIN)
 		FD_CLR(fd->fd, readfds_master);
 	else
 		FD_SET(fd->fd, readfds_master);
 
-	if (fd->handler_out == NULL || fd->ready_bands & MASKOUT)
+	if (wanted & MASKOUT)
 		FD_CLR(fd->fd, writefds_master);
 	else
 		FD_SET(fd->fd, writefds_master);
-}
 
-static void iv_select_unregister_fd(struct iv_fd_ *fd)
-{
-	list_del_init(&fd->list_all);
-	FD_CLR(fd->fd, readfds_master);
-	FD_CLR(fd->fd, writefds_master);
+	fd->registered_bands = wanted;
 }
 
 static void iv_select_deinit(void)
 {
 	free(readfds_master);
-	free(all);
+	free(htable);
 }
 
 
@@ -199,7 +191,7 @@ struct iv_poll_method iv_method_select = {
 	.init		= iv_select_init,
 	.poll		= iv_select_poll,
 	.register_fd	= iv_select_register_fd,
-	.reregister_fd	= iv_select_reregister_fd,
 	.unregister_fd	= iv_select_unregister_fd,
+	.notify_fd	= iv_select_notify_fd,
 	.deinit		= iv_select_deinit,
 };

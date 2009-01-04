@@ -67,83 +67,7 @@ static int iv_kqueue_init(int maxfd)
 	return 0;
 }
 
-static void queue(u_int ident, short filter, u_short flags,
-		  u_int fflags, int data, void *udata)
-{
-	if (upload_entries == UPLOAD_QUEUE_SIZE) {
-		struct timespec to = { 0, 0 };
-		int ret;
-
-		do {
-			ret = kevent(kqueue_fd, upload_queue,
-				     upload_entries, NULL, 0, &to);
-		} while (ret < 0 && errno == EINTR);
-
-		if (ret < 0) {
-			syslog(LOG_CRIT, "queue: got error %d[%s]",
-			       errno, strerror(errno));
-			abort();
-		}
-
-		upload_entries = 0;
-	}
-
-	EV_SET(&upload_queue[upload_entries], ident, filter, flags,
-	       fflags, data, udata);
-	upload_entries++;
-}
-
-static int wanted_bit(struct iv_fd_ *fd, int handler, int bandmask)
-{
-	int wanted;
-
-	wanted = 0;
-	if (!list_empty(&fd->list_all)) {
-		int ready;
-		int regd;
-
-		ready = !!(fd->ready_bands & bandmask);
-		regd = !!(fd->registered_bands & bandmask);
-		if ((handler && !ready) || (regd && (handler || !ready)))
-			wanted = 1;
-	}
-
-	return wanted;
-}
-
-static void queue_read(struct iv_fd_ *fd)
-{
-	int wanted;
-
-	wanted = wanted_bit(fd, !!(fd->handler_in != NULL), MASKIN);
-
-	if ((fd->registered_bands & MASKIN) && !wanted) {
-		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
-		fd->registered_bands &= ~MASKIN;
-	} else if (wanted && !(fd->registered_bands & MASKIN)) {
-		queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
-		      0, 0, (void *)fd);
-		fd->registered_bands |= MASKIN;
-	}
-}
-
-static void queue_write(struct iv_fd_ *fd)
-{
-	int wanted;
-
-	wanted = wanted_bit(fd, !!(fd->handler_out != NULL), MASKOUT);
-
-	if ((fd->registered_bands & MASKOUT) && !wanted) {
-		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
-		fd->registered_bands &= ~MASKOUT;
-	} else if (wanted && !(fd->registered_bands & MASKOUT)) {
-		queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
-		      0, 0, (void *)fd);
-		fd->registered_bands |= MASKOUT;
-	}
-}
-
-static void iv_kqueue_poll(int msec)
+static void iv_kqueue_poll(struct list_head *active, int msec)
 {
 	struct timespec to;
 	int i;
@@ -170,13 +94,9 @@ static void iv_kqueue_poll(int msec)
 
 		fd = batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
-			iv_fd_make_ready(fd, MASKIN);
-			if (fd->handler_in == NULL)
-				queue_read(fd);
+			iv_fd_make_ready(active, fd, MASKIN);
 		} else if (batch[i].filter == EVFILT_WRITE) {
-			iv_fd_make_ready(fd, MASKOUT);
-			if (fd->handler_out == NULL)
-				queue_write(fd);
+			iv_fd_make_ready(active, fd, MASKOUT);
 		} else {
 			syslog(LOG_CRIT, "iv_kqueue_poll: got message from "
 					 "filter %d", batch[i].filter);
@@ -185,27 +105,51 @@ static void iv_kqueue_poll(int msec)
 	}
 }
 
-static void iv_kqueue_register_fd(struct iv_fd_ *fd)
+static void queue(u_int ident, short filter, u_short flags,
+		  u_int fflags, int data, void *udata)
 {
-	list_add_tail(&fd->list_all, &all);
+	if (upload_entries == UPLOAD_QUEUE_SIZE) {
+		struct timespec to = { 0, 0 };
+		int ret;
 
-	if (fd->handler_in != NULL)
-		queue_read(fd);
-	if (fd->handler_out != NULL)
-		queue_write(fd);
+		do {
+			ret = kevent(kqueue_fd, upload_queue,
+				     upload_entries, NULL, 0, &to);
+		} while (ret < 0 && errno == EINTR);
+
+		if (ret < 0) {
+			syslog(LOG_CRIT, "queue: got error %d[%s]",
+			       errno, strerror(errno));
+			abort();
+		}
+
+		upload_entries = 0;
+	}
+
+	EV_SET(&upload_queue[upload_entries], ident, filter, flags,
+	       fflags, data, udata);
+	upload_entries++;
 }
 
-static void iv_kqueue_reregister_fd(struct iv_fd_ *fd)
+static void iv_kqueue_notify_fd(struct iv_fd_ *fd, int wanted)
 {
-	queue_read(fd);
-	queue_write(fd);
-}
+	if ((fd->registered_bands & MASKIN) && !(wanted & MASKIN)) {
+		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
+		fd->registered_bands &= ~MASKIN;
+	} else if ((wanted & MASKIN) && !(fd->registered_bands & MASKIN)) {
+		queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
+		      0, 0, (void *)fd);
+		fd->registered_bands |= MASKIN;
+	}
 
-static void iv_kqueue_unregister_fd(struct iv_fd_ *fd)
-{
-	list_del_init(&fd->list_all);
-	queue_read(fd);
-	queue_write(fd);
+	if ((fd->registered_bands & MASKOUT) && !(wanted & MASKOUT)) {
+		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
+		fd->registered_bands &= ~MASKOUT;
+	} else if ((wanted & MASKOUT) && !(fd->registered_bands & MASKOUT)) {
+		queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
+		      0, 0, (void *)fd);
+		fd->registered_bands |= MASKOUT;
+	}
 }
 
 static void iv_kqueue_deinit(void)
@@ -220,9 +164,7 @@ struct iv_poll_method iv_method_kqueue = {
 	.name		= "kqueue",
 	.init		= iv_kqueue_init,
 	.poll		= iv_kqueue_poll,
-	.register_fd	= iv_kqueue_register_fd,
-	.reregister_fd	= iv_kqueue_reregister_fd,
-	.unregister_fd	= iv_kqueue_unregister_fd,
+	.notify_fd	= iv_kqueue_notify_fd,
 	.deinit		= iv_kqueue_deinit,
 };
 #endif

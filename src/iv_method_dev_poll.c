@@ -34,9 +34,9 @@
 #define HASH_SIZE		(512)
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static struct list_head		*all;
 static struct pollfd		*batch;
 static int			batch_size;
+static struct list_head		*htable;
 static int			poll_fd;
 static struct pollfd		*upload_queue;
 static int			upload_entries;
@@ -53,10 +53,10 @@ static struct iv_fd_ *find_fd(int fd)
 	struct list_head *lh;
 	struct iv_fd_ *ret = NULL;
 
-	list_for_each(lh, &all[hash]) {
+	list_for_each(lh, &htable[hash]) {
 		struct iv_fd_ *f;
 
-		f = list_entry(lh, struct iv_fd_, list_all);
+		f = list_entry(lh, struct iv_fd_, list_hash);
 		if (f->fd == fd) {
 			ret = f;
 			break;
@@ -76,29 +76,29 @@ static int iv_dev_poll_init(int maxfd)
 	if (poll_fd < 0)
 		return -1;
 
-	all = malloc(HASH_SIZE * sizeof(*all));
-	if (all == NULL) {
+	batch = malloc(maxfd * sizeof(*batch));
+	if (batch == NULL) {
 		close(poll_fd);
 		return -1;
 	}
 
-	batch = malloc(maxfd * sizeof(*batch));
-	if (batch == NULL) {
-		free(all);
+	htable = malloc(HASH_SIZE * sizeof(*htable));
+	if (htable == NULL) {
+		free(batch);
 		close(poll_fd);
 		return -1;
 	}
 
 	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
 	if (upload_queue == NULL) {
+		free(htable);
 		free(batch);
-		free(all);
 		close(poll_fd);
 		return -1;
 	}
 
 	for (i = 0; i < HASH_SIZE; i++)
-		INIT_LIST_HEAD(&all[i]);
+		INIT_LIST_HEAD(&htable[i]);
 	batch_size = maxfd;
 	upload_entries = 0;
 
@@ -133,83 +133,7 @@ static void flush_upload_queue(void)
 	upload_entries = 0;
 }
 
-static int wanted_bits(struct iv_fd_ *fd)
-{
-	int wanted;
-	int handler;
-	int ready;
-	int regd;
-
-	/*
-	 * We are being unregistered?
-	 */
-	if (list_empty(&fd->list_all))
-		return 0;
-
-	/*
-	 * Error condition raised?
-	 */
-	if (fd->ready_bands & MASKERR)
-		return 0;
-
-	wanted = MASKERR;
-
-	handler = !!(fd->handler_in != NULL);
-	ready = !!(fd->ready_bands & MASKIN);
-	regd = !!(fd->registered_bands & MASKIN);
-	if ((handler && !ready) || (regd && (handler || !ready)))
-		wanted |= MASKIN;
-
-	handler = !!(fd->handler_out != NULL);
-	ready = !!(fd->ready_bands & MASKOUT);
-	regd = !!(fd->registered_bands & MASKOUT);
-	if ((handler && !ready) || (regd && (handler || !ready)))
-		wanted |= MASKOUT;
-
-	return wanted;
-}
-
-static int bits_to_poll_mask(int bits)
-{
-	int mask;
-
-	mask = 0;
-	if (bits & 4) {
-		mask = POLLERR;
-		if (bits & 1)
-			mask |= POLLIN | POLLHUP;
-		if (bits & 2)
-			mask |= POLLOUT;
-	}
-
-	return mask;
-}
-
-static void queue(struct iv_fd_ *fd)
-{
-	int wanted;
-
-	if (upload_entries > UPLOAD_QUEUE_SIZE - 2)
-		flush_upload_queue();
-
-	wanted = wanted_bits(fd);
-
-	if (fd->registered_bands & ~wanted) {
-		upload_queue[upload_entries].fd = fd->fd;
-		upload_queue[upload_entries].events = POLLREMOVE;
-		upload_entries++;
-	}
-
-	if (wanted) {
-		upload_queue[upload_entries].fd = fd->fd;
-		upload_queue[upload_entries].events = bits_to_poll_mask(wanted);
-		upload_entries++;
-	}
-
-	fd->registered_bands = wanted;
-}
-
-static void iv_dev_poll_poll(int msec)
+static void iv_dev_poll_poll(struct list_head *active, int msec)
 {
 	int i;
 	int ret;
@@ -251,53 +175,67 @@ static void iv_dev_poll_poll(int msec)
 			abort();
 		}
 
-		if (batch[i].revents) {
-			int should_queue;
+		if (batch[i].revents & (POLLIN | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKIN);
 
-			should_queue = 0;
-			if (batch[i].revents & (POLLIN | POLLERR | POLLHUP)) {
-				iv_fd_make_ready(fd, MASKIN);
-				if (fd->handler_in == NULL)
-					should_queue = 1;
-			}
-			if (batch[i].revents & (POLLOUT | POLLERR)) {
-				iv_fd_make_ready(fd, MASKOUT);
-				if (fd->handler_out == NULL)
-					should_queue = 1;
-			}
-			if (batch[i].revents & POLLERR) {
-				iv_fd_make_ready(fd, MASKERR);
-				should_queue = 1;
-			}
+		if (batch[i].revents & (POLLOUT | POLLERR))
+			iv_fd_make_ready(active, fd, MASKOUT);
 
-			if (should_queue)
-				queue(fd);
-		}
+		if (batch[i].revents & POLLERR)
+			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
 
 static void iv_dev_poll_register_fd(struct iv_fd_ *fd)
 {
-	list_add_tail(&fd->list_all, &all[__fd_hash(fd->fd)]);
-	queue(fd);
-}
-
-static void iv_dev_poll_reregister_fd(struct iv_fd_ *fd)
-{
-	queue(fd);
+	list_add_tail(&fd->list_hash, &htable[__fd_hash(fd->fd)]);
 }
 
 static void iv_dev_poll_unregister_fd(struct iv_fd_ *fd)
 {
-	list_del_init(&fd->list_all);
-	queue(fd);
+	list_del_init(&fd->list_hash);
+}
+
+static int bits_to_poll_mask(int bits)
+{
+	int mask;
+
+	mask = 0;
+	if (bits & MASKIN)
+		mask |= POLLIN | POLLHUP;
+	if (bits & MASKOUT)
+		mask |= POLLOUT;
+	if (bits & MASKERR)
+		mask |= POLLERR;
+
+	return mask;
+}
+
+static void iv_dev_poll_notify_fd(struct iv_fd_ *fd, int wanted)
+{
+	if (upload_entries > UPLOAD_QUEUE_SIZE - 2)
+		flush_upload_queue();
+
+	if (fd->registered_bands & ~wanted) {
+		upload_queue[upload_entries].fd = fd->fd;
+		upload_queue[upload_entries].events = POLLREMOVE;
+		upload_entries++;
+	}
+
+	if (wanted) {
+		upload_queue[upload_entries].fd = fd->fd;
+		upload_queue[upload_entries].events = bits_to_poll_mask(wanted);
+		upload_entries++;
+	}
+
+	fd->registered_bands = wanted;
 }
 
 static void iv_dev_poll_deinit(void)
 {
 	free(upload_queue);
+	free(htable);
 	free(batch);
-	free(all);
 	close(poll_fd);
 }
 
@@ -307,8 +245,8 @@ struct iv_poll_method iv_method_dev_poll = {
 	.init		= iv_dev_poll_init,
 	.poll		= iv_dev_poll_poll,
 	.register_fd	= iv_dev_poll_register_fd,
-	.reregister_fd	= iv_dev_poll_reregister_fd,
 	.unregister_fd	= iv_dev_poll_unregister_fd,
+	.notify_fd	= iv_dev_poll_notify_fd,
 	.deinit		= iv_dev_poll_deinit,
 };
 #endif

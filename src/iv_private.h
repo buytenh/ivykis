@@ -37,14 +37,39 @@ struct iv_fd_ {
 	void			(*handler_err)(void *);
 
 	/*
-	 * Private data.
+	 * Reflects whether the fd has been registered with
+	 * iv_register_fd().  Will be zero in ->notify_fd() if the
+	 * fd is being unregistered.
 	 */
-	struct list_head	list_all;
+	unsigned		registered:1;
+
+	/*
+	 * If this fd gathered any events during this polling round,
+	 * fd->list_active will be on iv_main()'s active list, and
+	 * fd->ready_bands will indicate which bands are currently
+	 * active.
+	 */
 	struct list_head	list_active;
-	unsigned		quotum:8,
-				ready_bands:3,
-				registered_bands:3,
-				epoch:16;
+	unsigned		ready_bands:3;
+
+	/*
+	 * ->registered_bands is maintained by the poll method to
+	 * indicate which bands are currently registered with the
+	 * kernel, so that the ivykis core knows when to call
+	 * the poll method's ->notify_fd() on an fd.
+	 */
+	unsigned		registered_bands:3;
+
+	/*
+	 * This is for state internal to some of the poll methods:
+	 * ->list_hash is used by poll methods that maintain an
+	 * internal hash table, and ->index is used by iv_method_poll
+	 * to maintain the index of this fd in the list of pollfds.
+	 */
+	union {
+		struct list_head	list_hash;
+		int			index;
+	};
 };
 
 struct iv_task_ {
@@ -85,10 +110,10 @@ struct iv_timer_ {
 struct iv_poll_method {
 	char	*name;
 	int	(*init)(int maxfd);
-	void	(*poll)(int msec);
+	void	(*poll)(struct list_head *active, int msec);
 	void	(*register_fd)(struct iv_fd_ *fd);
-	void	(*reregister_fd)(struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_fd_ *fd);
+	void	(*notify_fd)(struct iv_fd_ *fd, int wanted_bands);
 	void	(*deinit)(void);
 };
 
@@ -98,11 +123,9 @@ extern struct iv_poll_method iv_method_kqueue;
 extern struct iv_poll_method iv_method_poll;
 extern struct iv_poll_method iv_method_select;
 
-extern struct list_head *active;
-
 
 /* iv_main.c */
-void iv_fd_make_ready(struct iv_fd_ *fd, int band);
+void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands);
 
 /* iv_task.c */
 void iv_task_init(void);

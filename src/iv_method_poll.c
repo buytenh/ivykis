@@ -26,9 +26,9 @@
 #include <sys/poll.h>
 #include "iv_private.h"
 
-static struct pollfd		*pfds;
-static struct iv_fd_		**fds;
-static int			numfds;
+static struct pollfd	*pfds;
+static struct iv_fd_	**fds;
+static int		numfds;
 
 
 static int iv_poll_init(int maxfd)
@@ -48,44 +48,10 @@ static int iv_poll_init(int maxfd)
 	return 0;
 }
 
-static int __poll_mask(struct iv_fd_ *fd)
+static void iv_poll_poll(struct list_head *active, int msec)
 {
-	int mask;
-
-	mask = 0;
-	if (!(fd->ready_bands & MASKERR)) {
-		mask = POLLERR;
-		if (fd->handler_in != NULL && !(fd->ready_bands & MASKIN))
-			mask |= POLLIN | POLLHUP;
-		if (fd->handler_out != NULL && !(fd->ready_bands & MASKOUT))
-			mask |= POLLOUT;
-	}
-
-	return mask;
-}
-
-static void internal_unregister(struct iv_fd_ *fd)
-{
-	int index;
-
-	index = (int)(ptrdiff_t)fd->list_all.next;
-	if (index != numfds - 1) {
-		struct iv_fd_ *last = fds[numfds-1];
-
-		pfds[index] = pfds[numfds-1];
-		fds[index] = last;
-		last->list_all.next = (void *)(ptrdiff_t)index;
-		last->list_all.prev = (void *)(ptrdiff_t)index;
-	}
-	numfds--;
-
-	fd->list_all.next = fd->list_all.prev = (void *)-1;
-}
-
-static void iv_poll_poll(int msec)
-{
-	int i;
 	int ret;
+	int i;
 
 	do {
 		ret = poll(pfds, numfds, msec);
@@ -98,67 +64,62 @@ static void iv_poll_poll(int msec)
 	}
 
 	for (i = 0; i < numfds; i++) {
-		if (pfds[i].revents) {
-			struct iv_fd_ *fd = fds[i];
+		struct iv_fd_ *fd = fds[i];
 
-			if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
-				iv_fd_make_ready(fd, MASKIN);
-			if (pfds[i].revents & (POLLOUT | POLLERR))
-				iv_fd_make_ready(fd, MASKOUT);
-			if (pfds[i].revents & POLLERR)
-				iv_fd_make_ready(fd, MASKERR);
-
-			pfds[i].events = __poll_mask(fd);
-			if (pfds[i].events == 0) {
-				internal_unregister(fd);
-				i--;
-			}
-		}
+		if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKIN);
+		if (pfds[i].revents & (POLLOUT | POLLERR))
+			iv_fd_make_ready(active, fd, MASKOUT);
+		if (pfds[i].revents & POLLERR)
+			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
 
 static void iv_poll_register_fd(struct iv_fd_ *fd)
 {
-	int index;
-
-	index = numfds++;
-	pfds[index].fd = fd->fd;
-	pfds[index].events = __poll_mask(fd);
-	fds[index] = fd;
-
-	fd->list_all.next = fd->list_all.prev = (void *)(ptrdiff_t)index;
+	fd->index = -1;
 }
 
-static void iv_poll_reregister_fd(struct iv_fd_ *fd)
+static int bits_to_poll_mask(int bits)
 {
-	int index;
+	int mask;
 
-	index = (int)(ptrdiff_t)fd->list_all.next;
-	if (index != -1) {
-		if (pfds[index].fd != fd->fd || fds[index] != fd) {
-			syslog(LOG_CRIT, "iv_poll_reregister_fd: index fuckup");
-			abort();
-		}
+	mask = 0;
+	if (bits & MASKIN)
+		mask |= POLLIN | POLLHUP;
+	if (bits & MASKOUT)
+		mask |= POLLOUT;
+	if (bits & MASKERR)
+		mask |= POLLERR;
 
-		pfds[index].events = __poll_mask(fd);
-	}
+	return mask;
 }
 
-static void iv_poll_unregister_fd(struct iv_fd_ *fd)
+static void iv_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 {
-	int index;
+	if (fd->registered_bands == wanted)
+		return;
 
-	index = (int)(ptrdiff_t)fd->list_all.next;
-	if (index != -1) {
-		if (pfds[index].fd != fd->fd || fds[index] != fd) {
-			syslog(LOG_CRIT, "iv_poll_unregister_fd: index fuckup");
-			abort();
+	if (fd->index == -1 && wanted) {
+		fd->index = numfds++;
+		pfds[fd->index].fd = fd->fd;
+		pfds[fd->index].events = bits_to_poll_mask(wanted);
+		fds[fd->index] = fd;
+	} else if (fd->index != -1 && !wanted) {
+		if (fd->index != numfds - 1) {
+			struct iv_fd_ *last = fds[numfds - 1];
+
+			pfds[fd->index] = pfds[numfds - 1];
+			fds[fd->index] = last;
 		}
+		numfds--;
 
-		internal_unregister(fd);
+		fd->index = -1;
+	} else {
+		pfds[fd->index].events = bits_to_poll_mask(wanted);
 	}
 
-	INIT_LIST_HEAD(&fd->list_all);
+	fd->registered_bands = wanted;
 }
 
 static void iv_poll_deinit(void)
@@ -173,7 +134,6 @@ struct iv_poll_method iv_method_poll = {
 	.init		= iv_poll_init,
 	.poll		= iv_poll_poll,
 	.register_fd	= iv_poll_register_fd,
-	.reregister_fd	= iv_poll_reregister_fd,
-	.unregister_fd	= iv_poll_unregister_fd,
+	.notify_fd	= iv_poll_notify_fd,
 	.deinit		= iv_poll_deinit,
 };

@@ -32,12 +32,6 @@
 #include "iv_private.h"
 
 /* main loop ****************************************************************/
-#define MAX_QUOTUM		(16)
-
-static struct list_head		arrays[2];
-struct list_head		*active;
-static struct list_head		*expired;
-static unsigned int		epoch;
 static struct iv_fd_		*handled_fd;
 static int			maxfd;
 static struct iv_poll_method	*method;
@@ -112,11 +106,6 @@ void iv_init(void)
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGURG, SIG_IGN);
 
-	INIT_LIST_HEAD(arrays);
-	INIT_LIST_HEAD(arrays + 1);
-	active = arrays;
-	expired = arrays + 1;
-	epoch = 0;
 	handled_fd = NULL;
 	maxfd = sanitise_nofile_rlimit(euid);
 	numfds = 0;
@@ -153,44 +142,58 @@ void iv_quit(void)
 	quit = 1;
 }
 
-static void iv_run_active_list(void)
+static void notify_fd(struct iv_fd_ *fd)
+{
+	int wanted;
+
+	wanted = 0;
+	if (fd->registered) {
+		if (fd->handler_in != NULL)
+			wanted |= MASKIN | MASKERR;
+		if (fd->handler_out != NULL)
+			wanted |= MASKOUT | MASKERR;
+		if (fd->handler_err != NULL)
+			wanted |= MASKERR;
+	}
+
+	method->notify_fd(fd, wanted);
+}
+
+static void iv_run_active_list(struct list_head *active)
 {
 	while (!list_empty(active)) {
 		struct iv_fd_ *fd;
+		int notify;
 
 		fd = list_entry(active->next, struct iv_fd_, list_active);
+		list_del_init(&fd->list_active);
 
-		if (fd->handler_in == NULL && fd->handler_out == NULL &&
-		    fd->handler_err == NULL) {
-			syslog(LOG_CRIT, "iv_run_active_list: active fd "
-					 "while no handlers set!");
-			abort();
-		}
+		handled_fd = fd;
+		notify = 0;
 
-		if (fd->quotum--) {
-			handled_fd = fd;
-
-			if (fd->ready_bands & MASKERR &&
-			    fd->handler_err != NULL)
+		if (fd->ready_bands & MASKERR) {
+			if (fd->handler_err != NULL)
 				fd->handler_err(fd->cookie);
-
-			if (handled_fd != NULL &&
-			    fd->ready_bands & MASKIN &&
-			    fd->handler_in != NULL)
-				fd->handler_in(fd->cookie);
-
-			if (handled_fd != NULL &&
-			    fd->ready_bands & MASKOUT &&
-			    fd->handler_out != NULL)
-				fd->handler_out(fd->cookie);
-
-			continue;
+			else
+				notify = 1;
 		}
 
-		list_del(&fd->list_active);
-		list_add_tail(&fd->list_active, expired);
-		fd->epoch = epoch + 1;
-		fd->quotum = MAX_QUOTUM;
+		if (handled_fd != NULL && fd->ready_bands & MASKIN) {
+			if (fd->handler_in != NULL)
+				fd->handler_in(fd->cookie);
+			else
+				notify = 1;
+		}
+
+		if (handled_fd != NULL && fd->ready_bands & MASKOUT) {
+			if (fd->handler_out != NULL)
+				fd->handler_out(fd->cookie);
+			else
+				notify = 1;
+		}
+
+		if (handled_fd != NULL && notify)
+			notify_fd(fd);
 	}
 }
 
@@ -201,39 +204,28 @@ static int should_quit(void)
 
 void iv_main(void)
 {
-	quit = 0;
+	struct list_head active;
 
+	INIT_LIST_HEAD(&active);
+
+	quit = 0;
 	while (!should_quit()) {
 		struct timespec to;
 
 		iv_invalidate_now();
 
 		do {
-			iv_run_active_list();
+			iv_run_active_list(&active);
 			iv_run_timers();
 			iv_run_tasks();
-		} while (!list_empty(active));
-
-		if (!list_empty(expired)) {
-			method->poll(0);
-			if (list_empty(active)) {
-				struct list_head *temp;
-				temp = active;
-				active = expired;
-				expired = temp;
-				epoch = (epoch + 1) & 0xFFFF;
-			}
-
-			continue;
-		}
+		} while (!list_empty(&active));
 
 		if (!should_quit() && !iv_get_soonest_timeout(&to)) {
 			int msec;
 
-			epoch = (epoch + 1) & 0xFFFF;
 			msec = 1000 * to.tv_sec;
 			msec += (to.tv_nsec + 999999) / 1000000;
-			method->poll(msec);
+			method->poll(&active, msec);
 		}
 	}
 }
@@ -248,7 +240,7 @@ void INIT_IV_FD(struct iv_fd *_fd)
 	fd->handler_in = NULL;
 	fd->handler_out = NULL;
 	fd->handler_err = NULL;
-	INIT_LIST_HEAD(&fd->list_all);
+	fd->registered = 0;
 }
 
 void iv_register_fd(struct iv_fd *_fd)
@@ -257,7 +249,7 @@ void iv_register_fd(struct iv_fd *_fd)
 	int flags;
 	int yes;
 
-	if (!list_empty(&fd->list_all)) {
+	if (fd->registered) {
 		syslog(LOG_CRIT, "iv_register_fd: called with fd which "
 				 "is still registered");
 		abort();
@@ -278,167 +270,126 @@ void iv_register_fd(struct iv_fd *_fd)
 	yes = 1;
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));
 
+	fd->registered = 1;
 	INIT_LIST_HEAD(&fd->list_active);
 	fd->ready_bands = 0;
 	fd->registered_bands = 0;
-	fd->epoch = epoch - 1;
 
 	numfds++;
-	method->register_fd(fd);
+
+	if (method->register_fd != NULL)
+		method->register_fd(fd);
+	notify_fd(fd);
 }
 
 void iv_unregister_fd(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
-	if (list_empty(&fd->list_all)) {
+	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_unregister_fd: called with fd which "
 				 "is not registered");
 		abort();
 	}
+	fd->registered = 0;
 
-	method->unregister_fd(fd);
-	numfds--;
 	list_del(&fd->list_active);
+
+	notify_fd(fd);
+	if (method->unregister_fd != NULL)
+		method->unregister_fd(fd);
+
+	numfds--;
 
 	if (handled_fd == fd)
 		handled_fd = NULL;
 }
 
-static int should_be_active(struct iv_fd_ *fd)
-{
-	if (fd->ready_bands & MASKIN && fd->handler_in != NULL)
-		return 1;
-	if (fd->ready_bands & MASKOUT && fd->handler_out != NULL)
-		return 1;
-	if (fd->ready_bands & MASKERR && fd->handler_err != NULL)
-		return 1;
-
-	return 0;
-}
-
-static void make_active(struct iv_fd_ *fd)
+void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands)
 {
 	if (list_empty(&fd->list_active)) {
+		fd->ready_bands = 0;
 		list_add_tail(&fd->list_active, active);
-		if (fd->epoch != epoch) {
-			fd->epoch = epoch;
-			fd->quotum = MAX_QUOTUM;
-		}
 	}
-}
-
-void iv_fd_make_ready(struct iv_fd_ *fd, int bandmask)
-{
-	fd->ready_bands |= bandmask;
-	if (should_be_active(fd))
-		make_active(fd);
-}
-
-static void make_unready(struct iv_fd_ *fd, int bandmask)
-{
-	fd->ready_bands &= ~bandmask;
-	if (!should_be_active(fd))
-		list_del_init(&fd->list_active);
-
-	if (method->reregister_fd != NULL)
-		method->reregister_fd(fd);
+	fd->ready_bands |= bands;
 }
 
 void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	void (*old_handler_in)(void *);
-	int rereg;
+	int notify;
 
-	if (list_empty(&fd->list_all)) {
+	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_in: called with fd "
 				 "which is not registered");
 		abort();
 	}
 
-	old_handler_in = fd->handler_in;
-	fd->handler_in = handler_in;
-	rereg = 0;
-
-	if (handler_in != NULL) {
-		if (old_handler_in == NULL) {
-			if (fd->ready_bands & MASKIN)
-				make_active(fd);
-			rereg = 1;
+	notify = 0;
+	if (handler_in != NULL && !(fd->registered_bands & MASKIN)) {
+		if (fd->handler_in != NULL) {
+			syslog(LOG_CRIT, "iv_fd_set_handler_in: old handler "
+					 "is NULL, yet not registered");
+			abort();
 		}
-	} else if (old_handler_in != NULL) {
-		if (!should_be_active(fd))
-			list_del_init(&fd->list_active);
-		rereg = 1;
+		notify = 1;
 	}
 
-	if (rereg && method->reregister_fd != NULL)
-		method->reregister_fd(fd);
+	fd->handler_in = handler_in;
+	if (notify)
+		notify_fd(fd);
 }
 
 void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	void (*old_handler_out)(void *);
-	int rereg;
+	int notify;
 
-	if (list_empty(&fd->list_all)) {
+	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_out: called with fd "
 				 "which is not registered");
 		abort();
 	}
 
-	old_handler_out = fd->handler_out;
-	fd->handler_out = handler_out;
-	rereg = 0;
-
-	if (handler_out != NULL) {
-		if (old_handler_out == NULL) {
-			if (fd->ready_bands & MASKOUT)
-				make_active(fd);
-			rereg = 1;
+	notify = 0;
+	if (handler_out != NULL && !(fd->registered_bands & MASKOUT)) {
+		if (fd->handler_out != NULL) {
+			syslog(LOG_CRIT, "iv_fd_set_handler_out: old handler "
+					 "is NULL, yet not registered");
+			abort();
 		}
-	} else if (old_handler_out != NULL) {
-		if (!should_be_active(fd))
-			list_del_init(&fd->list_active);
-		rereg = 1;
+		notify = 1;
 	}
 
-	if (rereg && method->reregister_fd != NULL)
-		method->reregister_fd(fd);
+	fd->handler_out = handler_out;
+	if (notify)
+		notify_fd(fd);
 }
 
 void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	void (*old_handler_err)(void *);
-	int rereg;
+	int notify;
 
-	if (list_empty(&fd->list_all)) {
+	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_err: called with fd "
 				 "which is not registered");
 		abort();
 	}
 
-	old_handler_err = fd->handler_err;
-	fd->handler_err = handler_err;
-	rereg = 0;
-
-	if (handler_err != NULL) {
-		if (old_handler_err == NULL) {
-			if (fd->ready_bands & MASKERR)
-				make_active(fd);
-			rereg = 1;
+	notify = 0;
+	if (handler_err != NULL && !(fd->registered_bands & MASKERR)) {
+		if (fd->handler_err != NULL) {
+			syslog(LOG_CRIT, "iv_fd_set_handler_err: old handler "
+					 "is NULL, yet not registered");
+			abort();
 		}
-	} else if (old_handler_err != NULL) {
-		if (!should_be_active(fd))
-			list_del_init(&fd->list_active);
-		rereg = 1;
+		notify = 1;
 	}
 
-	if (rereg && method->reregister_fd != NULL)
-		method->reregister_fd(fd);
+	fd->handler_err = handler_err;
+	if (notify)
+		notify_fd(fd);
 }
 
 
@@ -446,98 +397,58 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 int iv_accept(struct iv_fd *_fd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = accept(fd->fd, addr, addrlen);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return accept(fd->fd, addr, addrlen);
 }
 
 int iv_connect(struct iv_fd *_fd, struct sockaddr *addr, socklen_t addrlen)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = connect(fd->fd, addr, addrlen);
-	if (ret == -1 && (errno == EINPROGRESS || errno == EALREADY))
-		make_unready(fd, MASKIN | MASKOUT);
-
-	return ret;
+	return connect(fd->fd, addr, addrlen);
 }
 
 ssize_t iv_read(struct iv_fd *_fd, void *buf, size_t count)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = read(fd->fd, buf, count);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return read(fd->fd, buf, count);
 }
 
 ssize_t iv_readv(struct iv_fd *_fd, const struct iovec *vector, int count)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = readv(fd->fd, vector, count);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return readv(fd->fd, vector, count);
 }
 
 int iv_recv(struct iv_fd *_fd, void *buf, size_t len, int flags)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = recv(fd->fd, buf, len, flags);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return recv(fd->fd, buf, len, flags);
 }
 
 int iv_recvfrom(struct iv_fd *_fd, void *buf, size_t len, int flags,
 		struct sockaddr *from, socklen_t *fromlen)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = recvfrom(fd->fd, buf, len, flags, from, fromlen);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return recvfrom(fd->fd, buf, len, flags, from, fromlen);
 }
 
 int iv_recvmsg(struct iv_fd *_fd, struct msghdr *msg, int flags)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = recvmsg(fd->fd, msg, flags);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKIN);
-
-	return ret;
+	return recvmsg(fd->fd, msg, flags);
 }
 
 int iv_send(struct iv_fd *_fd, const void *msg, size_t len, int flags)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = send(fd->fd, msg, len, flags);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return send(fd->fd, msg, len, flags);
 }
 
 #ifdef linux
@@ -546,61 +457,36 @@ int iv_send(struct iv_fd *_fd, const void *msg, size_t len, int flags)
 ssize_t iv_sendfile(struct iv_fd *_fd, int in_fd, off_t *offset, size_t count)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = sendfile(fd->fd, in_fd, offset, count);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return sendfile(fd->fd, in_fd, offset, count);
 }
 #endif
 
 int iv_sendmsg(struct iv_fd *_fd, const struct msghdr *msg, int flags)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = sendmsg(fd->fd, msg, flags);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return sendmsg(fd->fd, msg, flags);
 }
 
 int iv_sendto(struct iv_fd *_fd, const void *msg, size_t len, int flags,
 	      const struct sockaddr *to, socklen_t tolen)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = sendto(fd->fd, msg, len, flags, to, tolen);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return sendto(fd->fd, msg, len, flags, to, tolen);
 }
 
 ssize_t iv_write(struct iv_fd *_fd, const void *buf, size_t count)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = write(fd->fd, buf, count);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return write(fd->fd, buf, count);
 }
 
 ssize_t iv_writev(struct iv_fd *_fd, const struct iovec *vector, int count)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int ret;
 
-	ret = writev(fd->fd, vector, count);
-	if (ret == -1 && errno == EAGAIN)
-		make_unready(fd, MASKOUT);
-
-	return ret;
+	return writev(fd->fd, vector, count);
 }
