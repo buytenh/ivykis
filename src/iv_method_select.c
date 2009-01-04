@@ -18,8 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#warning somebody should make POLLERR work
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,6 +79,8 @@ static int iv_select_init(int maxfd)
 		free(htable);
 		return -1;
 	}
+
+	fprintf(stderr, "warning: using select(2), POLLERR delivery broken\n");
 
 	readfds_master = (fd_set *)fdsets;
 	writefds_master = (fd_set *)(fdsets + setsize);

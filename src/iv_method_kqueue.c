@@ -20,8 +20,6 @@
 
 #if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
 
-#warning somebody should make POLLERR work
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +57,8 @@ static int iv_kqueue_init(int maxfd)
 		close(kqueue_fd);
 		return -1;
 	}
+
+	fprintf(stderr, "warning: using kqueue(2), POLLERR delivery broken\n");
 
 	INIT_LIST_HEAD(&all);
 	batch_size = maxfd;
