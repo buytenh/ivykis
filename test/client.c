@@ -70,7 +70,9 @@ static void create_connector(struct connector *conn, struct sockaddr_in *addr)
 	conn->fd.handler_out = NULL;
 	iv_register_fd(&conn->fd);
 
-	conn->addr = *addr;
+	conn->addr.sin_family = addr->sin_family;
+	conn->addr.sin_addr = addr->sin_addr;
+	conn->addr.sin_port = addr->sin_port;
 
 	connected((void *)conn);
 }
