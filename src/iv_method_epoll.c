@@ -27,6 +27,18 @@
 #include <syslog.h>
 #include "iv_private.h"
 
+/*
+ * To accommodate systems with older versions of <sys/epoll.h>.
+ */
+#ifndef EPOLLRDHUP
+#define EPOLLRDHUP	0x2000
+#endif
+
+#define SET_IN		(EPOLLIN | EPOLLPRI | EPOLLRDNORM | \
+			 EPOLLRDBAND | EPOLLMSG | EPOLLRDHUP)
+#define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
+#define SET_ERR		(EPOLLERR | EPOLLHUP)
+
 static struct list_head		all;
 static struct epoll_event	*batch;
 static int			batch_size;
@@ -71,13 +83,13 @@ static void iv_epoll_poll(struct list_head *active, int msec)
 
 		fd = batch[i].data.ptr;
 
-		if (batch[i].events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+		if (batch[i].events & (SET_IN | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKIN);
 
-		if (batch[i].events & (EPOLLOUT | EPOLLERR))
+		if (batch[i].events & (SET_OUT | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKOUT);
 
-		if (batch[i].events & EPOLLERR)
+		if (batch[i].events & SET_ERR)
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
@@ -88,11 +100,11 @@ static int bits_to_poll_mask(int bits)
 
 	mask = 0;
 	if (bits & MASKIN)
-		mask |= EPOLLIN | EPOLLHUP;
+		mask |= SET_IN;
 	if (bits & MASKOUT)
-		mask |= EPOLLOUT;
-	if (bits & MASKERR)
-		mask |= EPOLLERR;
+		mask |= SET_OUT;
+	if (bits)
+		mask |= SET_ERR;
 
 	return mask;
 }

@@ -202,11 +202,11 @@ static int bits_to_poll_mask(int bits)
 
 	mask = 0;
 	if (bits & MASKIN)
-		mask |= POLLIN | POLLHUP;
+		mask |= POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI;
 	if (bits & MASKOUT)
-		mask |= POLLOUT;
-	if (bits & MASKERR)
-		mask |= POLLERR;
+		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+	if (bits)
+		mask |= POLLERR | POLLHUP;
 
 	return mask;
 }

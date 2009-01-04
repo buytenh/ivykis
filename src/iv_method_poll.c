@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -25,6 +27,19 @@
 #include <syslog.h>
 #include <sys/poll.h>
 #include "iv_private.h"
+
+#ifndef POLLMSG
+#define POLLMSG		0
+#endif
+
+#ifndef POLLRDHUP
+#define POLLRDHUP	0
+#endif
+
+#define SET_IN		(POLLIN | POLLPRI | POLLRDNORM | \
+			 POLLRDBAND | POLLMSG | POLLRDHUP)
+#define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
+#define SET_ERR		(POLLERR | POLLHUP)
 
 static struct pollfd	*pfds;
 static struct iv_fd_	**fds;
@@ -66,11 +81,11 @@ static void iv_poll_poll(struct list_head *active, int msec)
 	for (i = 0; i < numfds; i++) {
 		struct iv_fd_ *fd = fds[i];
 
-		if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
+		if (pfds[i].revents & (SET_IN | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKIN);
-		if (pfds[i].revents & (POLLOUT | POLLERR))
+		if (pfds[i].revents & (SET_OUT | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKOUT);
-		if (pfds[i].revents & POLLERR)
+		if (pfds[i].revents & SET_ERR)
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
@@ -86,11 +101,11 @@ static int bits_to_poll_mask(int bits)
 
 	mask = 0;
 	if (bits & MASKIN)
-		mask |= POLLIN | POLLHUP;
+		mask |= SET_IN;
 	if (bits & MASKOUT)
-		mask |= POLLOUT;
-	if (bits & MASKERR)
-		mask |= POLLERR;
+		mask |= SET_OUT;
+	if (bits)
+		mask |= SET_ERR;
 
 	return mask;
 }
