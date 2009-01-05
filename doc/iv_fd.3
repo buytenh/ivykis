@@ -120,15 +120,9 @@ An application is allowed to unregister a file descriptor from within
 its own callback function, and even to free the memory corresponding
 to that file descriptor from that callback function.
 .PP
-When dealing with file descriptors, applications must use special
-versions of standard I/O primitives.  See
-.BR iv_wrappers (3)
-for details.
-.PP
 See
 .BR iv_examples (3)
 for programming examples.
 .SH "SEE ALSO"
 .BR ivykis (3),
-.BR iv_examples (3),
-.BR iv_wrappers (3)
+.BR iv_examples (3)

@@ -17,7 +17,6 @@ HTML =	iv_examples.3.html		\
 	iv_unregister_task.3.html	\
 	iv_unregister_timer.3.html	\
 	iv_validate_now.3.html		\
-	iv_wrappers.3.html		\
 	ivykis.3.html
 
 

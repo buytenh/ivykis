@@ -37,7 +37,7 @@ void callback(void *dummy)
         char buf[1024];
         int len;
 
-        len = iv_read(&fd_stdin, buf, sizeof(buf));
+        len = read(fd_stdin.fd, buf, sizeof(buf));
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
@@ -68,14 +68,6 @@ passed to ivykis.  For example, it should not free memory that contains
 such structures that are still registered with ivykis (i.e. haven't
 had iv_unregister_fd called on them).
 .PP
-The application, when dealing with file descriptors registered to
-ivykis, has to use special 'wrapped' versions of common I/O primitives
-(like iv_read in the above examples).  This is because it is necessary
-for ivykis to know when an EAGAIN condition on a file descriptor has
-occured, for internal bookkeeping.  Note that the application still
-has to deal with the EAGAIN condition (usually by just returning from
-the callback function).
-.PP
 iv_register_fd transparently sets the passed file descriptor to
 nonblocking mode, in anticipation of its future usage.  A 'struct iv_fd'
 needs to be registered via iv_register_fd before any other operations
@@ -83,7 +75,7 @@ can be done on it.  Therefore, calls to iv_ primitives will never block.
 .PP
 File descriptor callbacks are called in a level-triggered fashion.
 Therefore, the way of dealing with fd_stdin in the example callback
-function is safe.  In case there arrives data between iv_read and
+function is safe.  In case there arrives data between read and
 detecting EAGAIN, ivykis will re-call the callback function after
 it returns.  Also, if there are more than 1024 bytes waiting in the
 input buffer, ivykis will re-call the callback function until all
@@ -117,7 +109,7 @@ void connection_handler(void *_conn)
         char buf[1024];
         int len;
 
-        len = iv_read(&(conn->fd), buf, sizeof(buf));
+        len = read(conn->fd.fd, buf, sizeof(buf));
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
@@ -139,11 +131,11 @@ void listening_socket_handler(void *_sock)
         int fd;
 
         addrlen = sizeof(addr);
-        fd = iv_accept(&(sock->fd), (struct sockaddr *)&addr, &addrlen);
+        fd = accept(sock->fd.fd, (struct sockaddr *)&addr, &addrlen);
         if (fd <= 0) {
                 if (fd < 0 && errno == EAGAIN)
                         return;
-                perror("iv_accept");
+                perror("accept");
                 exit(-1);
         }
 
@@ -241,7 +233,7 @@ void connection_handler(void *_conn)
         char buf[1024];
         int len;
 
-        len = iv_read(&(conn->fd), buf, sizeof(buf));
+        len = read(conn->fd.fd, buf, sizeof(buf));
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
@@ -278,11 +270,11 @@ void listening_socket_handler(void *_sock)
         int fd;
 
         addrlen = sizeof(addr);
-        fd = iv_accept(&(sock->fd), (struct sockaddr *)&addr, &addrlen);
+        fd = accept(sock->fd.fd, (struct sockaddr *)&addr, &addrlen);
         if (fd <= 0) {
                 if (fd < 0 && errno == EAGAIN)
                         return;
-                perror("iv_accept");
+                perror("accept");
                 exit(-1);
         }
 
@@ -357,6 +349,5 @@ must be called.
 .BR iv_fd (3),
 .BR iv_timer (3),
 .BR iv_task (3),
-.BR iv_wrappers (3),
 .BR iv_init (3),
 .BR iv_time (3)
