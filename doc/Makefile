@@ -26,4 +26,4 @@ clean:
 		rm -f $(HTML)
 
 %.3.html:	%.3
-		cat $< | man2html -r | tail +3 > $@
+		cat $< | man2html -r | tail -n +3 > $@
