@@ -113,7 +113,7 @@ void connection_handler(void *_conn)
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
-                iv_unregister_fd(&(conn->fd));
+                iv_unregister_fd(&conn->fd);
                 close(conn->fd.fd);
                 free(conn);
                 return;
@@ -146,11 +146,11 @@ void listening_socket_handler(void *_sock)
                 return;
         }
 
-        INIT_IV_FD(&(conn->fd));
+        INIT_IV_FD(&conn->fd);
         conn->fd.fd = fd;
         conn->fd.cookie = (void *)conn;
         conn->fd.handler_in = connection_handler;
-        iv_register_fd(&(conn->fd));
+        iv_register_fd(&conn->fd);
 }
 
 int main()
@@ -180,11 +180,11 @@ int main()
 
         iv_init();
 
-        INIT_IV_FD(&(s.fd));
+        INIT_IV_FD(&s.fd);
         s.fd.fd = fd;
         s.fd.cookie = (void *)&s;
         s.fd.handler_in = listening_socket_handler;
-        iv_register_fd(&(s.fd));
+        iv_register_fd(&s.fd);
 
         iv_main();
 
@@ -237,8 +237,8 @@ void connection_handler(void *_conn)
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
-                iv_unregister_timer(&(conn->disconnect_timeout));//XXXX
-                iv_unregister_fd(&(conn->fd));
+                iv_unregister_timer(&conn->disconnect_timeout);  //XXXX
+                iv_unregister_fd(&conn->fd);
                 close(conn->fd.fd);
                 free(conn);
                 return;
@@ -246,17 +246,17 @@ void connection_handler(void *_conn)
 
         printf("got %d bytes of data from %p\\n", len, conn);
 
-        iv_unregister_timer(&(conn->disconnect_timeout));        //XXXX
+        iv_unregister_timer(&conn->disconnect_timeout);          //XXXX
         iv_validate_now();                                       //XXXX
         conn->disconnect_timeout.expires = now;                  //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
-        iv_register_timer(&(conn->disconnect_timeout));          //XXXX
+        iv_register_timer(&conn->disconnect_timeout);            //XXXX
 }
 
 void disconnect_timeout_expired(void *_conn)                     //XXXX
 {                                                                //XXXX
         struct connection *conn = (struct connection *)_conn;    //XXXX
-        iv_unregister_fd(&(conn->fd));                           //XXXX
+        iv_unregister_fd(&conn->fd);                             //XXXX
         close(conn->fd.fd);                                      //XXXX
         free(conn);                                              //XXXX
 }                                                                //XXXX
@@ -285,19 +285,19 @@ void listening_socket_handler(void *_sock)
                 return;
         }
 
-        INIT_IV_FD(&(conn->fd));
+        INIT_IV_FD(&conn->fd);
         conn->fd.fd = fd;
         conn->fd.cookie = (void *)conn;
         conn->fd.handler_in = connection_handler;
-        iv_register_fd(&(conn->fd));
+        iv_register_fd(&conn->fd);
 
-        INIT_IV_TIMER(&(conn->disconnect_timeout));              //XXXX
+        INIT_IV_TIMER(&conn->disconnect_timeout);                //XXXX
         iv_validate_now();                                       //XXXX
         conn->disconnect_timeout.cookie = (void *)conn;          //XXXX
         conn->disconnect_timeout.handler = disconnect_timeout_expired;//XXXX
         conn->disconnect_timeout.expires = now;                  //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
-        iv_register_timer(&(conn->disconnect_timeout));          //XXXX
+        iv_register_timer(&conn->disconnect_timeout);            //XXXX
 }
 
 int main()
@@ -327,11 +327,11 @@ int main()
 
         iv_init();
 
-        INIT_IV_FD(&(s.fd));
+        INIT_IV_FD(&s.fd);
         s.fd.fd = fd;
         s.fd.cookie = (void *)&s;
         s.fd.handler_in = listening_socket_handler;
-        iv_register_fd(&(s.fd));
+        iv_register_fd(&s.fd);
 
         iv_main();
 
