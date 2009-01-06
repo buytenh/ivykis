@@ -2,7 +2,7 @@ Name:		ivykis
 Summary:	event handling library
 Group:		System Environment/Libraries
 Version:	0.10
-Release:	1
+Release:	2
 URL:		http://libivykis.sourceforge.net/
 Source0:	ivykis-0.10.tar.gz
 Packager:	Lennert Buytenhek <ivykis@wantstofly.org>
@@ -29,6 +29,7 @@ install -m 0644 misc/libivykis.pc %{buildroot}%{_libdir}/pkgconfig
 
 install -d -m 0755 %{buildroot}%{_includedir}
 install -m 0644 src/iv.h %{buildroot}%{_includedir}
+install -m 0644 src/iv_fd_compat.h %{buildroot}%{_includedir}
 install -m 0644 src/iv_list.h %{buildroot}%{_includedir}
 
 install -d -m 0755 %{buildroot}%{_libdir}
@@ -50,6 +51,9 @@ install -m 0644 doc/iv*.3 %{buildroot}%{_mandir}/man3
 rm -rf %{buildroot}
 
 %changelog
+* Tue Jan  6 2009 Lennert Buytenhek <buytenh@wantstofly.org>
+- Don't forget to install iv_fd_compat.h as well.
+
 * Mon Jan  5 2009 Lennert Buytenhek <buytenh@wantstofly.org>
 - Release ivykis 0.10.
 
