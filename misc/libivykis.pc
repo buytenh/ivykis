@@ -5,7 +5,7 @@ includedir=/usr/include
 
 
 Name: libivykis
-Version: 0.10
+Version: 0.11
 Description: event handling library
 Requires:
 Libs: -L${libdir} -livykis
