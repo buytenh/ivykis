@@ -3,6 +3,11 @@ This directory holds ivykis example programs and contributed ivykis
 modules.
 
 
+iv_inotify/
+	Example ivykis wrapper around Linux's inotify(7) file system
+	event monitoring API.
+
+
 kojines/
 	Application that accepts connections forwarded to it by the
 	iptables REDIRECT target, and forwards them to a remote SOCKS5
