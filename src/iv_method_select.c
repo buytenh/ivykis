@@ -168,14 +168,14 @@ static void iv_select_unregister_fd(struct iv_fd_ *fd)
 static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
 {
 	if (wanted & MASKIN)
-		FD_CLR(fd->fd, readfds_master);
-	else
 		FD_SET(fd->fd, readfds_master);
+	else
+		FD_CLR(fd->fd, readfds_master);
 
 	if (wanted & MASKOUT)
-		FD_CLR(fd->fd, writefds_master);
-	else
 		FD_SET(fd->fd, writefds_master);
+	else
+		FD_CLR(fd->fd, writefds_master);
 
 	fd->registered_bands = wanted;
 }
