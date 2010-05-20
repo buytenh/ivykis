@@ -209,12 +209,15 @@ void iv_main(void)
 	INIT_LIST_HEAD(&active);
 
 	quit = 0;
-	while (!should_quit()) {
+	while (1) {
 		struct timespec to;
 		int msec;
 
 		iv_run_timers();
 		iv_run_tasks();
+
+		if (should_quit())
+			break;
 
 		if (!iv_get_soonest_timeout(&to)) {
 			msec = 1000 * to.tv_sec;
