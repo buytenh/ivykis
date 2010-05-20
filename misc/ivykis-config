@@ -36,6 +36,6 @@ done
 
 if [ $LIBS != 0 -o $STATICLIBS != 0 ]
 then
-	echo -n "-livykis "
+	echo -n "-livykis -lrt "
 fi
 echo

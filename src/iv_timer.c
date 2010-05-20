@@ -24,6 +24,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <sys/time.h>
+#include <time.h>
 #include "iv_private.h"
 
 /* time handling ************************************************************/
@@ -38,11 +39,7 @@ void iv_invalidate_now(void)
 void iv_validate_now(void)
 {
 	if (!now_valid) {
-		struct timeval _now;
-
-		gettimeofday(&_now, NULL);
-		now.tv_sec = _now.tv_sec;
-		now.tv_nsec = _now.tv_usec * 1000;
+		clock_gettime(CLOCK_MONOTONIC, &now);
 		now_valid = 1;
 	}
 }
