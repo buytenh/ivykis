@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <syslog.h>
@@ -48,9 +49,17 @@ static int			epoll_fd;
 
 static int iv_epoll_init(int maxfd)
 {
+	int flags;
+
 	epoll_fd = epoll_create(maxfd);
 	if (epoll_fd < 0)
 		return -1;
+
+	flags = fcntl(epoll_fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(epoll_fd, F_SETFD, flags);
+	}
 
 	batch = malloc(maxfd * sizeof(*batch));
 	if (batch == NULL) {
