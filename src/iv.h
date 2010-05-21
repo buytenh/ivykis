@@ -71,8 +71,6 @@ void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_out(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
 
-#include <iv_fd_compat.h>
-
 
 /*
  * Task handling.

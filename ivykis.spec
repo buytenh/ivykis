@@ -29,7 +29,6 @@ install -m 0644 misc/libivykis.pc %{buildroot}%{_libdir}/pkgconfig
 
 install -d -m 0755 %{buildroot}%{_includedir}
 install -m 0644 src/iv.h %{buildroot}%{_includedir}
-install -m 0644 src/iv_fd_compat.h %{buildroot}%{_includedir}
 install -m 0644 src/iv_list.h %{buildroot}%{_includedir}
 
 install -d -m 0755 %{buildroot}%{_libdir}
