@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <string.h>
 #include <syslog.h>
 #include <sys/types.h>
@@ -42,9 +43,17 @@ static int			upload_entries;
 
 static int iv_kqueue_init(int maxfd)
 {
+	int flags;
+
 	kqueue_fd = kqueue();
 	if (kqueue_fd < 0)
 		return -1;
+
+	flags = fcntl(kqueue_fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(kqueue_fd, F_SETFD, flags);
+	}
 
 	batch = malloc(maxfd * sizeof(*batch));
 	if (batch == NULL) {
