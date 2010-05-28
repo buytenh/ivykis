@@ -90,14 +90,14 @@ struct iv_timer_ {
 	/*
 	 * User data.
 	 */
-	struct timespec	expires;
-	void		*cookie;
-	void		(*handler)(void *);
+	struct timespec		expires;
+	void			*cookie;
+	void			(*handler)(void *);
 
 	/*
 	 * Private data.
 	 */
-	int		index;
+	int			index;
 };
 
 
