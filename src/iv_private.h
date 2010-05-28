@@ -38,13 +38,6 @@ struct iv_fd_ {
 	void			(*handler_err)(void *);
 
 	/*
-	 * Reflects whether the fd has been registered with
-	 * iv_register_fd().  Will be zero in ->notify_fd() if the
-	 * fd is being unregistered.
-	 */
-	unsigned		registered:1;
-
-	/*
 	 * If this fd gathered any events during this polling round,
 	 * fd->list_active will be on iv_main()'s active list, and
 	 * fd->ready_bands will indicate which bands are currently
@@ -52,6 +45,13 @@ struct iv_fd_ {
 	 */
 	struct list_head	list_active;
 	unsigned		ready_bands:3;
+
+	/*
+	 * Reflects whether the fd has been registered with
+	 * iv_register_fd().  Will be zero in ->notify_fd() if the
+	 * fd is being unregistered.
+	 */
+	unsigned		registered:1;
 
 	/*
 	 * ->registered_bands is maintained by the poll method to
