@@ -80,7 +80,7 @@ static inline int list_empty(struct list_head *head)
 }
 
 #define list_entry(lh, type, member) \
-	((type *)((char *)(lh) - (unsigned long)(&((type *)0)->member)))
+	container_of(lh, type, member)
 
 #define list_for_each(lh, head) \
 	for (lh = (head)->next; lh != (head); lh = lh->next)
