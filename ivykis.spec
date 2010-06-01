@@ -7,7 +7,7 @@ URL:		http://libivykis.sourceforge.net/
 Source0:	ivykis-0.11.tar.gz
 Packager:	Lennert Buytenhek <ivykis@wantstofly.org>
 BuildRoot:	/tmp/%{name}-%{version}
-License:	LGPL
+License:	LGPLv2.1
 
 %description
 ivykis is an event handling library.
