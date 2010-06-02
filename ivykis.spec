@@ -1,10 +1,10 @@
 Name:		ivykis
 Summary:	event handling library
 Group:		System Environment/Libraries
-Version:	0.11
+Version:	0.12
 Release:	1
 URL:		http://libivykis.sourceforge.net/
-Source0:	ivykis-0.11.tar.gz
+Source0:	ivykis-0.12.tar.gz
 Packager:	Lennert Buytenhek <ivykis@wantstofly.org>
 BuildRoot:	/tmp/%{name}-%{version}
 License:	LGPLv2.1
@@ -50,6 +50,9 @@ install -m 0644 doc/iv*.3 %{buildroot}%{_mandir}/man3
 rm -rf %{buildroot}
 
 %changelog
+* Wed Jun  2 2010 Lennert Buytenhek <buytenh@wantstofly.org>
+- Release ivykis 0.12.
+
 * Sun Feb  8 2009 Lennert Buytenhek <buytenh@wantstofly.org>
 - Release ivykis 0.11.
 
