@@ -18,5 +18,5 @@ libivykis.a:	$(OBJS)
 		$(AR) -rc libivykis.a $(OBJS)
 		ranlib libivykis.a
 
-.c.o:		iv.h iv_list.h iv_private.h
+.c.o:		iv.h iv_avl.h iv_list.h iv_private.h
 		$(CC) $(CFLAGS) -Wall -I. -fomit-frame-pointer -c -o $@ $<

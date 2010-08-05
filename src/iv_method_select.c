@@ -26,9 +26,7 @@
 #include <sys/select.h>
 #include "iv_private.h"
 
-#define HASH_SIZE		(512)
-
-static struct list_head	*htable;
+static struct iv_avl_tree	fds;
 static int		setsize;
 static int		fd_max;
 static fd_set		*readfds_master;
@@ -37,28 +35,37 @@ static fd_set		*readfds;
 static fd_set		*writefds;
 
 
-static unsigned int __fd_hash(unsigned int fd)
-{
-	return fd % HASH_SIZE;
-}
-
 static struct iv_fd_ *find_fd(int fd)
 {
-	int hash = __fd_hash(fd);
-	struct list_head *lh;
-	struct iv_fd_ *ret = NULL;
+	struct iv_avl_node *an;
 
-	list_for_each(lh, &htable[hash]) {
-		struct iv_fd_ *f;
+	an = fds.root;
+	while (an != NULL) {
+		struct iv_fd_ *p;
 
-		f = list_entry(lh, struct iv_fd_, list_hash);
-		if (f->fd == fd) {
-			ret = f;
-			break;
-		}
+		p = container_of(an, struct iv_fd_, avl_node);
+		if (fd == p->fd)
+			return p;
+
+		if (fd < p->fd)
+			an = an->left;
+		else
+			an = an->right;
 	}
 
-	return ret;
+	return NULL;
+}
+
+static int fd_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+{
+	struct iv_fd_ *a = container_of(_a, struct iv_fd_, avl_node);
+	struct iv_fd_ *b = container_of(_b, struct iv_fd_, avl_node);
+
+	if (a->fd < b->fd)
+		return -1;
+	if (a->fd > b->fd)
+		return 1;
+	return 0;
 }
 
 
@@ -66,19 +73,14 @@ static struct iv_fd_ *find_fd(int fd)
 static int iv_select_init(int maxfd)
 {
 	unsigned char *fdsets;
-	int i;
 
-	htable = malloc(HASH_SIZE * sizeof(*htable));
-	if (htable == NULL)
-		return -1;
+	INIT_IV_AVL_TREE(&fds, fd_compare);
 
 	setsize = (maxfd + 7) / 8;
 
 	fdsets = malloc(4 * setsize);
-	if (fdsets == NULL) {
-		free(htable);
+	if (fdsets == NULL)
 		return -1;
-	}
 
 	fprintf(stderr, "warning: using select(2), POLLERR delivery broken\n");
 
@@ -87,8 +89,6 @@ static int iv_select_init(int maxfd)
 	readfds = (fd_set *)(fdsets + 2 * setsize);
 	writefds = (fd_set *)(fdsets + 3 * setsize);
 
-	for (i = 0; i < HASH_SIZE; i++)
-		INIT_LIST_HEAD(&htable[i]);
 	fd_max = 0;
 	memset(readfds_master, 0, 2*setsize);
 
@@ -150,7 +150,14 @@ static void iv_select_poll(struct list_head *active, int msec)
 
 static void iv_select_register_fd(struct iv_fd_ *fd)
 {
-	list_add_tail(&fd->list_hash, &htable[__fd_hash(fd->fd)]);
+	int ret;
+
+	ret = iv_avl_tree_insert(&fds, &fd->avl_node);
+	if (ret) {
+		syslog(LOG_CRIT, "iv_select_register_fd: got error %d[%s]",
+		       ret, strerror(ret));
+		abort();
+	}
 
 	/*
 	 * @@@ Room for optimisation here.
@@ -161,7 +168,7 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 
 static void iv_select_unregister_fd(struct iv_fd_ *fd)
 {
-	list_del_init(&fd->list_hash);
+	iv_avl_tree_delete(&fds, &fd->avl_node);
 }
 
 static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
@@ -182,7 +189,6 @@ static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
 static void iv_select_deinit(void)
 {
 	free(readfds_master);
-	free(htable);
 }
 
 

@@ -19,6 +19,7 @@
  */
 
 #include "iv.h"
+#include "iv_avl.h"
 #include "iv_list.h"
 
 /*
@@ -62,12 +63,12 @@ struct iv_fd_ {
 
 	/*
 	 * This is for state internal to some of the poll methods:
-	 * ->list_hash is used by poll methods that maintain an
-	 * internal hash table, and ->index is used by iv_method_poll
+	 * ->avl_node is used by poll methods that maintain an
+	 * internal fd tree, and ->index is used by iv_method_poll
 	 * to maintain the index of this fd in the list of pollfds.
 	 */
 	union {
-		struct list_head	list_hash;
+		struct iv_avl_node	avl_node;
 		int			index;
 	};
 };
