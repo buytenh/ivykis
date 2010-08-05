@@ -69,9 +69,7 @@ such structures that are still registered with ivykis (i.e. haven't
 had iv_unregister_fd called on them).
 .PP
 iv_register_fd transparently sets the passed file descriptor to
-nonblocking mode, in anticipation of its future usage.  A 'struct iv_fd'
-needs to be registered via iv_register_fd before any other operations
-can be done on it.  Therefore, calls to iv_ primitives will never block.
+nonblocking mode, in anticipation of its future usage.
 .PP
 File descriptor callbacks are called in a level-triggered fashion.
 Therefore, the way of dealing with fd_stdin in the example callback
