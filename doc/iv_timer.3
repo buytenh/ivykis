@@ -29,9 +29,10 @@ The functions
 .B iv_register_timer
 and
 .B iv_unregister_timer
-register, respectively unregister, a timer with the ivykis core.  When
-a timer that is registered becomes 'ready', due to the current system
-clock value becoming greater than or equal to the timer's
+register, respectively unregister, a timer with the ivykis core.
+.PP
+When a timer that is registered becomes 'ready', due to the current
+system clock value becoming greater than or equal to the timer's
 .B ->expires
 member field, the callback function specified by
 .B ->handler
