@@ -159,9 +159,6 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 		abort();
 	}
 
-	/*
-	 * @@@ Room for optimisation here.
-	 */
 	if (fd->fd > fd_max)
 		fd_max = fd->fd;
 }
@@ -169,6 +166,19 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 static void iv_select_unregister_fd(struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&fds, &fd->avl_node);
+
+	if (fd->fd == fd_max) {
+		fd_max = 0;
+		if (fds.root != NULL) {
+			struct iv_avl_node *an;
+
+			an = fds.root;
+			while (an->right != NULL)
+				an = an->right;
+
+			fd_max = container_of(an, struct iv_fd_, avl_node)->fd;
+		}
+	}
 }
 
 static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
