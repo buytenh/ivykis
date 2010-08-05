@@ -28,12 +28,24 @@ The functions
 .B iv_register_task
 and
 .B iv_unregister_task
-register, respectively unregister, a task with the ivykis core.  A task
-is like a timer, but with an immediate timeout.  Tasks are mainly used for
-scheduling code for execution where it is not appropriate to directly run
-that code in the calling context (for example, because the current context
-might be run as a callback function where the caller expects certain
-conditions to remain invariant after the callback completes.)
+register, respectively unregister, a task with the ivykis core.
+.PP
+A task is like a timer, but with an immediate timeout.  When a task
+is registered, unless it is unregistered again first, the callback
+function specified by
+.B ->handler
+is guaranteed to be called once, some time after control returns to
+the ivykis main loop but before ivykis will sleep for more events,
+with
+.B ->cookie
+as its first and sole argument.  When this happens, the task is
+transparently unregistered.
+.PP
+Tasks are mainly used for scheduling code for execution where it is not
+appropriate to directly run that code in the calling context (for
+example, because the current context might be run as a callback function
+where the caller expects certain conditions to remain invariant after
+the callback completes).
 .PP
 The application is allowed to change the
 .B ->cookie
