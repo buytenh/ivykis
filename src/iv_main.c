@@ -263,6 +263,12 @@ void iv_register_fd(struct iv_fd *_fd)
 		abort();
 	}
 
+	flags = fcntl(fd->fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(fd->fd, F_SETFD, flags);
+	}
+
 	flags = fcntl(fd->fd, F_GETFL);
 	if (!(flags & O_NONBLOCK)) {
 		flags |= O_NONBLOCK;
