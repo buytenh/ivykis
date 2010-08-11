@@ -393,3 +393,45 @@ void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an)
 
 	rebalance_path(tree, p);
 }
+
+struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an)
+{
+	struct iv_avl_node *p;
+
+	if (an->right != NULL) {
+		an = an->right;
+		while (an->left != NULL)
+			an = an->left;
+
+		return an;
+	}
+
+	p = an->parent;
+	while (p != NULL && an == p->right) {
+		an = p;
+		p = an->parent;
+	}
+
+	return p;
+}
+
+struct iv_avl_node *iv_avl_tree_prev(struct iv_avl_node *an)
+{
+	struct iv_avl_node *p;
+
+	if (an->left != NULL) {
+		an = an->left;
+		while (an->right != NULL)
+			an = an->right;
+
+		return an;
+	}
+
+	p = an->parent;
+	while (p != NULL && an == p->left) {
+		an = p;
+		p = an->parent;
+	}
+
+	return p;
+}
