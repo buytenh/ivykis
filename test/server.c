@@ -61,54 +61,97 @@ static void handler(void *_h)
 	}
 }
 
-int main()
+static void create_handle(struct handle *h, int port)
 {
 	struct sockaddr_in addr;
-	struct handle hh[1000];
+	int sock;
+	int yes;
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0) {
+		perror("socket");
+		exit(-1);
+	}
+
+	yes = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+		       &yes, sizeof(yes)) < 0) {
+		perror("setsockopt");
+		exit(-1);
+	}
+
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(port);
+	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		perror("bind");
+		exit(-1);
+	}
+
+	listen(sock, 5);
+
+	INIT_IV_FD(&h->fd);
+	h->fd.fd = sock;
+	h->fd.handler_in = handler;
+	h->fd.handler_out = NULL;
+	h->fd.cookie = h;
+	h->port = port;
+	iv_register_fd(&h->fd);
+}
+
+static void create_run_handles(int fp, int numhandles)
+{
+	struct handle hh[numhandles];
 	int i;
 
-	printf("booting...\n");
+	printf("entering main loop for ports %d..%d\n",
+	       fp, fp + numhandles - 1);
+
+	for (i = 0; i < numhandles; i++)
+		create_handle(hh + i, fp + i);
+
+	iv_main();
+}
+
+
+#ifdef THREAD
+#include <pthread.h>
+
+static void *thr(void *_fp)
+{
+	int fp = (int)(unsigned long)_fp;
 
 	iv_init();
 
-	for (i = 0; i < sizeof(hh) / sizeof(hh[0]); i++) {
-		int sock;
-		int yes;
-		struct handle *h = hh + i;
+	create_run_handles(fp, 100);
 
-		sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock < 0) {
-			perror("socket");
-			return 1;
-		}
+	return NULL;
+}
 
-		yes = 1;
-		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-			       &yes, sizeof(yes)) < 0) {
-			perror("setsockopt");
-			return 1;
-		}
+int main()
+{
+	int i;
 
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = htonl(INADDR_ANY);
-		addr.sin_port = htons(20000 + i);
-		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			perror("bind");
-			return 1;
-		}
+	iv_init();
 
-		listen(sock, 5);
+	for (i = 1; i < 10; i++) {
+		unsigned long fp = 20000 + i * 100;
+		pthread_t id;
 
-		INIT_IV_FD(&h->fd);
-		h->fd.fd = sock;
-		h->fd.handler_in = handler;
-		h->fd.handler_out = NULL;
-		h->fd.cookie = h;
-		h->port = 20000 + i;
-		iv_register_fd(&h->fd);
+		pthread_create(&id, NULL, thr, (void *)fp);
 	}
 
-	iv_main();
+	create_run_handles(20000, 100);
 
 	return 0;
 }
+#else
+int main()
+{
+	iv_init();
+
+	create_run_handles(20000, 1000);
+
+	return 0;
+}
+#endif
