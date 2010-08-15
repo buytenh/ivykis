@@ -1,17 +1,16 @@
-.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" This man page is Copyright (C) 2003, 2010 Lennert Buytenhek.
 .\" Permission is granted to distribute possibly modified copies
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
 .\" of the modification is added to the header.
-.TH iv_timer 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.TH iv_timer 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
 iv_register_timer, iv_unregister_timer \- deal with ivykis timers
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
 .nf
-struct iv_timer
-{
+struct iv_timer {
         struct timespec         expires;
         void                    *cookie;
         void                    (*handler)(void *);
@@ -29,14 +28,15 @@ The functions
 .B iv_register_timer
 and
 .B iv_unregister_timer
-register, respectively unregister, a timer with the ivykis core.
+register, respectively unregister, a timer with the current thread's
+ivykis event loop.
 .PP
 When a timer that is registered becomes 'ready', due to the current
 system clock value becoming greater than or equal to the timer's
 .B ->expires
 member field, the callback function specified by
 .B ->handler
-is called, with
+is called in the thread that the timer was registered in, with
 .B ->cookie
 as its first and sole argument.  When this happens, the timer is
 transparently unregistered.
@@ -49,6 +49,11 @@ members at any time.  The application is not allowed to change
 the
 .B ->expires
 member while the timer is registered.
+.PP
+A given
+.B struct iv_timer
+can only be registered in one thread at a time, and a timer can only
+be unregistered in the thread that it was registered from.
 .PP
 There is no limit on the number of timers registered at once.
 .PP

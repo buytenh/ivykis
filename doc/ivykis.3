@@ -1,59 +1,57 @@
-.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" This man page is Copyright (C) 2003, 2010 Lennert Buytenhek.
 .\" Permission is granted to distribute possibly modified copies
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
 .\" of the modification is added to the header.
-.TH ivykis 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.TH ivykis 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
 ivykis \- library for asynchronous I/O readiness notification
 .SH DESCRIPTION
 ivykis is a library for asynchronous I/O readiness notification.
 It is a thin, portable wrapper around OS-provided mechanisms such as
-/dev/poll,
+.BR epoll_create (2),
 .BR kqueue (2),
 .BR poll (2),
-.BR select (2),
-and
-.BR epoll_create (2).
+.BR poll (7d)
+(/dev/poll), and
+.BR select (2).
 .PP
 ivykis was mainly designed for building high-performance network
-servers, but can be used as building block for any kind of
-event-driven application that uses
+applications, but can be used in any event-driven application that
+uses
 .BR poll (2)able
-file descriptors as its inputs.
+file descriptors as its event sources.
 .PP
-Whereas some programming models dictate using blocking I/O and
-dealing with each unit of input (for example, a file descriptor) by
-starting a dedicated thread, programs written to the ivykis API are
-generally single-threaded and never block on I/O.  All input and
-output is done in a nonblocking fashion, with I/O readiness
-notification done via callback functions.
+While some programming models dictate using blocking I/O and starting
+a thread per event source, programs written to the ivykis API are
+generally single-threaded (or use only a small number of threads),
+and never block on I/O.  All input and output is done in a nonblocking
+fashion, with I/O readiness notifications delivered via callback
+functions.
 .PP
-The two main event-generating entities in ivykis are file descriptors
-and timers.  File descriptors generate an event when they become
-readable or writable, while timers generate an event when the system
-time increments past a certain pre-set time.  Events associated with
-file descriptors are level-triggered -- a callback function set up to
-handle a certain event will be called in a loop until the condition
-generating the event is cleared.
+The two main event sources in ivykis are file descriptors and timers.
+File descriptors generate an event when they become readable or
+writable or trigger an error condition, while timers generate an event
+when the system time increments past a certain pre-set time.  Events
+associated with file descriptors are level-triggered -- a callback
+function set up to handle a certain file descriptor event will be
+called repeatedly until the condition generating the event has been
+cleared.
 .PP
 As mentioned, applications using ivykis are generally single-threaded.
-Callbacks are strictly serialised within a thread, and nonpreemptable.
-This makes programming ivykis applications rather easy, generally having
-avoided the need for any kind of locking of shared data.
+Event callbacks are strictly serialised within a thread, and
+non-preemptible.  This mostly removes the need for locking of shared
+data, and generally simplifies writing applications.
 .PP
-Currently, there can be only one set of file descriptors and timers
-per process, which generally means that in a multi-threaded application,
-there can be only one thread that deals with ivykis and runs the ivykis
-event loop.  This limitation might be lifted in the future, giving
-each thread its own set of file descriptors and timers.
+Each thread that uses ivykis has its own file descriptors and timers,
+and runs a separate event loop.
 .PP
-In ivykis, almost all code (all code that is not initialisation code)
-runs from callback functions.  Callback functions are not allowed to block.
-If a particular piece of code wants to perform a certain operation
-that can block, it either has to schedule it to run in a separate
-thread, or it has to do the operation in a nonblocking fashion instead.
-For example, registering an input callback function instead of blocking
+In ivykis, all code that is not initialization code runs from callback
+functions.  Callback functions are not allowed to block.  If a
+particular piece of code wants to perform a certain operation that can
+block, it either has to schedule it to run in a separate thread, or it
+has to perform the operation in a nonblocking fashion instead.  For
+example, registering an input callback function instead of blocking
 on a read, registering a timer instead of calling
 .BR sleep (2),
 etc.

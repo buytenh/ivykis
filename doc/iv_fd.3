@@ -1,22 +1,21 @@
-.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" This man page is Copyright (C) 2003, 2010 Lennert Buytenhek.
 .\" Permission is granted to distribute possibly modified copies
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
 .\" of the modification is added to the header.
-.TH iv_fd 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.TH iv_fd 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
 iv_register_fd, iv_unregister_fd, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
 .nf
-struct iv_fd
-{
-        int                     fd;
-        void                    *cookie;
-        void                    (*handler_in)(void *);
-        void                    (*handler_out)(void *);
-        void                    (*handler_err)(void *);
+struct iv_fd {
+        int             fd;
+        void            *cookie;
+        void            (*handler_in)(void *);
+        void            (*handler_out)(void *);
+        void            (*handler_err)(void *);
 };
 .fi
 .sp
@@ -37,15 +36,21 @@ The functions
 .B iv_register_fd
 and
 .B iv_unregister_fd
-register, respectively unregister, a file descriptor with the ivykis
-core.  When a file descriptor that is registered with ivykis becomes
-ready for input or output, or an error condition occurs on that file
-descriptor, and a callback function for that event has been set, that
-callback function will be called.  And conversely, when a file
-descriptor that is already ready for input or output or already has an
-error condition set is registered with ivykis, and the corresponding
-callback function has been set, the callback function will be called
-in the next iteration of the ivykis event loop.
+register, respectively unregister, a file descriptor with the current
+thread's ivykis event loop.
+.PP
+When a file descriptor that is registered with ivykis becomes ready for
+input or output, or an error condition occurs on that file descriptor,
+and a callback function for that event has been specified, that
+callback function will be called in the thread that the file descriptor
+was registered in.
+.PP
+And conversely, when a file descriptor that is already ready for input
+or output or already has an error condition set is registered with
+ivykis, and the corresponding callback function pointer is not NULL,
+the callback function will be called in the next iteration of the
+current thread's ivykis event loop.
+in.
 .PP
 Before a file descriptor is registered, it must have been
 initialised by calling
@@ -56,7 +61,7 @@ member field set to a valid OS file descriptor.  The
 .B ->handler_in, ->handler_out
 and
 .B ->handler_err
-member fields are addresses of callback functions that are called when
+member fields point to callback functions that are to be called when
 the specified file descriptor becomes ready for input or output or an
 error condition occurs.  If any handler function is set to
 .B NULL,
@@ -78,13 +83,13 @@ has to be used instead.  Conversely, it is not allowed to use this
 function before the file descriptor has been registered.
 .PP
 .B iv_fd_set_handler_out
-is identical to
+is analogous to
 .B iv_fd_set_handler_in,
 only it deals with the callback function for output readiness
 .B (->handler_out).
 .PP
 .B iv_fd_set_handler_err
-is identical to
+is analogous to
 .B iv_fd_set_handler_in
 and
 .B iv_fd_set_handler_out,
@@ -99,8 +104,8 @@ or
 and the file descriptor was already ready for input or output, or
 already had an error condition set, an event is generated, and the
 specified callback function will be called in the next iteration of
-the event loop.  The application does not need to poll the file
-descriptor to see if a condition was already raised.
+the current thread's event loop.  The application does not need to
+poll the file descriptor to see if a condition was already raised.
 .PP
 Callback functions are passed a
 .B cookie
@@ -118,8 +123,16 @@ set to nonblocking mode, and configured to be closed on
 .BR exit (3).
 .PP
 An application is allowed to unregister a file descriptor from within
-its own callback function, and even to free the memory corresponding
-to that file descriptor from that callback function.
+any callback function, including callback functions triggered by that
+file descriptor itself, and even to free the memory corresponding to
+that file descriptor from any callback function, but a
+.B struct iv_fd
+can only be unregistered in the thread that it was registered from.
+.PP
+It is allowed to register the same underlying OS file descriptor in
+multiple threads, but a given
+.B struct iv_fd
+can only be registered in one thread at a time.
 .PP
 See
 .BR iv_examples (3)

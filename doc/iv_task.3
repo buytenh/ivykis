@@ -1,19 +1,18 @@
-.\" This man page is Copyright (C) 2003 Lennert Buytenhek.
+.\" This man page is Copyright (C) 2003, 2010 Lennert Buytenhek.
 .\" Permission is granted to distribute possibly modified copies
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
 .\" of the modification is added to the header.
-.TH iv_task 3 2003-03-29 "ivykis" "ivykis programmer's manual"
+.TH iv_task 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
 iv_register_task, iv_unregister_task \- deal with ivykis tasks
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
 .nf
-struct iv_task
-{
-        void                    *cookie;
-        void                    (*handler)(void *);
+struct iv_task {
+        void            *cookie;
+        void            (*handler)(void *);
 };
 .fi
 .sp
@@ -28,15 +27,16 @@ The functions
 .B iv_register_task
 and
 .B iv_unregister_task
-register, respectively unregister, a task with the ivykis core.
+register, respectively unregister, a task with the current thread's
+ivykis event loop.
 .PP
 A task is like a timer, but with an immediate timeout.  When a task
 is registered, unless it is unregistered again first, the callback
 function specified by
 .B ->handler
-is guaranteed to be called once, some time after control returns to
-the ivykis main loop but before ivykis will sleep for more events,
-with
+is guaranteed to be called once, in the thread that the task was
+registered in, some time after control returns to the ivykis main
+loop but before ivykis will sleep for more events, with
 .B ->cookie
 as its first and sole argument.  When this happens, the task is
 transparently unregistered.
@@ -52,6 +52,11 @@ The application is allowed to change the
 and
 .B ->handler
 members at any time.
+.PP
+A given
+.B struct iv_task
+can only be registered in one thread at a time, and a task can only
+be unregistered in the thread that it was registered from.
 .PP
 There is no limit on the number of tasks registered at once.
 .PP
