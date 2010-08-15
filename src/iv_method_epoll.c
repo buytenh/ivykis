@@ -40,9 +40,7 @@
 #define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
 #define SET_ERR		(EPOLLERR | EPOLLHUP)
 
-static struct epoll_event	*batch;
-static int			batch_size;
-static int			epoll_fd;
+static int		epoll_fd;
 
 
 static int iv_epoll_init(int maxfd)
@@ -59,24 +57,17 @@ static int iv_epoll_init(int maxfd)
 		fcntl(epoll_fd, F_SETFD, flags);
 	}
 
-	batch = malloc(maxfd * sizeof(*batch));
-	if (batch == NULL) {
-		close(epoll_fd);
-		return -1;
-	}
-
-	batch_size = maxfd;
-
 	return 0;
 }
 
 static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
 {
+	struct epoll_event batch[numfds];
 	int ret;
 	int i;
 
 	do {
-		ret = epoll_wait(epoll_fd, batch, batch_size, msec);
+		ret = epoll_wait(epoll_fd, batch, numfds, msec);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -149,7 +140,6 @@ static void iv_epoll_notify_fd(struct iv_fd_ *fd, int wanted)
 
 static void iv_epoll_deinit(void)
 {
-	free(batch);
 	close(epoll_fd);
 }
 

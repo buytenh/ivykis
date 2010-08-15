@@ -32,8 +32,6 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static struct kevent	*batch;
-static int		batch_size;
 static int		kqueue_fd;
 static struct kevent	*upload_queue;
 static int		upload_entries;
@@ -53,22 +51,14 @@ static int iv_kqueue_init(int maxfd)
 		fcntl(kqueue_fd, F_SETFD, flags);
 	}
 
-	batch = malloc(maxfd * sizeof(*batch));
-	if (batch == NULL) {
-		close(kqueue_fd);
-		return -1;
-	}
-
 	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
 	if (upload_queue == NULL) {
-		free(batch);
 		close(kqueue_fd);
 		return -1;
 	}
 
 	fprintf(stderr, "warning: using kqueue(2), POLLERR delivery broken\n");
 
-	batch_size = maxfd;
 	upload_entries = 0;
 
 	return 0;
@@ -76,6 +66,7 @@ static int iv_kqueue_init(int maxfd)
 
 static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 {
+	struct kevent batch[numfds];
 	struct timespec to;
 	int i;
 	int ret;
@@ -85,7 +76,7 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 
 	do {
 		ret = kevent(kqueue_fd, upload_queue, upload_entries,
-			     batch, batch_size, &to);
+			     batch, numfds, &to);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -162,7 +153,6 @@ static void iv_kqueue_notify_fd(struct iv_fd_ *fd, int wanted)
 static void iv_kqueue_deinit(void)
 {
 	free(upload_queue);
-	free(batch);
 	close(kqueue_fd);
 }
 

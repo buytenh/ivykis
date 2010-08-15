@@ -33,8 +33,6 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static struct pollfd		*batch;
-static int			batch_size;
 static struct iv_avl_tree	fds;
 static int			poll_fd;
 static struct pollfd		*upload_queue;
@@ -82,22 +80,14 @@ static int iv_dev_poll_init(int maxfd)
 	if (poll_fd < 0)
 		return -1;
 
-	batch = malloc(maxfd * sizeof(*batch));
-	if (batch == NULL) {
-		close(poll_fd);
-		return -1;
-	}
-
 	INIT_IV_AVL_TREE(&fds, fd_compare);
 
 	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
 	if (upload_queue == NULL) {
-		free(batch);
 		close(poll_fd);
 		return -1;
 	}
 
-	batch_size = maxfd;
 	upload_entries = 0;
 
 	return 0;
@@ -133,6 +123,7 @@ static void flush_upload_queue(void)
 
 static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 {
+	struct pollfd batch[numfds];
 	int i;
 	int ret;
 
@@ -152,7 +143,7 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 		struct dvpoll dvp;
 
 		dvp.dp_fds = batch;
-		dvp.dp_nfds = batch_size;
+		dvp.dp_nfds = numfds;
 		dvp.dp_timeout = msec;
 		ret = ioctl(poll_fd, DP_POLL, &dvp);
 	} while (ret < 0 && errno == EINTR);
@@ -239,7 +230,6 @@ static void iv_dev_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 static void iv_dev_poll_deinit(void)
 {
 	free(upload_queue);
-	free(batch);
 	close(poll_fd);
 }
 
