@@ -131,7 +131,7 @@ static void flush_upload_queue(void)
 	upload_entries = 0;
 }
 
-static void iv_dev_poll_poll(struct list_head *active, int msec)
+static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 {
 	int i;
 	int ret;

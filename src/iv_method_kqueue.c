@@ -74,7 +74,7 @@ static int iv_kqueue_init(int maxfd)
 	return 0;
 }
 
-static void iv_kqueue_poll(struct list_head *active, int msec)
+static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 {
 	struct timespec to;
 	int i;

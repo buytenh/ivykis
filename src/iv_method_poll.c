@@ -63,7 +63,7 @@ static int iv_poll_init(int maxfd)
 	return 0;
 }
 
-static void iv_poll_poll(struct list_head *active, int msec)
+static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 {
 	int ret;
 	int i;

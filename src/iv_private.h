@@ -111,7 +111,7 @@ struct iv_timer_ {
 struct iv_poll_method {
 	char	*name;
 	int	(*init)(int maxfd);
-	void	(*poll)(struct list_head *active, int msec);
+	void	(*poll)(int numfds, struct list_head *active, int msec);
 	void	(*register_fd)(struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_fd_ *fd, int wanted_bands);

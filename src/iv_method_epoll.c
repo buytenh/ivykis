@@ -70,7 +70,7 @@ static int iv_epoll_init(int maxfd)
 	return 0;
 }
 
-static void iv_epoll_poll(struct list_head *active, int msec)
+static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
 {
 	int ret;
 	int i;

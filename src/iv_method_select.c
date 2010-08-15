@@ -95,7 +95,7 @@ static int iv_select_init(int maxfd)
 	return 0;
 }
 
-static void iv_select_poll(struct list_head *active, int msec)
+static void iv_select_poll(int numfds, struct list_head *active, int msec)
 {
 	int i;
 	int ret;

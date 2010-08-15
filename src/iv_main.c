@@ -224,7 +224,7 @@ void iv_main(void)
 		} else {
 			msec = 0;
 		}
-		method->poll(&active, msec);
+		method->poll(numfds, &active, msec);
 
 		iv_invalidate_now();
 
