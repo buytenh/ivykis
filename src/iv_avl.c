@@ -19,7 +19,6 @@
  */
 
 #include <stdio.h>
-#include <errno.h>
 #include <iv.h>
 #include "iv_avl.h"
 
