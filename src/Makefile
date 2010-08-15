@@ -19,4 +19,4 @@ libivykis.a:	$(OBJS)
 		ranlib libivykis.a
 
 .c.o:		iv.h iv_avl.h iv_list.h iv_private.h
-		$(CC) $(CFLAGS) -Wall -I. -fomit-frame-pointer -c -o $@ $<
+		$(CC) $(CFLAGS) -D_GNU_SOURCE -Wall -I. -fomit-frame-pointer -c -o $@ $<
