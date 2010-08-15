@@ -41,9 +41,9 @@
 #define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
 #define SET_ERR		(POLLERR | POLLHUP)
 
-static struct pollfd	*pfds;
-static struct iv_fd_	**fds;
-static int		numfds;
+static __thread struct pollfd	*pfds;
+static __thread struct iv_fd_	**fds;
+static __thread int		numfds;
 
 
 static int iv_poll_init(int maxfd)

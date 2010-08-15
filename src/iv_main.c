@@ -30,12 +30,9 @@
 #include <unistd.h>
 #include "iv_private.h"
 
-/* main loop ****************************************************************/
-static struct iv_fd_		*handled_fd;
+/* process-global state *****************************************************/
 static int			maxfd;
 static struct iv_poll_method	*method;
-static int			numfds;
-static int			quit;
 
 static int sanitise_nofile_rlimit(int euid)
 {
@@ -95,19 +92,17 @@ static void consider_poll_method(char *exclude, struct iv_poll_method *m)
 	}
 }
 
-void iv_init(void)
+static void iv_init_first_thread(void)
 {
-	char *exclude;
 	int euid;
+	char *exclude;
 
 	euid = geteuid();
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGURG, SIG_IGN);
 
-	handled_fd = NULL;
 	maxfd = sanitise_nofile_rlimit(euid);
-	numfds = 0;
 	method = NULL;
 
 	exclude = getenv("IV_EXCLUDE_POLL_METHOD");
@@ -131,6 +126,25 @@ void iv_init(void)
 				 "dispatcher");
 		abort();
 	}
+}
+
+
+/* main loop ****************************************************************/
+static __thread struct iv_fd_	*handled_fd;
+static __thread int		numfds;
+static __thread int		quit;
+
+void iv_init(void)
+{
+	if (method == NULL) {
+		iv_init_first_thread();
+	} else if (method->init(maxfd) < 0) {
+		syslog(LOG_CRIT, "iv_init: can't initialize event dispatcher");
+		abort();
+	}
+
+	handled_fd = NULL;
+	numfds = 0;
 
 	iv_task_init();
 	iv_timer_init();

@@ -40,7 +40,7 @@
 #define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
 #define SET_ERR		(EPOLLERR | EPOLLHUP)
 
-static int		epoll_fd;
+static __thread int		epoll_fd;
 
 
 static int iv_epoll_init(int maxfd)

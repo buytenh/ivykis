@@ -33,10 +33,10 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static struct iv_avl_tree	fds;
-static int			poll_fd;
-static struct pollfd		*upload_queue;
-static int			upload_entries;
+static __thread struct iv_avl_tree	fds;
+static __thread int			poll_fd;
+static __thread struct pollfd		*upload_queue;
+static __thread int			upload_entries;
 
 
 static struct iv_fd_ *find_fd(int fd)

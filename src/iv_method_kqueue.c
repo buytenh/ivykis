@@ -32,9 +32,9 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static int		kqueue_fd;
-static struct kevent	*upload_queue;
-static int		upload_entries;
+static __thread int		kqueue_fd;
+static __thread struct kevent	*upload_queue;
+static __thread int		upload_entries;
 
 
 static int iv_kqueue_init(int maxfd)

@@ -27,8 +27,8 @@
 #include "iv_private.h"
 
 /* time handling ************************************************************/
-struct timespec now;
-static int now_valid;
+__thread struct timespec	now;
+static __thread int		now_valid;
 
 void iv_invalidate_now(void)
 {
@@ -51,8 +51,8 @@ void iv_validate_now(void)
 #define SPLIT_MAX		(1 << (SPLIT_BITS * SPLIT_LEVELS))
 struct ratnode { void *child[SPLIT_NODES]; };
 
-static int num_timers;
-static struct ratnode *timer_root;
+static __thread int		num_timers;
+static __thread struct ratnode	*timer_root;
 
 void INIT_IV_TIMER(struct iv_timer *_t)
 {

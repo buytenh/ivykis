@@ -42,7 +42,7 @@ void iv_quit(void);
 /*
  * Time handling.
  */
-extern struct timespec now;
+extern __thread struct timespec now;
 void iv_validate_now(void);
 void iv_invalidate_now(void);
 

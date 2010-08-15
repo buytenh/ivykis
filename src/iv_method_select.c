@@ -26,13 +26,13 @@
 #include <sys/select.h>
 #include "iv_private.h"
 
-static struct iv_avl_tree	fds;
-static int		setsize;
-static int		fd_max;
-static fd_set		*readfds_master;
-static fd_set		*writefds_master;
-static fd_set		*readfds;
-static fd_set		*writefds;
+static __thread struct iv_avl_tree	fds;
+static __thread int			setsize;
+static __thread int			fd_max;
+static __thread fd_set			*readfds_master;
+static __thread fd_set			*writefds_master;
+static __thread fd_set			*readfds;
+static __thread fd_set			*writefds;
 
 
 static struct iv_fd_ *find_fd(int fd)

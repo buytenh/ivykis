@@ -23,7 +23,7 @@
 #include <syslog.h>
 #include "iv_private.h"
 
-static struct list_head tasks;
+static __thread struct list_head	tasks;
 
 void iv_task_init(void)
 {
