@@ -40,7 +40,6 @@
 #define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
 #define SET_ERR		(EPOLLERR | EPOLLHUP)
 
-static struct list_head		all;
 static struct epoll_event	*batch;
 static int			batch_size;
 static int			epoll_fd;
@@ -66,7 +65,6 @@ static int iv_epoll_init(int maxfd)
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&all);
 	batch_size = maxfd;
 
 	return 0;

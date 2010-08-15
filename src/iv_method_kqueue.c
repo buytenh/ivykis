@@ -32,12 +32,11 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static struct list_head		all;
-static struct kevent		*batch;
-static int			batch_size;
-static int			kqueue_fd;
-static struct kevent		*upload_queue;
-static int			upload_entries;
+static struct kevent	*batch;
+static int		batch_size;
+static int		kqueue_fd;
+static struct kevent	*upload_queue;
+static int		upload_entries;
 
 
 static int iv_kqueue_init(int maxfd)
@@ -69,7 +68,6 @@ static int iv_kqueue_init(int maxfd)
 
 	fprintf(stderr, "warning: using kqueue(2), POLLERR delivery broken\n");
 
-	INIT_LIST_HEAD(&all);
 	batch_size = maxfd;
 	upload_entries = 0;
 
