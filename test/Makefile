@@ -1,7 +1,7 @@
-all:		avl client connectfail connectreset null nullclose server server_thread timer timer_rat
+all:		avl client connectfail connectreset null server server_thread timer timer_rat
 
 clean:
-		rm -f avl client connectfail connectreset null nullclose server server_thread timer timer_rat
+		rm -f avl client connectfail connectreset null server server_thread timer timer_rat
 
 avl:		avl.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o avl avl.c `../misc/ivykis-config --cflags --libs`
@@ -17,9 +17,6 @@ connectreset:	connectreset.c ../src/libivykis.a
 
 null:		null.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o null null.c `../misc/ivykis-config --cflags --libs`
-
-nullclose:	nullclose.c ../src/libivykis.a
-		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o nullclose nullclose.c `../misc/ivykis-config --cflags --libs`
 
 server:		server.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o server server.c `../misc/ivykis-config --cflags --libs`
