@@ -62,12 +62,12 @@ static int iv_epoll_init(int maxfd)
 
 static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
 {
-	struct epoll_event batch[numfds];
+	struct epoll_event batch[numfds ? : 1];
 	int ret;
 	int i;
 
 	do {
-		ret = epoll_wait(epoll_fd, batch, numfds, msec);
+		ret = epoll_wait(epoll_fd, batch, numfds ? : 1, msec);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
