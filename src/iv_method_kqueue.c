@@ -66,20 +66,20 @@ static int iv_kqueue_init(int maxfd)
 
 static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 {
-	struct kevent batch[numfds];
 	struct timespec to;
-	int i;
+	struct kevent batch[numfds];
 	int ret;
+	int i;
 
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
-	do {
-		ret = kevent(kqueue_fd, upload_queue, upload_entries,
-			     batch, numfds, &to);
-	} while (ret < 0 && errno == EINTR);
-
+	ret = kevent(kqueue_fd, upload_queue, upload_entries,
+		     batch, numfds, &to);
 	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
 		syslog(LOG_CRIT, "iv_kqueue_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();

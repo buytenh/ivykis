@@ -124,8 +124,9 @@ static void flush_upload_queue(void)
 static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 {
 	struct pollfd batch[numfds];
-	int i;
+	struct dvpoll dvp;
 	int ret;
+	int i;
 
 #if 0
 	/*
@@ -139,16 +140,15 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 	if (upload_entries)
 		flush_upload_queue();
 
-	do {
-		struct dvpoll dvp;
+	dvp.dp_fds = batch;
+	dvp.dp_nfds = numfds;
+	dvp.dp_timeout = msec;
 
-		dvp.dp_fds = batch;
-		dvp.dp_nfds = numfds;
-		dvp.dp_timeout = msec;
-		ret = ioctl(poll_fd, DP_POLL, &dvp);
-	} while (ret < 0 && errno == EINTR);
-
+	ret = ioctl(poll_fd, DP_POLL, &dvp);
 	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
 		syslog(LOG_CRIT, "iv_dev_poll_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();

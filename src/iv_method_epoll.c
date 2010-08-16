@@ -66,11 +66,11 @@ static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
 	int ret;
 	int i;
 
-	do {
-		ret = epoll_wait(epoll_fd, batch, numfds ? : 1, msec);
-	} while (ret < 0 && errno == EINTR);
-
+	ret = epoll_wait(epoll_fd, batch, numfds ? : 1, msec);
 	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
 		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();

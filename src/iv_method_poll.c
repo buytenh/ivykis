@@ -66,11 +66,11 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 	int ret;
 	int i;
 
-	do {
-		ret = poll(pfds, numfds, msec);
-	} while (ret < 0 && errno == EINTR);
-
+	ret = poll(pfds, numfds, msec);
 	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
 		syslog(LOG_CRIT, "iv_poll_poll: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();

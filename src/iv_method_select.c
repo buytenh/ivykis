@@ -97,8 +97,9 @@ static int iv_select_init(int maxfd)
 
 static void iv_select_poll(int numfds, struct list_head *active, int msec)
 {
-	int i;
+	struct timeval to;
 	int ret;
+	int i;
 
 	/*
 	 * @@@ This is ugly and dependent on clock tick granularity.
@@ -106,18 +107,17 @@ static void iv_select_poll(int numfds, struct list_head *active, int msec)
 	if (msec)
 		msec += (1000/100) - 1;
 
-	do {
-		struct timeval to;
+	memcpy(readfds, readfds_master, (fd_max / 8) + 1);
+	memcpy(writefds, writefds_master, (fd_max / 8) + 1);
 
-		to.tv_sec = msec / 1000;
-		to.tv_usec = 1000 * (msec % 1000);
+	to.tv_sec = msec / 1000;
+	to.tv_usec = 1000 * (msec % 1000);
 
-		memcpy(readfds, readfds_master, (fd_max / 8) + 1);
-		memcpy(writefds, writefds_master, (fd_max / 8) + 1);
-		ret = select(fd_max + 1, readfds, writefds, NULL, &to);
-	} while (ret < 0 && errno == EINTR);
-
+	ret = select(fd_max + 1, readfds, writefds, NULL, &to);
 	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
 		syslog(LOG_CRIT, "iv_select_poll: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();
