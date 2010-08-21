@@ -16,7 +16,6 @@ ivykis is an event handling library.
 %setup -q -n %{name}-%{version}
 
 %build
-cd lib
 make CFLAGS="-O3"
 
 %install
@@ -29,19 +28,22 @@ install -m 0644 misc/libivykis.pc %{buildroot}%{_libdir}/pkgconfig
 
 install -d -m 0755 %{buildroot}%{_includedir}
 install -m 0644 lib/include/*.h %{buildroot}%{_includedir}
+install -m 0644 modules/include/*.h %{buildroot}%{_includedir}
 
 install -d -m 0755 %{buildroot}%{_libdir}
 install -m 0755 lib/libivykis.a %{buildroot}%{_libdir}
+install -m 0755 modules/libivykis-modules.a %{buildroot}%{_libdir}
 
 install -d -m 0755 %{buildroot}%{_mandir}/man3
 install -m 0644 lib/man3/iv*.3 %{buildroot}%{_mandir}/man3
+install -m 0644 modules/man3/iv*.3 %{buildroot}%{_mandir}/man3
 
 
 %files
 %defattr(-,root,root)
 %{_bindir}/*
 %{_includedir}/iv*
-%{_libdir}/libivykis.a
+%{_libdir}/lib*
 %{_libdir}/pkgconfig/*
 %{_mandir}/man3/*
 

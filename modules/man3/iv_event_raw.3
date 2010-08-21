@@ -1,0 +1,96 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_event_raw 3 2010-09-02 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_event_raw_register, iv_event_raw_unregister, iv_event_raw_post \- manage ivykis objects for event notification
+.SH SYNOPSIS
+.B #include <iv_event_raw.h>
+.sp
+.nf
+struct iv_event_raw {
+        void            *cookie;
+        void            (*handler)(void *);
+};
+.fi
+.sp
+.BI "int iv_event_raw_register(struct iv_event_raw *" this ");"
+.br
+.BI "void iv_event_raw_unregister(struct iv_event_raw *" this ");"
+.br
+.BI "void iv_event_raw_post(struct iv_event_raw *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_event_raw
+provides a way for delivering events to
+.BR ivykis (3)
+recipients across thread and process boundaries.
+.PP
+The intended event recipient calls
+.B iv_event_raw_register
+on a
+.B struct iv_event_raw
+object.
+.PP
+To generate an event, call
+.B iv_event_raw_post
+on the previously initialized
+.B struct iv_event_raw
+object.  This will cause the callback specified by
+.B ->handler
+to be called in the thread that the
+.B struct iv_event_raw
+object was registered in, with
+.B ->cookie
+as its sole argument.
+.PP
+To deinitialize a
+.B struct iv_event_raw
+object, call
+.B iv_event_raw_unregister
+from the same thread that
+.B iv_event_raw_register
+was called from on that object.
+.PP
+It is permitted to unregister a
+.B struct iv_event_raw
+object from any ivykis callback function in the thread it was
+registered in, including from a callback function triggered by this
+object, and it is permitted to free the memory corresponding to an
+unregistered object from its own callback function.
+.PP
+.B iv_event_raw_post
+can be called from the same thread that
+.B iv_event_raw_register
+was called from, from a different thread in the same process, or even
+from a different process, and can safely be called from signal handlers.
+.PP
+Internally,
+.B iv_event_raw
+is implemented by registering a file descriptor (a struct
+.BR iv_fd (3))
+with the recipient thread's ivykis event loop, and by causing that
+file descriptor to become readable upon a call to
+.B iv_event_raw_post.
+.PP
+If
+.BR eventfd (2)
+is available, it will be used to procure the abovementioned file
+descriptor.  If not,
+.B iv_event_raw
+will fall back to
+.BR pipe (2)
+as the source of its file descriptors.
+.BR eventfd (2)
+is preferred as it requires only one file descriptor table entry
+(while
+.BR pipe (2)
+requires two), and has much less kernel overhead than
+.BR pipe (2)
+has.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR eventfd (2),
+.BR pipe (2)
