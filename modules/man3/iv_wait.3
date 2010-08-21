@@ -1,0 +1,88 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_wait 3 2010-09-03 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_wait_interest_register, iv_wait_interest_unregister \- ivykis
+.BR wait4 (2)
+wrapper
+.SH SYNOPSIS
+.B #include <iv_wait.h>
+.sp
+.nf
+struct iv_wait_interest {
+        pid_t           pid;
+        void            *cookie;
+        void            (*handler)(void *cookie, int status,
+                                   struct rusage *rusage);
+};
+.fi
+.sp
+.BI "int iv_wait_interest_register(struct iv_wait_interest *" this ");"
+.br
+.BI "void iv_wait_interest_unregister(struct iv_wait_interest *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_wait
+is an
+.BR ivykis (3)
+wrapper around
+.BR wait4 (2),
+integrating process state change notification with the ivykis event loop.
+.PP
+An ivykis application desiring process state change notifications
+registers a
+.B struct iv_wait_interest
+object by calling
+.B iv_wait_interest_register
+after having filled in the
+.B ->pid,
+.B ->cookie
+and
+.B ->handler
+members.
+.PP
+Once a process state change occurs (as indicated by delivery of a
+SIGCHLD signal to the current process),
+.B iv_wait
+calls
+.BR wait4 (2)
+to return information about the process state change, looks up the
+returned process ID in the set of registered
+.B struct iv_wait_interest
+objects, and if there is a registered interest with a matching
+.B ->pid
+field, arranges for that object's callback function to be called in
+the thread that the object was registered in.
+.PP
+Process state change notifications will continue to be delivered to
+the object's callback function until
+.B iv_wait_interest_unregister
+is called on the object.  Delivery of a WIFEXITED or WIFSIGNALED
+status does not automatically unregister the object.
+.PP
+Unregistering a
+.B struct iv_wait_interest
+object can only be done from the thread that that object was
+registered in, but within that thread, can safely be done from (and
+its underlying memory allocation can safely be freed from) its own
+callback function.
+.PP
+Registering multiple
+.B struct iv_wait_interest
+objects for the same process ID will produce undefined behavior.
+.PP
+Internally,
+.B iv_wait
+is implemented using
+.BR iv_signal (3)
+and
+.BR iv_event (3).
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_signal (3),
+.BR iv_event (3),
+.BR wait4 (2)
