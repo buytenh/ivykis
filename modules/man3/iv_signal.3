@@ -1,0 +1,97 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_signal 3 2010-09-03 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_signal_register, iv_signal_unregister \- ivykis signal handling
+.SH SYNOPSIS
+.B #include <iv_signal.h>
+.sp
+.nf
+struct iv_signal {
+        int             signum;
+        unsigned        exclusive:1;
+        void            *cookie;
+        void            (*handler)(void *);
+};
+.fi
+.sp
+.BI "int iv_signal_register(struct iv_signal *" this ");"
+.br
+.BI "void iv_signal_unregister(struct iv_signal *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_signal
+provides a way for
+.BR ivykis (3)
+applications to handle POSIX signals, by integrating them with the
+ivykis event loop.
+.PP
+An ivykis application desiring signal notification registers a
+.B struct iv_signal
+object by calling
+.B iv_signal_register,
+after having filled in the
+.B ->signum,
+.B ->cookie
+and
+.B ->handler
+members.
+.PP
+Once the signal indicated by
+.B ->signum
+arrives, the callback specified by
+.B ->handler
+is scheduled to be called in the thread that
+the
+.B struct iv_signal
+object was registered in, with
+.B ->cookie
+as its sole argument.
+.PP
+If the same signal arrives again while the callback function is still
+running, the callback function is guaranteed to be called again after
+it returns.
+.PP
+It is permitted to register multiple
+.B struct iv_signal
+objects for the same signal number.  If all such objects are
+registered with
+.B ->exclusive
+set to zero, then all objects will have their callback functions
+called upon arrival of the signal, in no guaranteed order.
+.PP
+Invoking callback functions stops at the first
+.B struct iv_signal
+object with
+.B ->exclusive
+set to true, so that if all objects have
+.B ->exclusive
+set to one, only one callback function will be invoked.
+.PP
+To deinitialize a
+.B struct iv_signal
+object, call
+.B iv_signal_unregister
+from the same thread that
+.B iv_signal_register
+was called from on that object.
+.PP
+It is permitted to unregister a
+.B struct iv_signal
+object from any ivykis callback function in the thread it was
+registered in, including from a callback function triggered by this
+object, and it is permitted to free the memory corresponding to an
+unregistered object from its own callback function.
+.PP
+Internally,
+.B iv_signal
+is implemented using
+.BR iv_event_raw (3).
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_event_raw (3),
+.BR signal (2)
