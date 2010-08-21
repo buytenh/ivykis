@@ -1,11 +1,11 @@
-all:		src/libivykis.a test/client
+all:		lib/libivykis.a test/client
 
 clean:
-		$(MAKE) -C src clean
+		$(MAKE) -C lib clean
 		$(MAKE) -C test clean
 
-src/libivykis.a:
-		$(MAKE) -C src
+lib/libivykis.a:
+		$(MAKE) -C lib
 
 test/client:
 		$(MAKE) -C test
