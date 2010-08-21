@@ -14,6 +14,7 @@ all:		libivykis.a
 clean:
 		rm -f libivykis.a $(OBJS)
 		make -C man3 clean
+		make -C test clean
 
 libivykis.a:	$(OBJS)
 		$(AR) -rc libivykis.a $(OBJS)
