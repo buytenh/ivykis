@@ -34,7 +34,7 @@ install -d -m 0755 %{buildroot}%{_libdir}
 install -m 0755 lib/libivykis.a %{buildroot}%{_libdir}
 
 install -d -m 0755 %{buildroot}%{_mandir}/man3
-install -m 0644 doc/iv*.3 %{buildroot}%{_mandir}/man3
+install -m 0644 lib/man3/iv*.3 %{buildroot}%{_mandir}/man3
 
 
 %files
