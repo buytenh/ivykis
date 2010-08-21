@@ -5,8 +5,8 @@ clean:
 
 discard:	discard.c
 		gcc -Wall -o discard discard.c -livykis -lrt \
-			-I../../lib -L../../lib
+			-I../../lib/include -L../../lib
 
 echo:		echo.c
 		gcc -Wall -o echo echo.c -livykis -lrt \
-			-I../../lib -L../../lib
+			-I../../lib/include -L../../lib

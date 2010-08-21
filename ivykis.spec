@@ -28,9 +28,7 @@ install -d -m 0755 %{buildroot}%{_libdir}/pkgconfig
 install -m 0644 misc/libivykis.pc %{buildroot}%{_libdir}/pkgconfig
 
 install -d -m 0755 %{buildroot}%{_includedir}
-install -m 0644 lib/iv.h %{buildroot}%{_includedir}
-install -m 0644 lib/iv_avl.h %{buildroot}%{_includedir}
-install -m 0644 lib/iv_list.h %{buildroot}%{_includedir}
+install -m 0644 lib/include/*.h %{buildroot}%{_includedir}
 
 install -d -m 0755 %{buildroot}%{_libdir}
 install -m 0755 lib/libivykis.a %{buildroot}%{_libdir}

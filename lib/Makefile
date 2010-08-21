@@ -18,5 +18,5 @@ libivykis.a:	$(OBJS)
 		$(AR) -rc libivykis.a $(OBJS)
 		ranlib libivykis.a
 
-.c.o:		iv.h iv_avl.h iv_list.h iv_private.h
-		$(CC) $(CFLAGS) -D_GNU_SOURCE -Wall -I. -fomit-frame-pointer -c -o $@ $<
+.c.o:		include/iv.h include/iv_avl.h include/iv_list.h iv_private.h
+		$(CC) $(CFLAGS) -D_GNU_SOURCE -Wall -Iinclude/ -fomit-frame-pointer -c -o $@ $<
