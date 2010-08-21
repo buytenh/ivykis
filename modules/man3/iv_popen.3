@@ -1,0 +1,79 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_popen 3 2010-09-04 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_popen_request_submit, iv_popen_request_close \-
+.BR popen (3)
+for ivykis applications
+.SH SYNOPSIS
+.B #include <iv_popen.h>
+.sp
+.nf
+struct iv_popen_request {
+        char            *file;
+        char            **argv;
+        char            *type;
+};
+.fi
+.sp
+.BI "int iv_popen_request_submit(struct iv_popen_request *" this ");"
+.br
+.BI "void iv_popen_request_close(struct iv_popen_request *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_popen
+provides
+.BR ivykis (3)
+applications with an asynchronous version of
+.BR popen (3)
+that is integrated with the ivykis event loop.
+.PP
+.B iv_popen_request_submit
+forks off a child process, and in the child process calls
+.BR execvp(2)
+on the
+.B ->file
+and
+.B ->argv
+members specified in the
+.B struct iv_popen_request
+parameter, while in the parent process returning a file descriptor
+that is connected to the child's standard input (if
+.B ->type
+equals "w") or standard output (if
+.B ->type
+equals "r").
+.PP
+When the application is done with the child process, it should call
+.B iv_popen_request_close,
+and close the file descriptor returned by
+.B iv_popen_request_submit
+(this is not done automatically).
+.PP
+.B iv_popen
+will continue to monitor the child's process state while it is
+running, by registering an
+.BR iv_wait (3)
+interest for its process ID.
+.PP
+If the child process has not yet terminated when
+.B iv_popen_request_close
+is called,
+.B iv_popen
+will attempt to terminate the child process in the background by
+sending it a series of SIGTERM and SIGKILL signals.
+.PP
+.B iv_popen_request_close
+must be called from the same thread that
+.B iv_popen_request_submit
+was called from on this object.
+.PP
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_wait (3),
+.BR execvp (2),
+.BR popen (3)
