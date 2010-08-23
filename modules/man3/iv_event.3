@@ -1,0 +1,84 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_event 3 2010-09-03 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_event_register, iv_event_unregister, iv_event_post \- manage ivykis objects for event notification
+.SH SYNOPSIS
+.B #include <iv_event.h>
+.sp
+.nf
+struct iv_event {
+        void            *cookie;
+        void            (*handler)(void *);
+};
+.fi
+.sp
+.BI "int iv_event_register(struct iv_event *" this ");"
+.br
+.BI "void iv_event_unregister(struct iv_event *" this ");"
+.br
+.BI "void iv_event_post(struct iv_event *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_event
+provides a way for delivering events to
+.BR ivykis (3)
+recipients across thread boundaries.
+.PP
+The intended event recipient calls
+.B iv_event_register
+on a
+.B struct iv_event
+object.
+.PP
+To generate an event, call
+.B iv_event_post
+on the previously initialized
+.B struct iv_event
+object.  This will cause the callback specified by
+.B ->handler
+to be called in the thread that the
+.B struct iv_event
+object was registered in, with
+.B ->cookie
+as its sole argument.
+.PP
+To deinitialize a
+.B struct iv_event
+object, call
+.B iv_event_unregister
+from the same thread that
+.B iv_event_register
+was called from on that object.
+.PP
+It is permitted to unregister a
+.B struct iv_event
+object from any ivykis callback function in the thread it was
+registered in, including from a callback function triggered by this
+object, and it is permitted to free the memory corresponding to an
+unregistered object from its own callback function.
+.PP
+.B iv_event_post
+can be called from the same thread that
+.B iv_event_register
+was called from, or from a different thread within the same process,
+but can not be called from a different process, and can not be called
+from signal handlers.  If you need this functionality, look at
+.BR iv_event_raw (3).
+.PP
+Internally,
+.B iv_event
+is implemented as a wrapper around
+.BR iv_event_raw (3),
+and multiplexes multiple
+.B struct iv_event
+objects over per-thread
+.B struct iv_event_raw
+objects, to save file descriptors and kernel resources.
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_event_raw (3)

@@ -67,6 +67,12 @@ can be called from the same thread that
 was called from, from a different thread in the same process, or even
 from a different process, and can safely be called from signal handlers.
 .PP
+If posting an event only ever needs to be done from within the same
+process, see
+.BR iv_event (3)
+for a lighter-weight alternative to
+.B iv_event_raw.
+.PP
 Internally,
 .B iv_event_raw
 is implemented by registering a file descriptor (a struct
@@ -92,5 +98,6 @@ requires two), and has much less kernel overhead than
 has.
 .SH "SEE ALSO"
 .BR ivykis (3),
+.BR iv_event (3),
 .BR eventfd (2),
 .BR pipe (2)

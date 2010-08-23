@@ -1,7 +1,11 @@
-HTML =	iv_event_raw.3.html			\
+HTML =	iv_event.3.html				\
+	iv_event_post.3.html			\
+	iv_event_raw.3.html			\
 	iv_event_raw_post.3.html		\
 	iv_event_raw_register.3.html		\
 	iv_event_raw_unregister.3.html		\
+	iv_event_register.3.html		\
+	iv_event_unregister.3.html		\
 	iv_signal.3.html			\
 	iv_signal_register.3.html		\
 	iv_signal_unregister.3.html
