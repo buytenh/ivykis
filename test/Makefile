@@ -22,7 +22,7 @@ server:		server.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o server server.c `../misc/ivykis-config --cflags --libs`
 
 server_thread:	server.c ../src/libivykis.a
-		gcc -DTHREAD -I../src -L../src -O3 -Wall -fomit-frame-pointer -o server_thread server.c `../misc/ivykis-config --cflags --libs`
+		gcc -DTHREAD -I../src -L../src -O3 -Wall -fomit-frame-pointer -o server_thread server.c `../misc/ivykis-config --cflags --libs` -lpthread
 
 timer:		timer.c ../src/libivykis.a
 		gcc -I../src -L../src -O3 -Wall -fomit-frame-pointer -o timer timer.c `../misc/ivykis-config --cflags --libs`
