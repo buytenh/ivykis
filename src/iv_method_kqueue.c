@@ -67,7 +67,7 @@ static int iv_kqueue_init(int maxfd)
 static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 {
 	struct timespec to;
-	struct kevent batch[numfds];
+	struct kevent batch[numfds ? : 1];
 	int ret;
 	int i;
 
@@ -75,7 +75,7 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 	to.tv_nsec = 1000000 * (msec % 1000);
 
 	ret = kevent(kqueue_fd, upload_queue, upload_entries,
-		     batch, numfds, &to);
+		     batch, numfds ? : 1, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
