@@ -103,26 +103,35 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 	}
 }
 
+static void flush_upload_queue(void)
+{
+	struct timespec to = { 0, 0 };
+	int ret;
+
+	do {
+		ret = kevent(kqueue_fd, upload_queue,
+			     upload_entries, NULL, 0, &to);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		syslog(LOG_CRIT, "flush_upload_queue: got error %d[%s]",
+		       errno, strerror(errno));
+		abort();
+	}
+
+	upload_entries = 0;
+}
+
+static void iv_kqueue_unregister_fd(struct iv_fd_ *fd)
+{
+	flush_upload_queue();
+}
+
 static void queue(u_int ident, short filter, u_short flags,
 		  u_int fflags, int data, void *udata)
 {
-	if (upload_entries == UPLOAD_QUEUE_SIZE) {
-		struct timespec to = { 0, 0 };
-		int ret;
-
-		do {
-			ret = kevent(kqueue_fd, upload_queue,
-				     upload_entries, NULL, 0, &to);
-		} while (ret < 0 && errno == EINTR);
-
-		if (ret < 0) {
-			syslog(LOG_CRIT, "queue: got error %d[%s]",
-			       errno, strerror(errno));
-			abort();
-		}
-
-		upload_entries = 0;
-	}
+	if (upload_entries == UPLOAD_QUEUE_SIZE)
+		flush_upload_queue();
 
 	EV_SET(&upload_queue[upload_entries], ident, filter, flags,
 	       fflags, data, udata);
@@ -161,6 +170,7 @@ struct iv_poll_method iv_method_kqueue = {
 	.name		= "kqueue",
 	.init		= iv_kqueue_init,
 	.poll		= iv_kqueue_poll,
+	.unregister_fd	= iv_kqueue_unregister_fd,
 	.notify_fd	= iv_kqueue_notify_fd,
 	.deinit		= iv_kqueue_deinit,
 };
