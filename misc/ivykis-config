@@ -8,7 +8,6 @@ if test $# -eq 0; then
 fi
 
 CFLAGS=0
-DEBUG=0
 LIBS=0
 STATICLIBS=0
 
