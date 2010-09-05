@@ -3,13 +3,15 @@
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
 .\" of the modification is added to the header.
-.TH iv_init 3 2010-08-15 "ivykis" "ivykis programmer's manual"
+.TH iv_init 3 2010-09-05 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_init \- initialise ivykis
+iv_init, iv_deinit \- initialise and deinitialise ivykis
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
 .BI "void iv_init(void);"
+.br
+.BI "void iv_deinit(void);"
 .br
 .SH DESCRIPTION
 .B iv_init
@@ -27,6 +29,10 @@ to call
 but subsequent calls to
 .B iv_init
 can be done concurrently.
+.PP
+.B iv_deinit
+frees all resources allocated by ivykis in this thread, and should be
+called before this thread exits.
 .SH "SEE ALSO"
 .BR ivykis (3),
 .BR iv_examples (3)

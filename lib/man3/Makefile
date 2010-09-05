@@ -1,4 +1,5 @@
-HTML =	iv_examples.3.html		\
+HTML =	iv_deinit.3.html		\
+	iv_examples.3.html		\
 	iv_fd.3.html			\
 	iv_fd_set_handler_err.3.html	\
 	iv_fd_set_handler_in.3.html	\
