@@ -1,0 +1,40 @@
+#!/bin/sh
+
+usage="Usage: ivykis-modules-config [--cflags] [--libs] [--static-libs]"
+
+if test $# -eq 0; then
+	echo "${usage}" 1>&2
+	exit 1
+fi
+
+CFLAGS=0
+LIBS=0
+STATICLIBS=0
+
+while test $# -gt 0; do
+	case $1 in
+	--cflags)
+		CFLAGS=1
+		;;
+
+	--libs)
+		LIBS=1
+		;;
+
+	--static-libs)
+		STATICLIBS=1
+		;;
+
+	*)
+		echo "${usage}" 1>&2
+		exit 1
+		;;
+	esac
+	shift
+done
+
+if [ $LIBS != 0 -o $STATICLIBS != 0 ]
+then
+	echo -n "-livykis-modules "
+fi
+echo
