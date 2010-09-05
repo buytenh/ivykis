@@ -37,6 +37,7 @@ extern "C" {
 void iv_init(void);
 void iv_main(void);
 void iv_quit(void);
+void iv_deinit(void);
 
 
 /*

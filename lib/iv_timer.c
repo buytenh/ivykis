@@ -91,7 +91,7 @@ static struct iv_timer_ **get_node(int index)
 			memset(*r, 0, sizeof(struct ratnode));
 		}
 
-		bits = (index >> i*SPLIT_BITS) & (SPLIT_NODES - 1);
+		bits = (index >> i * SPLIT_BITS) & (SPLIT_NODES - 1);
 		r = (struct ratnode **)&((*r)->child[bits]);
 	}
 
@@ -133,6 +133,28 @@ int iv_get_soonest_timeout(struct timespec *to)
 	to->tv_nsec = 0;
 
 	return 0;
+}
+
+static void free_ratnode(struct ratnode *node, int depth)
+{
+	int i;
+
+	for (i = 0; i < SPLIT_NODES; i++) {
+		if (node->child[i] == NULL)
+			break;
+
+		if (depth == 1)
+			free(node->child[i]);
+		else
+			free_ratnode(node->child[i], depth - 1);
+	}
+
+	free(node);
+}
+
+void iv_timer_deinit(void)
+{
+	free_ratnode(timer_root, SPLIT_LEVELS - 1);
 }
 
 static void pull_up(int index, struct iv_timer_ **i)

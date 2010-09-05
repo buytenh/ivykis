@@ -246,6 +246,13 @@ void iv_main(void)
 	}
 }
 
+void iv_deinit(void)
+{
+	method->deinit();
+
+	iv_timer_deinit();
+}
+
 
 /* file descriptor handling *************************************************/
 void INIT_IV_FD(struct iv_fd *_fd)

@@ -138,3 +138,4 @@ void iv_timer_init(void);
 int iv_pending_timers(void);
 int iv_get_soonest_timeout(struct timespec *to);
 void iv_run_timers(void);
+void iv_timer_deinit(void);
