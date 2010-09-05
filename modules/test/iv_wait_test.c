@@ -56,6 +56,8 @@ int main()
 		write(p[1], "", 1);
 
 		iv_main();
+
+		iv_deinit();
 	} else {
 		char c;
 

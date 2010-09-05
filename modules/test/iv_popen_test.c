@@ -96,5 +96,7 @@ int main()
 
 	iv_main();
 
+	iv_deinit();
+
 	return 0;
 }

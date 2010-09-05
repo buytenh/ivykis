@@ -92,7 +92,10 @@ int main()
 		addr.sin_port = htons(20000 + i);
 		create_connector(&c[i], &addr);
 	}
+
 	iv_main();
+
+	iv_deinit();
 
 	return 0;
 }

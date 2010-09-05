@@ -59,6 +59,8 @@ int main()
 
         iv_main();
 
+        iv_deinit();
+
         return 0;
 }
 .fi
@@ -185,6 +187,8 @@ int main()
         iv_register_fd(&s.fd);
 
         iv_main();
+
+        iv_deinit();
 
         return 0;
 }
@@ -332,6 +336,8 @@ int main()
         iv_register_fd(&s.fd);
 
         iv_main();
+
+        iv_deinit();
 
         return 0;
 }

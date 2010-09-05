@@ -111,6 +111,8 @@ static void create_run_handles(int fp, int numhandles)
 		create_handle(hh + i, fp + i);
 
 	iv_main();
+
+	iv_deinit();
 }
 
 
