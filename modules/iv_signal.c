@@ -34,12 +34,16 @@ static struct list_head sig_interests[MAX_SIGS];
 
 static void iv_signal_got_signal(int signum)
 {
+	sigset_t mask;
 	struct list_head *lh;
 
 	if (signum < 0 || signum >= MAX_SIGS)
 		return;
 
+	sigfillset(&mask);
+	pthr_sigmask(SIG_BLOCK, &mask, &mask);
 	pthr_spin_lock(&sig_interests_lock);
+
 	list_for_each (lh, &sig_interests[signum]) {
 		struct iv_signal *is;
 
@@ -49,7 +53,9 @@ static void iv_signal_got_signal(int signum)
 		if (is->exclusive)
 			break;
 	}
+
 	pthr_spin_unlock(&sig_interests_lock);
+	pthr_sigmask(SIG_SETMASK, &mask, NULL);
 }
 
 int iv_signal_register(struct iv_signal *this)
