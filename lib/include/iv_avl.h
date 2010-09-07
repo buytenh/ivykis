@@ -55,6 +55,11 @@ void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an);
 struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an);
 struct iv_avl_node *iv_avl_tree_prev(struct iv_avl_node *an);
 
+static inline int iv_avl_tree_empty(struct iv_avl_tree *tree)
+{
+	return tree->root == NULL;
+}
+
 #ifdef __cplusplus
 }
 #endif
