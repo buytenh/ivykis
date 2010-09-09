@@ -168,16 +168,13 @@ static void iv_select_unregister_fd(struct iv_fd_ *fd)
 	iv_avl_tree_delete(&fds, &fd->avl_node);
 
 	if (fd->fd == fd_max) {
-		fd_max = 0;
-		if (fds.root != NULL) {
-			struct iv_avl_node *an;
+		struct iv_avl_node *an;
 
-			an = fds.root;
-			while (an->right != NULL)
-				an = an->right;
-
+		an = iv_avl_tree_max(&fds);
+		if (an != NULL)
 			fd_max = container_of(an, struct iv_fd_, avl_node)->fd;
-		}
+		else
+			fd_max = 0;
 	}
 }
 
