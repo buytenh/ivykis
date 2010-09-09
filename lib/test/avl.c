@@ -130,24 +130,6 @@ static void tree_check(struct iv_avl_tree *this, int expected_count)
 	}
 }
 
-static void
-tree_walk(struct iv_avl_tree *this, void (*print)(struct iv_avl_node *an))
-{
-	struct iv_avl_node *an;
-
-	an = this->root;
-	if (an == NULL)
-		return;
-
-	while (an->left != NULL)
-		an = an->left;
-
-	while (an != NULL) {
-		printit(an);
-		an = iv_avl_tree_next(an);
-	}
-}
-
 
 static int docomp(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
@@ -170,6 +152,7 @@ static struct foo *f[NUM];
 
 int main()
 {
+	struct iv_avl_node *an;
 	int i;
 
 	srandom(time(NULL) ^ getpid());
@@ -199,11 +182,10 @@ int main()
 
 	tree_check(&x, NUM);
 
-	tree_walk(&x, printit);
+	iv_avl_tree_for_each (an, &x)
+		printit(an);
 
 	for (i = 0; i < NUM; i++) {
-		struct iv_avl_node *an;
-
 		if ((i & 1023) == 0)
 			printf("deleting #%d\n", i);
 
