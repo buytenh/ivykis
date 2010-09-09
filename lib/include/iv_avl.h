@@ -60,6 +60,48 @@ static inline int iv_avl_tree_empty(struct iv_avl_tree *tree)
 	return tree->root == NULL;
 }
 
+static inline struct iv_avl_node *iv_avl_tree_min(struct iv_avl_tree *tree)
+{
+	if (tree->root != NULL) {
+		struct iv_avl_node *an;
+
+		an = tree->root;
+		while (an->left != NULL)
+			an = an->left;
+
+		return an;
+	}
+
+	return NULL;
+}
+
+static inline struct iv_avl_node *iv_avl_tree_max(struct iv_avl_tree *tree)
+{
+	if (tree->root != NULL) {
+		struct iv_avl_node *an;
+
+		an = tree->root;
+		while (an->right != NULL)
+			an = an->right;
+
+		return an;
+	}
+
+	return NULL;
+}
+
+#define iv_avl_tree_for_each(an, tree) \
+	for (an = iv_avl_tree_min(tree); an != NULL; an = iv_avl_tree_next(an))
+
+static inline struct iv_avl_node *iv_avl_tree_next_safe(struct iv_avl_node *an)
+{
+	return an != NULL ? iv_avl_tree_next(an) : NULL;
+}
+
+#define iv_avl_tree_for_each_safe(an, an2, tree) \
+	for (an = iv_avl_tree_min(tree), an2 = iv_avl_tree_next_safe(an); \
+	     an != NULL; an = an2, an2 = iv_avl_tree_next_safe(an))
+
 #ifdef __cplusplus
 }
 #endif
