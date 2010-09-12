@@ -17,7 +17,11 @@ HTML =	iv_event.3.html				\
 	iv_thread_set_debug_state.3.html	\
 	iv_wait.3.html				\
 	iv_wait_interest_register.3.html	\
-	iv_wait_interest_unregister.3.html
+	iv_wait_interest_unregister.3.html	\
+	iv_work.3.html				\
+	iv_work_pool_create.3.html		\
+	iv_work_pool_put.3.html			\
+	iv_work_pool_submit_work.3.html
 
 
 all:		$(HTML)

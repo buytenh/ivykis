@@ -1,0 +1,102 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_work 3 2010-09-14 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_work_pool_create, iv_work_pool_put, iv_work_pool_submit_work \- ivykis
+worker thread management
+.SH SYNOPSIS
+.B #include <iv_work.h>
+.sp
+.nf
+struct iv_work_pool {
+        int             max_threads;
+};
+
+struct iv_work_item {
+        void            *cookie;
+        void            (*work)(void *cookie);
+        void            (*completion)(void *cookie);
+};
+.fi
+.sp
+.BI "int iv_work_pool_create(struct iv_work_pool *" this ");"
+.br
+.BI "int iv_work_pool_put(struct iv_work_pool *" this ");"
+.br
+.BI "int iv_work_pool_submit_work(struct iv_work_pool *" this ", struct iv_work_item *" work ");"
+.br
+.SH DESCRIPTION
+.B iv_work_pool_create
+creates a pool of worker threads that can be used to offload CPU
+intensive tasks to, so as to prevent negatively influencing event
+handling latency in the calling thread, and to enable the use of
+multiple host CPUs for CPU intensive tasks.
+.PP
+.B iv_work
+dynamically adjusts the number of threads in the pool to the amount
+of work there is to do.  The
+.B ->max_threads
+member of
+.B struct iv_work_pool
+specifies the maximum number of threads that will be created in this
+pool.
+.PP
+.B iv_work_pool_submit_work
+submits a work item to a pool.  The
+.B ->work
+member of
+.B struct iv_work_item
+specifies the function that will be called in one of the worker
+threads in the pool specified by
+.B ->this,
+with
+.B ->cookie
+as its sole argument.  When the work function has completed,
+.B iv_work
+will call the
+.B ->completion
+callback to indicate this, also with
+.B ->cookie
+as its sole argument, in the thread that
+.B iv_work_pool_create
+was called in for this pool object.
+.PP
+.B iv_work_pool_submit_work
+can only be called from the thread that
+.B iv_work_pool_create
+for this pool object was called in.
+.PP
+There is no way to cancel submitted work items.
+.PP
+There is no guaranteed order, FIFO or otherwise, between different
+work items submitted to the same worker thread pool.
+.PP
+When the user has no more work items to submit to the pool, its
+reference to the pool can be dropped by calling
+.B iv_work_pool_put.
+.PP
+If there are still pending or running work items assigned to this pool
+when
+.B iv_work_pool_put
+is called, those work items will not be canceled, but will be allowed
+to run to completion, and their
+.B ->completion
+callbacks will be called as usual.  Even so, the memory corresponding
+to the
+.B struct iv_work_pool
+can immediately be freed or reused by the user upon return of the
+.B iv_work_pool_put
+call.
+.PP
+Internally,
+.B iv_work
+uses
+.BR iv_thread (3)
+for its thread management.
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_thread (3)
