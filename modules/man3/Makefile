@@ -12,6 +12,9 @@ HTML =	iv_event.3.html				\
 	iv_signal.3.html			\
 	iv_signal_register.3.html		\
 	iv_signal_unregister.3.html		\
+	iv_thread.3.html			\
+	iv_thread_create.3.html			\
+	iv_thread_set_debug_state.3.html	\
 	iv_wait.3.html				\
 	iv_wait_interest_register.3.html	\
 	iv_wait_interest_unregister.3.html

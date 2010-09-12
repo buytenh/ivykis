@@ -1,0 +1,63 @@
+.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_thread 3 2010-09-13 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_thread_create, iv_thread_set_debug_state \- ivykis thread convenience
+functions
+.SH SYNOPSIS
+.B #include <iv_thread.h>
+.sp
+.BI "int iv_thread_create(char *" name ", void (*" start_routine ")(void *), void *" arg ");"
+.br
+.BI "void iv_thread_set_debug_state(int " state ");"
+.br
+.SH DESCRIPTION
+.B iv_thread_create
+is a wrapper around
+.BR pthread_create (3)
+which will maintain an ivykis main loop reference in the calling
+thread (which must be an
+.BR ivykis (3)
+thread, i.e. have had
+.BR iv_init (3)
+called in it) for as long as the created thread is alive.
+.PP
+Maintaining a reference on the calling thread's ivykis event loop makes
+sure that the calling thread will not return from its ivykis main loop
+before the created thread exits, as that could cause cleanup still
+happening in the created thread to be interrupted when the calling
+thread subsequently calls
+.BR exit (3).
+.PP
+The created thread need not be an ivykis thread.
+.PP
+Enabling debugging by calling
+.B iv_thread_set_debug
+with a nonzero argument will print a debug message to standard error
+whenever a thread is created via
+.B iv_thread_create,
+whenever a thread so created terminates normally by returning from
+its
+.B start_routine,
+self-terminates by calling
+.BR pthread_exit (3),
+or is successfully canceled by
+.BR pthread_cancel (3),
+and whenever destruction of such a thread is signaled back to the
+calling thread.
+.PP
+For inter-thread signaling,
+.B iv_thread
+uses
+.BR iv_event (3).
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_event (3),
+.BR exit (3),
+.BR pthread_cancel (3),
+.BR pthread_create (3),
+.BR pthread_exit (3)
