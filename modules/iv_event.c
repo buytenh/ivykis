@@ -32,21 +32,26 @@ static __thread struct iv_event_thr_info {
 	struct iv_event_raw	ier;
 	pthread_mutex_t		list_mutex;
 	struct list_head	pending_events;
+	int			dead;
 } tinfo;
 
-static void ie_event_run_pending_events(void *_dummy)
+static void iv_event_run_pending_events(void *_dummy)
 {
 	pthr_mutex_lock(&tinfo.list_mutex);
 	while (!list_empty(&tinfo.pending_events)) {
-		struct list_head *lh;
 		struct iv_event *ie;
 
-		lh = tinfo.pending_events.next;
-		ie = container_of(lh, struct iv_event, list);
+		ie = container_of(tinfo.pending_events.next,
+				  struct iv_event, list);
+
 		list_del_init(&ie->list);
 
 		pthr_mutex_unlock(&tinfo.list_mutex);
+
 		ie->handler(ie->cookie);
+		if (tinfo.dead)
+			return;
+
 		pthr_mutex_lock(&tinfo.list_mutex);
 	}
 	pthr_mutex_unlock(&tinfo.list_mutex);
@@ -57,7 +62,7 @@ int iv_event_register(struct iv_event *this)
 	if (!tinfo.event_count++) {
 		int ret;
 
-		tinfo.ier.handler = ie_event_run_pending_events;
+		tinfo.ier.handler = iv_event_run_pending_events;
 
 		ret = iv_event_raw_register(&tinfo.ier);
 		if (ret)
@@ -65,6 +70,7 @@ int iv_event_register(struct iv_event *this)
 
 		pthr_mutex_init(&tinfo.list_mutex, NULL);
 		INIT_LIST_HEAD(&tinfo.pending_events);
+		tinfo.dead = 0;
 	}
 
 	this->tinfo = &tinfo;
@@ -82,6 +88,7 @@ void iv_event_unregister(struct iv_event *this)
 	}
 
 	if (!--tinfo.event_count) {
+		tinfo.dead = 1;
 		pthr_mutex_destroy(&tinfo.list_mutex);
 		iv_event_raw_unregister(&tinfo.ier);
 	}
