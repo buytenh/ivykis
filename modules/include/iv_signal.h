@@ -38,6 +38,7 @@ struct iv_signal {
 
 	struct list_head	list;
 	struct iv_event_raw	ev;
+	int			active;
 };
 
 int iv_signal_register(struct iv_signal *this);

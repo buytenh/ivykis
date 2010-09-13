@@ -27,12 +27,12 @@
 
 #define MAX_SIGS	32
 
-static pthread_mutex_t sig_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t sig_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static int sig_initialized;
 static pthread_spinlock_t sig_interests_lock;
 static struct list_head sig_interests[MAX_SIGS];
 
-static void iv_signal_got_signal(int signum)
+static void iv_signal_handler(int signum)
 {
 	struct list_head *lh;
 
@@ -47,11 +47,30 @@ static void iv_signal_got_signal(int signum)
 		is = container_of(lh, struct iv_signal, list);
 
 		iv_event_raw_post(&is->ev);
+		is->active = 1;
+
 		if (is->exclusive)
 			break;
 	}
 
 	pthr_spin_unlock(&sig_interests_lock);
+}
+
+static void iv_signal_event(void *_this)
+{
+	struct iv_signal *this = _this;
+	sigset_t mask;
+
+	sigfillset(&mask);
+	pthr_sigmask(SIG_BLOCK, &mask, &mask);
+	pthr_spin_lock(&sig_interests_lock);
+
+	this->active = 0;
+
+	pthr_spin_unlock(&sig_interests_lock);
+	pthr_sigmask(SIG_SETMASK, &mask, NULL);
+
+	this->handler(this->cookie);
 }
 
 int iv_signal_register(struct iv_signal *this)
@@ -61,11 +80,13 @@ int iv_signal_register(struct iv_signal *this)
 	if (this->signum < 0 || this->signum >= MAX_SIGS)
 		return -EINVAL;
 
-	this->ev.cookie = this->cookie;
-	this->ev.handler = this->handler;
+	this->ev.cookie = this;
+	this->ev.handler = iv_signal_event;
 	iv_event_raw_register(&this->ev);
 
-	pthr_mutex_lock(&sig_lock);
+	this->active = 0;
+
+	pthr_mutex_lock(&sig_init_lock);
 	if (!sig_initialized) {
 		int i;
 
@@ -75,7 +96,7 @@ int iv_signal_register(struct iv_signal *this)
 		for (i = 0; i < MAX_SIGS; i++)
 			INIT_LIST_HEAD(&sig_interests[i]);
 	}
-	pthr_mutex_unlock(&sig_lock);
+	pthr_mutex_unlock(&sig_init_lock);
 
 	sigfillset(&mask);
 	pthr_sigmask(SIG_BLOCK, &mask, &mask);
@@ -84,7 +105,7 @@ int iv_signal_register(struct iv_signal *this)
 	if (list_empty(&sig_interests[this->signum])) {
 		struct sigaction sa;
 
-		sa.sa_handler = iv_signal_got_signal;
+		sa.sa_handler = iv_signal_handler;
 		sigfillset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART;
 		sigaction(this->signum, &sa, NULL);
@@ -113,6 +134,12 @@ void iv_signal_unregister(struct iv_signal *this)
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = 0;
 		sigaction(this->signum, &sa, NULL);
+	} else if (this->exclusive && this->active) {
+		struct iv_signal *nxt;
+
+		nxt = container_of(sig_interests[this->signum].next,
+				   struct iv_signal, list);
+		iv_event_raw_post(&nxt->ev);
 	}
 
 	pthr_spin_unlock(&sig_interests_lock);
