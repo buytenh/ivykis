@@ -71,6 +71,16 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 	int ret;
 	int i;
 
+	/*
+	 * Valgrind 3.5.0 as supplied with FreeBSD 8.1-RELEASE ports
+	 * doesn't understand that kevent(2) fills in kevent udata on
+	 * return, and labels our subsequent use of it as "Conditional
+	 * jump or move depends on uninitialised value(s)".  Zero the
+	 * udata fields here as an ugly workaround.
+	 */
+	for (i = 0; i < (numfds ? : 1); i++)
+		batch[i].udata = 0;
+
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
