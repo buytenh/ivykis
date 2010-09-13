@@ -34,14 +34,11 @@ static struct list_head sig_interests[MAX_SIGS];
 
 static void iv_signal_got_signal(int signum)
 {
-	sigset_t mask;
 	struct list_head *lh;
 
 	if (signum < 0 || signum >= MAX_SIGS)
 		return;
 
-	sigfillset(&mask);
-	pthr_sigmask(SIG_BLOCK, &mask, &mask);
 	pthr_spin_lock(&sig_interests_lock);
 
 	list_for_each (lh, &sig_interests[signum]) {
@@ -55,7 +52,6 @@ static void iv_signal_got_signal(int signum)
 	}
 
 	pthr_spin_unlock(&sig_interests_lock);
-	pthr_sigmask(SIG_SETMASK, &mask, NULL);
 }
 
 int iv_signal_register(struct iv_signal *this)
@@ -85,8 +81,14 @@ int iv_signal_register(struct iv_signal *this)
 	pthr_sigmask(SIG_BLOCK, &mask, &mask);
 	pthr_spin_lock(&sig_interests_lock);
 
-	if (list_empty(&sig_interests[this->signum]))
-		signal(this->signum, iv_signal_got_signal);
+	if (list_empty(&sig_interests[this->signum])) {
+		struct sigaction sa;
+
+		sa.sa_handler = iv_signal_got_signal;
+		sigfillset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART;
+		sigaction(this->signum, &sa, NULL);
+	}
 	list_add_tail(&this->list, &sig_interests[this->signum]);
 
 	pthr_spin_unlock(&sig_interests_lock);
@@ -104,8 +106,14 @@ void iv_signal_unregister(struct iv_signal *this)
 	pthr_spin_lock(&sig_interests_lock);
 
 	list_del(&this->list);
-	if (list_empty(&sig_interests[this->signum]))
-		signal(this->signum, SIG_DFL);
+	if (list_empty(&sig_interests[this->signum])) {
+		struct sigaction sa;
+
+		sa.sa_handler = SIG_DFL;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(this->signum, &sa, NULL);
+	}
 
 	pthr_spin_unlock(&sig_interests_lock);
 	pthr_sigmask(SIG_SETMASK, &mask, NULL);
