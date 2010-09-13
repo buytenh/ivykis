@@ -26,6 +26,12 @@
 #include <pthread.h>
 #include "thr.h"
 
+struct wait_event {
+	struct list_head	list;
+	int			status;
+	struct rusage		rusage;
+};
+
 static int
 iv_wait_interest_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
@@ -73,6 +79,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 		pid_t pid;
 		int status;
 		struct rusage rusage;
+		struct wait_event *we;
 		struct iv_wait_interest *p;
 
 		pid = wait4(-1, &status, WNOHANG, &rusage);
@@ -82,14 +89,25 @@ static void iv_wait_got_sigchld(void *_dummy)
 			break;
 		}
 
+		we = malloc(sizeof(*we));
+		if (we == NULL) {
+			fprintf(stderr, "iv_wait_got_sigchld: OOM\n");
+			exit(-1);
+		}
+
+		we->status = status;
+		we->rusage = rusage;
+
 		pthr_mutex_lock(&iv_wait_interests_lock);
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
-			p->status = status;
-			p->rusage = rusage;
+			list_add_tail(&we->list, &p->events);
 			iv_event_post(&p->ev);
 		}
 		pthr_mutex_unlock(&iv_wait_interests_lock);
+
+		if (p == NULL)
+			free(we);
 	}
 }
 
@@ -97,7 +115,23 @@ static void iv_wait_completion(void *_this)
 {
 	struct iv_wait_interest *this = _this;
 
-	this->handler(this->cookie, this->status, &this->rusage);
+	this->term = (void **)&this;
+
+	while (!list_empty(&this->events)) {
+		struct wait_event *we;
+
+		we = container_of(this->events.next, struct wait_event, list);
+		list_del(&we->list);
+
+		this->handler(this->cookie, we->status, &we->rusage);
+
+		free(we);
+
+		if (this == NULL)
+			return;
+	}
+
+	this->term = NULL;
 }
 
 static __thread struct iv_wait_thr_info {
@@ -118,6 +152,10 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 	this->ev.cookie = this;
 	iv_event_register(&this->ev);
 
+	INIT_LIST_HEAD(&this->events);
+
+	this->term = NULL;
+
 	pthr_mutex_lock(&iv_wait_interests_lock);
 	iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
 	pthr_mutex_unlock(&iv_wait_interests_lock);
@@ -130,6 +168,17 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 	pthr_mutex_unlock(&iv_wait_interests_lock);
 
 	iv_event_unregister(&this->ev);
+
+	while (!list_empty(&this->events)) {
+		struct wait_event *we;
+
+		we = container_of(this->events.next, struct wait_event, list);
+		list_del(&we->list);
+		free(we);
+	}
+
+	if (this->term != NULL)
+		*this->term = NULL;
 
 	if (!--tinfo.wait_count)
 		iv_signal_unregister(&tinfo.sigchld_interest);

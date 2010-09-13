@@ -39,8 +39,8 @@ struct iv_wait_interest {
 
 	struct iv_avl_node	avl_node;
 	struct iv_event		ev;
-	int			status;
-	struct rusage		rusage;
+	struct list_head	events;
+	void			**term;
 };
 
 void iv_wait_interest_register(struct iv_wait_interest *this);
