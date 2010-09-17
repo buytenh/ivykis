@@ -82,7 +82,8 @@ static void iv_wait_got_sigchld(void *_dummy)
 		struct wait_event *we;
 		struct iv_wait_interest *p;
 
-		pid = wait4(-1, &status, WNOHANG, &rusage);
+		pid = wait4(-1, &status,
+			    WNOHANG | WUNTRACED | WCONTINUED, &rusage);
 		if (pid <= 0) {
 			if (pid < 0 && errno != ECHILD)
 				perror("wait4");
@@ -99,15 +100,16 @@ static void iv_wait_got_sigchld(void *_dummy)
 		we->rusage = rusage;
 
 		pthr_mutex_lock(&iv_wait_interests_lock);
+
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
 			list_add_tail(&we->list, &p->events);
 			iv_event_post(&p->ev);
-		}
-		pthr_mutex_unlock(&iv_wait_interests_lock);
-
-		if (p == NULL)
+		} else {
 			free(we);
+		}
+
+		pthr_mutex_unlock(&iv_wait_interests_lock);
 	}
 }
 
