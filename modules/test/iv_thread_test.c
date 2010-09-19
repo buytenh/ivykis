@@ -48,6 +48,8 @@ int main()
 	iv_thread_create("selfcancel", thr_selfcancel, NULL);
 	iv_thread_create("exit", thr_exit, NULL);
 
+	iv_thread_list_children();
+
 	iv_main();
 
 	iv_deinit();

@@ -28,13 +28,47 @@
 
 /* data structures and global data ******************************************/
 struct iv_thread {
+	struct list_head	list;
 	struct iv_event		dead;
 	char			*name;
+	pid_t			tid;
 	void			(*start_routine)(void *);
 	void			*arg;
 };
 
+static __thread struct list_head child_threads;
+
 static int iv_thread_debug;
+
+
+/* gettid *******************************************************************/
+#ifdef __FreeBSD__
+#include <thread.h>
+#endif
+
+#ifndef __NR_gettid
+#if defined(linux) && defined(__x86_64__)
+#define __NR_gettid	186
+#elif defined(linux) && defined(__i386__)
+#define __NR_gettid	224
+#endif
+#endif
+
+static pid_t gettid(void)
+{
+	pid_t tid;
+
+	tid = 0;
+#ifdef __NR_gettid
+	tid = syscall(__NR_gettid);
+#elif defined(__FreeBSD__)
+	long thr;
+	thr_self(&thr);
+	tid = (pid_t)thr;
+#endif
+
+	return tid;
+}
 
 
 /* callee thread ************************************************************/
@@ -51,6 +85,8 @@ static void iv_thread_cleanup_handler(void *_thr)
 static void *iv_thread_handler(void *_thr)
 {
 	struct iv_thread *thr = _thr;
+
+	thr->tid = gettid();
 
 	pthread_cleanup_push(iv_thread_cleanup_handler, thr);
 	thr->start_routine(thr->arg);
@@ -74,6 +110,7 @@ static void iv_thread_died(void *_thr)
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] joined\n", thr->name);
 
+	list_del(&thr->list);
 	iv_event_unregister(&thr->dead);
 	free(thr->name);
 	free(thr);
@@ -95,6 +132,7 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 	iv_event_register(&thr->dead);
 
 	thr->name = strdup(name);
+	thr->tid = 0;
 	thr->start_routine = start_routine;
 	thr->arg = arg;
 
@@ -111,6 +149,10 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 		goto out_attr;
 
 	pthread_attr_destroy(&attr);
+
+	if (child_threads.next == NULL)
+		INIT_LIST_HEAD(&child_threads);
+	list_add_tail(&thr->list, &child_threads);
 
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] started\n", name);
@@ -133,4 +175,19 @@ out_event:
 void iv_thread_set_debug_state(int state)
 {
 	iv_thread_debug = !!state;
+}
+
+void iv_thread_list_children(void)
+{
+	struct list_head *lh;
+
+	fprintf(stderr, "tid\tname\n");
+	fprintf(stderr, "%d\tself\n", gettid());
+
+	list_for_each (lh, &child_threads) {
+		struct iv_thread *thr;
+
+		thr = list_entry(lh, struct iv_thread, list);
+		fprintf(stderr, "%d\t%s\n", thr->tid, thr->name);
+	}
 }
