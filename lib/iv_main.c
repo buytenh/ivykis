@@ -334,6 +334,13 @@ void iv_unregister_fd(struct iv_fd *_fd)
 		handled_fd = NULL;
 }
 
+int iv_fd_registered(struct iv_fd *_fd)
+{
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
+
+	return fd->registered;
+}
+
 void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands)
 {
 	if (list_empty(&fd->list_active)) {
