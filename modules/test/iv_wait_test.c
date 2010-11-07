@@ -85,53 +85,41 @@ static void thr(void *cookie)
 	kill(pid, SIGTERM);
 }
 
+static void child(void *cookie)
+{
+	int i;
+
+	for (i = 0; i < 10; i++) {
+		printf("child sleeping %d\n", i);
+		dosleep(1000);
+	}
+
+	printf("dying\n");
+
+	exit(0);
+}
+
 int main()
 {
-	int p[2];
-	pid_t pid;
+	struct iv_wait_interest this;
+	int ret;
 
-	if (pipe(p) < 0) {
-		perror("pipe");
-		return 1;
+	iv_init();
+
+	this.cookie = &this;
+	this.handler = handler;
+
+	ret = iv_wait_interest_register_spawn(&this, child, NULL);
+	if (ret < 0) {
+		perror("fork");
+		return -1;
 	}
 
-	pid = fork();
-	if (pid) {
-		struct iv_wait_interest this;
+	iv_thread_create("thr", thr, (void *)(unsigned long)this.pid);
 
-		iv_init();
+	iv_main();
 
-		this.pid = pid;
-		this.cookie = &this;
-		this.handler = handler;
-		iv_wait_interest_register(&this);
-
-		write(p[1], "", 1);
-
-		iv_thread_create("thr", thr, (void *)(unsigned long)pid);
-
-		iv_main();
-
-		iv_deinit();
-	} else {
-		char c;
-		int i;
-
-		/*
-		 * Wait for parent task to run first, so that it can
-		 * setup its wait interest (for which it needs to know
-		 * our pid).  It will notify us when it's done with that
-		 * by writing to the pipe.
-		 */
-		read(p[0], &c, 1);
-
-		for (i = 0; i < 10; i++) {
-			printf("child sleeping %d\n", i);
-			dosleep(1000);
-		}
-
-		printf("dying\n");
-	}
+	iv_deinit();
 
 	return 0;
 }
