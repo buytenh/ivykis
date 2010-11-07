@@ -45,6 +45,8 @@ struct iv_wait_interest {
 };
 
 void iv_wait_interest_register(struct iv_wait_interest *this);
+int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
+				    void (*fn)(void *cookie), void *cookie);
 void iv_wait_interest_unregister(struct iv_wait_interest *this);
 int iv_wait_interest_kill(struct iv_wait_interest *this, int sig);
 
