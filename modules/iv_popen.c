@@ -188,7 +188,7 @@ static void iv_popen_running_child_timer(void *_ch)
 
 	signum = (ch->num_kills++ < MAX_SIGTERM_COUNT) ? SIGTERM : SIGKILL;
 
-	ret = kill(ch->wait.pid, signum);
+	ret = iv_wait_interest_kill(&ch->wait, signum);
 	if (ret < 0) {
 		iv_wait_interest_unregister(&ch->wait);
 		free(ch);
