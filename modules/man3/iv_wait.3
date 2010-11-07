@@ -60,8 +60,12 @@ the thread that the object was registered in.
 Process state change notifications will continue to be delivered to
 the object's callback function until
 .B iv_wait_interest_unregister
-is called on the object.  Delivery of a WIFEXITED or WIFSIGNALED
-status does not automatically unregister the object.
+is called on the object or until a WIFEXITED or WIFSIGNALED status
+for this pid is returned by
+.BR wait4 (2).
+.PP
+Delivery of a WIFEXITED or WIFSIGNALED status does not automatically
+unregister the object, this always needs to be done explicitly.
 .PP
 Unregistering a
 .B struct iv_wait_interest

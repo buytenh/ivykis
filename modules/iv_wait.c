@@ -73,6 +73,20 @@ static struct iv_wait_interest *__iv_wait_interest_find(int pid)
 	return NULL;
 }
 
+static int iv_wait_status_dead(int status)
+{
+	/*
+	 * On FreeBSD, WIFCONTINUED(status) => WIFSIGNALED(status).
+	 */
+	if (WIFSIGNALED(status) && !WIFCONTINUED(status))
+		return 1;
+
+	if (WIFEXITED(status))
+		return 1;
+
+	return 0;
+}
+
 static void iv_wait_got_sigchld(void *_dummy)
 {
 	while (1) {
@@ -107,6 +121,19 @@ static void iv_wait_got_sigchld(void *_dummy)
 			iv_event_post(&p->ev);
 		} else {
 			free(we);
+		}
+
+		/*
+		 * If this pid is now dead, avoid queueing subsequent
+		 * process status change events to this interest, as the
+		 * pid might be reused between us queueing this event to
+		 * the interest and the interest being unregistered,
+		 * and events for the new user of this pid would then end
+		 * up at the wrong interest.
+		 */
+		if (iv_wait_status_dead(status)) {
+			iv_avl_tree_delete(&iv_wait_interests, &p->avl_node);
+			p->dead = 1;
 		}
 
 		pthr_mutex_unlock(&iv_wait_interests_lock);
@@ -158,6 +185,8 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 
 	this->term = NULL;
 
+	this->dead = 0;
+
 	pthr_mutex_lock(&iv_wait_interests_lock);
 	iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
 	pthr_mutex_unlock(&iv_wait_interests_lock);
@@ -166,7 +195,8 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 void iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
 	pthr_mutex_lock(&iv_wait_interests_lock);
-	iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
+	if (!this->dead)
+		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
 	pthr_mutex_unlock(&iv_wait_interests_lock);
 
 	iv_event_unregister(&this->ev);
