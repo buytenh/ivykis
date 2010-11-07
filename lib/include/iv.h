@@ -89,6 +89,7 @@ struct iv_task {
 void INIT_IV_TASK(struct iv_task *);
 void iv_register_task(struct iv_task *);
 void iv_unregister_task(struct iv_task *);
+int iv_task_registered(struct iv_task *);
 
 
 /*

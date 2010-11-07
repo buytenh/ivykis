@@ -79,3 +79,10 @@ void iv_unregister_task(struct iv_task *_t)
 
 	list_del_init(&t->list);
 }
+
+int iv_task_registered(struct iv_task *_t)
+{
+	struct iv_task_ *t = (struct iv_task_ *)_t;
+
+	return !list_empty(&t->list);
+}
