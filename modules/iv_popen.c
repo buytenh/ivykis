@@ -59,9 +59,15 @@ iv_popen_running_child_wait(void *_ch, int status, struct rusage *rusage)
 	free(ch);
 }
 
-static void
-iv_popen_child(struct iv_popen_request *this, int for_read, int data[2])
+struct iv_popen_spawn_info {
+	struct iv_popen_request *this;
+	int for_read;
+	int data_pipe[2];
+};
+
+static void iv_popen_child(void *cookie)
 {
+	struct iv_popen_spawn_info *info = cookie;
 	int devnull;
 
 	devnull = open("/dev/null", O_RDWR);
@@ -70,40 +76,30 @@ iv_popen_child(struct iv_popen_request *this, int for_read, int data[2])
 		exit(-1);
 	}
 
-	if (for_read) {
+	if (info->for_read) {
 		dup2(devnull, 0);
-		dup2(data[1], 1);
+		dup2(info->data_pipe[1], 1);
 		dup2(devnull, 2);
 	} else {
-		dup2(data[0], 0);
+		dup2(info->data_pipe[0], 0);
 		dup2(devnull, 1);
 		dup2(devnull, 2);
 	}
 
-	close(data[0]);
-	close(data[1]);
+	close(info->data_pipe[0]);
+	close(info->data_pipe[1]);
 	close(devnull);
 
-	execvp(this->file, this->argv);
+	execvp(info->this->file, info->this->argv);
+	perror("execvp");
 }
 
 int iv_popen_request_submit(struct iv_popen_request *this)
 {
-	int for_read;
 	struct iv_popen_running_child *ch;
-	int start_event[2];
-	int data[2];
-	pid_t pid;
+	struct iv_popen_spawn_info info;
+	int ret;
 	int fd;
-
-	if (!strcmp(this->type, "r")) {
-		for_read = 1;
-	} else if (!strcmp(this->type, "w")) {
-		for_read = 0;
-	} else {
-		fprintf(stderr, "iv_popen_request_submit: invalid type\n");
-		return -1;
-	}
 
 	ch = malloc(sizeof(*ch));
 	if (ch == NULL) {
@@ -111,66 +107,46 @@ int iv_popen_request_submit(struct iv_popen_request *this)
 		return -1;
 	}
 
-	if (pipe(start_event) < 0) {
+	info.this = this;
+
+	if (!strcmp(this->type, "r")) {
+		info.for_read = 1;
+	} else if (!strcmp(this->type, "w")) {
+		info.for_read = 0;
+	} else {
+		fprintf(stderr, "iv_popen_request_submit: invalid type\n");
+		free(ch);
+		return -1;
+	}
+
+	if (pipe(info.data_pipe) < 0) {
 		perror("pipe");
 		free(ch);
 		return -1;
 	}
 
-	if (pipe(data) < 0) {
-		perror("pipe");
-		close(start_event[1]);
-		close(start_event[0]);
-		free(ch);
-		return -1;
-	}
-
-	pid = fork();
-	if (pid < 0) {
-		perror("fork");
-		close(data[1]);
-		close(data[0]);
-		close(start_event[1]);
-		close(start_event[0]);
-		free(ch);
-		return -1;
-	}
-
-	if (!pid) {
-		char c;
-
-		/*
-		 * Wait for parent task to run first, so that it can
-		 * setup its iv wait interest (for which it needs
-		 * to know our pid).  It will notify us when it's done
-		 * with that by writing to the pipe.
-		 */
-		read(start_event[0], &c, 1);
-		close(start_event[0]);
-		close(start_event[1]);
-
-		iv_popen_child(this, for_read, data);
-		exit(-1);
-	}
-
-	ch->wait.pid = pid;
 	ch->wait.cookie = ch;
 	ch->wait.handler = iv_popen_running_child_wait;
-	iv_wait_interest_register(&ch->wait);
 	ch->parent = this;
+
+	ret = iv_wait_interest_register_spawn(&ch->wait,
+					      iv_popen_child, &info);
+	if (ret < 0) {
+		perror("fork");
+		close(info.data_pipe[1]);
+		close(info.data_pipe[0]);
+		free(ch);
+		return -1;
+	}
 
 	this->child = ch;
 
-	write(start_event[1], "", 1);
-	close(start_event[0]);
-	close(start_event[1]);
-
-	if (for_read) {
-		fd = data[0];
-		close(data[1]);
+	if (info.for_read) {
+		fd = info.data_pipe[0];
+		close(info.data_pipe[1]);
 	} else {
-		fd = data[1];
-		close(data[0]);
+		fd = info.data_pipe[1];
+		close(info.data_pipe[0]);
 	}
 
 	return fd;
