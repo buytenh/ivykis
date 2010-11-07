@@ -42,10 +42,10 @@ members.
 .PP
 Once the signal indicated by
 .B ->signum
-arrives, the callback specified by
+is delivered to any thread in the current process, the callback
+specified by
 .B ->handler
-is scheduled to be called in the thread that
-the
+is scheduled to be called in the thread that the
 .B struct iv_signal
 object was registered in, with
 .B ->cookie
@@ -85,6 +85,15 @@ object from any ivykis callback function in the thread it was
 registered in, including from a callback function triggered by this
 object, and it is permitted to free the memory corresponding to an
 unregistered object from its own callback function.
+.PP
+It is guaranteed that signals delivered to child processes that were
+created by
+.BR fork (2)
+but that have not yet called
+.BR execve (2)
+will not cause
+.B iv_signal
+callbacks to be invoked in the parent process.
 .PP
 Internally,
 .B iv_signal
