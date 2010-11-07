@@ -48,7 +48,7 @@ iv_wait_interest_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 	return 0;
 }
 
-static pthread_mutex_t iv_wait_interests_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t iv_wait_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct iv_avl_tree iv_wait_interests =
 	IV_AVL_TREE_INIT(iv_wait_interest_compare);
 
@@ -113,7 +113,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 		we->status = status;
 		we->rusage = rusage;
 
-		pthr_mutex_lock(&iv_wait_interests_lock);
+		pthr_mutex_lock(&iv_wait_lock);
 
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
@@ -136,7 +136,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 			p->dead = 1;
 		}
 
-		pthr_mutex_unlock(&iv_wait_interests_lock);
+		pthr_mutex_unlock(&iv_wait_lock);
 	}
 }
 
@@ -146,19 +146,23 @@ static void iv_wait_completion(void *_this)
 
 	this->term = (void **)&this;
 
+	pthr_mutex_lock(&iv_wait_lock);
 	while (!list_empty(&this->events)) {
 		struct wait_event *we;
 
 		we = container_of(this->events.next, struct wait_event, list);
 		list_del(&we->list);
 
+		pthr_mutex_unlock(&iv_wait_lock);
 		this->handler(this->cookie, we->status, &we->rusage);
+		pthr_mutex_lock(&iv_wait_lock);
 
 		free(we);
 
 		if (this == NULL)
 			return;
 	}
+	pthr_mutex_unlock(&iv_wait_lock);
 
 	this->term = NULL;
 }
@@ -187,17 +191,17 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 
 	this->dead = 0;
 
-	pthr_mutex_lock(&iv_wait_interests_lock);
+	pthr_mutex_lock(&iv_wait_lock);
 	iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
-	pthr_mutex_unlock(&iv_wait_interests_lock);
+	pthr_mutex_unlock(&iv_wait_lock);
 }
 
 void iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
-	pthr_mutex_lock(&iv_wait_interests_lock);
+	pthr_mutex_lock(&iv_wait_lock);
 	if (!this->dead)
 		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
-	pthr_mutex_unlock(&iv_wait_interests_lock);
+	pthr_mutex_unlock(&iv_wait_lock);
 
 	iv_event_unregister(&this->ev);
 
