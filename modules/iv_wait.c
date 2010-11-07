@@ -89,6 +89,7 @@ static int iv_wait_status_dead(int status)
 
 static void iv_wait_got_sigchld(void *_dummy)
 {
+	pthr_mutex_lock(&iv_wait_lock);
 	while (1) {
 		pid_t pid;
 		int status;
@@ -113,8 +114,6 @@ static void iv_wait_got_sigchld(void *_dummy)
 		we->status = status;
 		we->rusage = rusage;
 
-		pthr_mutex_lock(&iv_wait_lock);
-
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
 			list_add_tail(&we->list, &p->events);
@@ -135,9 +134,8 @@ static void iv_wait_got_sigchld(void *_dummy)
 			iv_avl_tree_delete(&iv_wait_interests, &p->avl_node);
 			p->dead = 1;
 		}
-
-		pthr_mutex_unlock(&iv_wait_lock);
 	}
+	pthr_mutex_unlock(&iv_wait_lock);
 }
 
 static void iv_wait_completion(void *_this)
@@ -218,4 +216,15 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 
 	if (!--tinfo.wait_count)
 		iv_signal_unregister(&tinfo.sigchld_interest);
+}
+
+int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
+{
+	int ret;
+
+	pthr_mutex_lock(&iv_wait_lock);
+	ret = !this->dead ? kill(this->pid, sig) : -ESRCH;
+	pthr_mutex_unlock(&iv_wait_lock);
+
+	return ret;
 }
