@@ -1,0 +1,21 @@
+SUBDIRS = . man3 test
+
+AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include
+
+AM_CFLAGS		= -Wall
+
+lib_LIBRARIES		= libivykis.a
+
+libivykis_a_SOURCES	= iv_avl.c			\
+			  iv_main.c			\
+			  iv_method_dev_poll.c		\
+			  iv_method_epoll.c		\
+			  iv_method_kqueue.c		\
+			  iv_method_poll.c		\
+			  iv_method_select.c		\
+			  iv_task.c			\
+			  iv_timer.c
+
+include_HEADERS		= include/iv.h			\
+			  include/iv_avl.h		\
+			  include/iv_list.h
