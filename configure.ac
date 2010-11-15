@@ -32,6 +32,7 @@ AC_CHECK_FUNCS([clock_gettime dup2 fork malloc memcmp memmove memset	\
 	AC_MSG_ERROR(some required library functions not available.))
 
 AC_CONFIG_FILES([Makefile			\
+		 ivykis.spec			\
 		 lib/Makefile			\
 		 lib/man3/Makefile		\
 		 lib/test/Makefile		\
