@@ -43,7 +43,7 @@ static int iv_thread_debug;
 
 /* gettid *******************************************************************/
 #ifdef __FreeBSD__
-#include <thread.h>
+#include <sys/thr.h>
 #endif
 
 #ifndef __NR_gettid
