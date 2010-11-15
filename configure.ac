@@ -37,6 +37,7 @@ AC_CONFIG_FILES([Makefile			\
 		 lib/man3/Makefile		\
 		 lib/test/Makefile		\
 		 misc/Makefile			\
+		 misc/libivykis.pc		\
 		 modules/Makefile		\
 		 modules/man3/Makefile		\
 		 modules/test/Makefile])
