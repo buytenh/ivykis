@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_wait 3 2010-09-03 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_wait_interest_register, iv_wait_interest_unregister \- ivykis
+iv_wait_interest_register, iv_wait_interest_register_spawn, iv_wait_interest_unregister, iv_wait_interest_kill \- ivykis
 .BR wait4 (2)
 wrapper
 .SH SYNOPSIS
@@ -22,7 +22,11 @@ struct iv_wait_interest {
 .sp
 .BI "int iv_wait_interest_register(struct iv_wait_interest *" this ");"
 .br
+.BI "int iv_wait_interest_register_spawn(struct iv_wait_interest *" this ", void (*" fn ")(void *), void *" cookie ");"
+.br
 .BI "void iv_wait_interest_unregister(struct iv_wait_interest *" this ");"
+.br
+.BI "int iv_wait_interest_kill(struct iv_wait_interest *" this ", int " sig ");"
 .br
 .SH DESCRIPTION
 .B iv_wait
@@ -43,6 +47,27 @@ after having filled in the
 and
 .B ->handler
 members.
+.PP
+Alternatively, an ivykis application can use
+.B iv_wait_interest_register_spawn
+to atomically fork off a child process and register a
+.B struct iv_wait_interest
+for it.  In this context, 'atomically' means that the call to
+.B iv_wait_interest_register_spawn
+will be serialised with respect to invocations of
+.BR wait4 (2),
+which closes the race where process state change notifications can
+occur and be delivered between forking off the child process and
+registering a
+.B struct iv_wait_interest
+for the child's pid.  The child process will run the function given
+by the
+.B iv_wait_interest_register_spawn
+argument
+.B fn,
+with argument
+.B cookie
+as its argument.
 .PP
 Once a process state change occurs (as indicated by delivery of a
 SIGCHLD signal to the current process),
@@ -77,6 +102,14 @@ callback function.
 Registering multiple
 .B struct iv_wait_interest
 objects for the same process ID will produce undefined behavior.
+.PP
+To send a signal to a child process, use
+.B iv_wait_interest_kill.
+This function will internally serialise with invocations of
+.BR wait4(2),
+to avoid the race between sending a signal to a process and
+collecting a termination notification for that process (which makes
+its pid available for reuse).
 .PP
 Internally,
 .B iv_wait
