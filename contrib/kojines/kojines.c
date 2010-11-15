@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <iv.h>
-#include <linux/netfilter_ipv4/ip_nat.h>
+#include <limits.h>
+#include <linux/netfilter_ipv4.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
