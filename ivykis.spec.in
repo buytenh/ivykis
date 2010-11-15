@@ -17,7 +17,7 @@ ivykis is an event handling library.
 
 %build
 %configure
-make CFLAGS="-O3"
+make
 
 %install
 rm -rf %{buildroot}
