@@ -18,8 +18,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef linux
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -151,4 +149,3 @@ struct iv_poll_method iv_method_epoll = {
 	.notify_fd	= iv_epoll_notify_fd,
 	.deinit		= iv_epoll_deinit,
 };
-#endif

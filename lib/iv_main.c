@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include "config.h"
 #include "iv_private.h"
 
 /* process-global state *****************************************************/
@@ -109,14 +110,14 @@ static void iv_init_first_thread(void)
 	if (exclude != NULL && getuid() != euid)
 		exclude = NULL;
 
-#ifdef linux
+#ifdef HAVE_SYS_DEVPOLL_H
+	consider_poll_method(exclude, &iv_method_dev_poll);
+#endif
+#ifdef HAVE_EPOLL_CREATE
 	consider_poll_method(exclude, &iv_method_epoll);
 #endif
-#if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
+#ifdef HAVE_KQUEUE
 	consider_poll_method(exclude, &iv_method_kqueue);
-#endif
-#ifdef sun
-	consider_poll_method(exclude, &iv_method_dev_poll);
 #endif
 	consider_poll_method(exclude, &iv_method_poll);
 	consider_poll_method(exclude, &iv_method_select);

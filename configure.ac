@@ -19,6 +19,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 		  stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
+AC_CHECK_HEADERS([sys/devpoll.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -30,6 +31,13 @@ AC_TYPE_SIZE_T
 AC_CHECK_FUNCS([clock_gettime dup2 fork malloc memcmp memmove memset	\
 		select socket strdup strerror], [],
 	AC_MSG_ERROR(some required library functions not available.))
+AC_CHECK_FUNCS([epoll_create])
+AC_CHECK_FUNCS([kqueue])
+
+# Conditionals for poll methods.
+AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
+AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
+AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\

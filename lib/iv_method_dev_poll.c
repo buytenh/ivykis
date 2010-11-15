@@ -18,8 +18,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef sun
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -243,4 +241,3 @@ struct iv_poll_method iv_method_dev_poll = {
 	.notify_fd	= iv_dev_poll_notify_fd,
 	.deinit		= iv_dev_poll_deinit,
 };
-#endif

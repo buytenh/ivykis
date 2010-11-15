@@ -18,8 +18,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#if defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__NetBSD_) || defined(__OpenBSD__)
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -184,4 +182,3 @@ struct iv_poll_method iv_method_kqueue = {
 	.notify_fd	= iv_kqueue_notify_fd,
 	.deinit		= iv_kqueue_deinit,
 };
-#endif

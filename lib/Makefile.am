@@ -6,11 +6,29 @@ AM_CFLAGS		= -Wall
 
 lib_LIBRARIES		= libivykis.a
 
+if HAVE_DEV_POLL
+DEV_POLL_SRC = iv_method_dev_poll.c
+else
+DEV_POLL_SRC =
+endif
+
+if HAVE_EPOLL
+EPOLL_SRC = iv_method_epoll.c
+else
+EPOLL_SRC =
+endif
+
+if HAVE_KQUEUE
+KQUEUE_SRC = iv_method_kqueue.c
+else
+KQUEUE_SRC =
+endif
+
 libivykis_a_SOURCES	= iv_avl.c			\
 			  iv_main.c			\
-			  iv_method_dev_poll.c		\
-			  iv_method_epoll.c		\
-			  iv_method_kqueue.c		\
+			  $(DEV_POLL_SRC)		\
+			  $(EPOLL_SRC)			\
+			  $(KQUEUE_SRC)			\
 			  iv_method_poll.c		\
 			  iv_method_select.c		\
 			  iv_task.c			\
