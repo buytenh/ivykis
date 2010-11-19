@@ -158,11 +158,12 @@ static void iv_wait_completion(void *_this)
 		free(we);
 
 		if (this == NULL)
-			return;
+			break;
 	}
 	pthr_mutex_unlock(&iv_wait_lock);
 
-	this->term = NULL;
+	if (this != NULL)
+		this->term = NULL;
 }
 
 static __thread struct iv_wait_thr_info {
