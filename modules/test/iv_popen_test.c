@@ -23,76 +23,95 @@
 #include <iv.h>
 #include <iv_popen.h>
 
-static struct iv_popen_request popen_req;
-static struct iv_fd popen_fd;
-static struct iv_timer closeit;
+#define NUM		4
 
-static void done(int timeout)
+struct req {
+	struct iv_popen_request popen_req;
+	char *argv[3];
+	struct iv_fd popen_fd;
+	struct iv_timer closeit;
+};
+
+static void done(struct req *req, int timeout)
 {
-	iv_popen_request_close(&popen_req);
+	iv_popen_request_close(&req->popen_req);
 
-	iv_unregister_fd(&popen_fd);
-	close(popen_fd.fd);
+	iv_unregister_fd(&req->popen_fd);
+	close(req->popen_fd.fd);
 
 	if (!timeout)
-		iv_unregister_timer(&closeit);
+		iv_unregister_timer(&req->closeit);
 }
 
-static void got_data(void *_dummy)
+static void got_data(void *_req)
 {
+	struct req *req = _req;
 	char buf[1024];
 	int ret;
 
-	ret = read(popen_fd.fd, buf, sizeof(buf));
+	ret = read(req->popen_fd.fd, buf, sizeof(buf));
 	if (ret <= 0) {
 		if (ret == 0) {
 			fprintf(stderr, "got EOF\n");
-			done(0);
+			done(req, 0);
 		} else if (errno != EAGAIN && errno != EINTR) {
 			perror("read");
-			done(0);
+			done(req, 0);
 		}
 
 		return;
 	}
 
-	write(1, buf, ret);
+	printf("%p: ", req);
+	fwrite(buf, 1, ret, stdout);
 }
 
-static void do_close(void *_dummy)
+static void do_close(void *_req)
 {
-	printf("timeout expired, closing the popen request\n");
-	done(1);
+	struct req *req = _req;
+
+	printf("%p: timeout expired, closing the popen request\n", req);
+	done(req, 1);
+}
+
+static void open_child_request(struct req *req)
+{
+	int f;
+
+	req->popen_req.file = "/usr/bin/vmstat";
+	req->argv[0] = "/usr/bin/vmstat";
+	req->argv[1] = "1";
+	req->argv[2] = NULL;
+	req->popen_req.argv = req->argv;
+	req->popen_req.type = "r";
+	f = iv_popen_request_submit(&req->popen_req);
+
+	printf("submitted the popen request, fd is %d\n", f);
+
+	INIT_IV_FD(&req->popen_fd);
+	req->popen_fd.fd = f;
+	req->popen_fd.cookie = req;
+	req->popen_fd.handler_in = got_data;
+	iv_register_fd(&req->popen_fd);
+
+	INIT_IV_TIMER(&req->closeit);
+	iv_validate_now();
+	req->closeit.expires = now;
+	req->closeit.expires.tv_sec += 5;
+	req->closeit.cookie = req;
+	req->closeit.handler = do_close;
+	iv_register_timer(&req->closeit);
 }
 
 int main()
 {
-	char *argv[3];
-	int f;
+	struct req req[NUM];
+	int i;
 
 	iv_init();
 
-	popen_req.file = "/usr/bin/vmstat";
-	argv[0] = "/usr/bin/vmstat";
-	argv[1] = "1";
-	argv[2] = NULL;
-	popen_req.argv = argv;
-	popen_req.type = "r";
-	f = iv_popen_request_submit(&popen_req);
-
-	printf("submitted the popen request, fd is %d\n", f);
-
-	INIT_IV_FD(&popen_fd);
-	popen_fd.fd = f;
-	popen_fd.handler_in = got_data;
-	iv_register_fd(&popen_fd);
-
-	INIT_IV_TIMER(&closeit);
-	iv_validate_now();
-	closeit.expires = now;
-	closeit.expires.tv_sec += 5;
-	closeit.handler = do_close;
-	iv_register_timer(&closeit);
+	for (i = 0; i < NUM; i++)
+		open_child_request(&req[i]);
 
 	iv_main();
 
