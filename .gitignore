@@ -16,3 +16,6 @@ missing
 
 # autoheader
 config.h.in
+
+# editor backup files
+*~
