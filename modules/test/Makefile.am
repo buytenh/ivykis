@@ -2,8 +2,8 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include	\
 			  -I$(top_srcdir)/modules/include
 AM_CFLAGS		= -Wall
 
-LDADD			= ../../lib/libivykis.a			\
-			  ../libivykis-modules.a
+LDADD			= ../../lib/libivykis.la			\
+			  ../libivykis-modules.la
 
 noinst_PROGRAMS		= iv_event_raw_test		\
 			  iv_event_test			\

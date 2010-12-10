@@ -2,11 +2,12 @@ AC_PREREQ(2.59)
 AC_INIT([ivykis], [0.21], [libivykis-discuss@lists.sourceforge.net])
 AC_CONFIG_SRCDIR([lib/iv_main.c])
 AC_CONFIG_HEADER(config.h)
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
+LT_INIT()
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([pthread_create], [pthread], [],

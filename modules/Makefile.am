@@ -6,9 +6,9 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 
 AM_CFLAGS		= -Wall
 
-lib_LIBRARIES		= libivykis-modules.a
+lib_LTLIBRARIES		= libivykis-modules.la
 
-libivykis_modules_a_SOURCES	= iv_event.c			\
+libivykis_modules_la_SOURCES	= iv_event.c			\
 				  iv_event_raw.c		\
 				  iv_popen.c			\
 				  iv_signal.c			\

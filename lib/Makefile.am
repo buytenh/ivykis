@@ -4,7 +4,7 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include
 
 AM_CFLAGS		= -Wall
 
-lib_LIBRARIES		= libivykis.a
+lib_LTLIBRARIES		= libivykis.la
 
 if HAVE_DEV_POLL
 DEV_POLL_SRC = iv_method_dev_poll.c
@@ -24,7 +24,7 @@ else
 KQUEUE_SRC =
 endif
 
-libivykis_a_SOURCES	= iv_avl.c			\
+libivykis_la_SOURCES	= iv_avl.c			\
 			  iv_main.c			\
 			  $(DEV_POLL_SRC)		\
 			  $(EPOLL_SRC)			\
