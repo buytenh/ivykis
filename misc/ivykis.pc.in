@@ -4,8 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
 
 
-Name: @PACKAGE@
+Name: ivykis
 Version: @VERSION@
 Description: event handling library
-Requires:
 Libs: -L${libdir} -livykis -lrt
