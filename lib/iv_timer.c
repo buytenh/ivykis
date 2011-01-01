@@ -54,7 +54,7 @@ struct ratnode { void *child[SPLIT_NODES]; };
 static __thread int		num_timers;
 static __thread struct ratnode	*timer_root;
 
-void INIT_IV_TIMER(struct iv_timer *_t)
+void IV_TIMER_INIT(struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 
@@ -182,14 +182,14 @@ static void pull_up(int index, struct iv_timer_ **i)
 	}
 }
 
-void iv_register_timer(struct iv_timer *_t)
+void iv_timer_register(struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 	struct iv_timer_ **p;
 	int index;
 
 	if (t->index != -1) {
-		syslog(LOG_CRIT, "iv_register_timer: called with timer still "
+		syslog(LOG_CRIT, "iv_timer_register: called with timer still "
 				 "on the heap");
 		abort();
 	}
@@ -197,7 +197,7 @@ void iv_register_timer(struct iv_timer *_t)
 	index = ++num_timers;
 	p = get_node(index);
 	if (p == NULL) {
-		syslog(LOG_CRIT, "iv_register_timer: timer list overflow");
+		syslog(LOG_CRIT, "iv_timer_register: timer list overflow");
 		abort();
 	}
 
@@ -246,27 +246,27 @@ static void push_down(int index, struct iv_timer_ **i)
 	}
 }
 
-void iv_unregister_timer(struct iv_timer *_t)
+void iv_timer_unregister(struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 	struct iv_timer_ **m;
 	struct iv_timer_ **p;
 
 	if (t->index == -1) {
-		syslog(LOG_CRIT, "iv_unregister_timer: called with timer not "
+		syslog(LOG_CRIT, "iv_timer_unregister: called with timer not "
 				 "on the heap");
 		abort();
 	}
 
 	if (t->index > num_timers) {
-		syslog(LOG_CRIT, "iv_unregister_timer: timer index %d > %d",
+		syslog(LOG_CRIT, "iv_timer_unregister: timer index %d > %d",
 		       t->index, num_timers);
 		abort();
 	}
 
 	p = get_node(t->index);
 	if (*p != t) {
-		syslog(LOG_CRIT, "iv_unregister_timer: unregistered timer "
+		syslog(LOG_CRIT, "iv_timer_unregister: unregistered timer "
 				 "index belonging to other timer");
 		abort();
 	}
@@ -293,7 +293,7 @@ void iv_run_timers(void)
 		iv_validate_now();
 		if (timespec_gt(&t->expires, &now))
 			break;
-		iv_unregister_timer((struct iv_timer *)t);
+		iv_timer_unregister((struct iv_timer *)t);
 		t->handler(t->cookie);
 	}
 }

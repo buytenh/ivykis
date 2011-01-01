@@ -47,19 +47,19 @@ void iv_run_tasks(void)
 	}
 }
 
-void INIT_IV_TASK(struct iv_task *_t)
+void IV_TASK_INIT(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	INIT_LIST_HEAD(&t->list);
 }
 
-void iv_register_task(struct iv_task *_t)
+void iv_task_register(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	if (!list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_register_task: called with task still "
+		syslog(LOG_CRIT, "iv_task_register: called with task still "
 				 "on a list");
 		abort();
 	}
@@ -67,12 +67,12 @@ void iv_register_task(struct iv_task *_t)
 	list_add_tail(&t->list, &tasks);
 }
 
-void iv_unregister_task(struct iv_task *_t)
+void iv_task_unregister(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	if (list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_unregister_task: called with task not "
+		syslog(LOG_CRIT, "iv_task_unregister: called with task not "
 				 "on a list");
 		abort();
 	}

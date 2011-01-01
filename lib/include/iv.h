@@ -64,9 +64,9 @@ struct iv_fd {
 	};
 };
 
-void INIT_IV_FD(struct iv_fd *);
-void iv_register_fd(struct iv_fd *);
-void iv_unregister_fd(struct iv_fd *);
+void IV_FD_INIT(struct iv_fd *);
+void iv_fd_register(struct iv_fd *);
+void iv_fd_unregister(struct iv_fd *);
 int iv_fd_registered(struct iv_fd *);
 void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_out(struct iv_fd *, void (*)(void *));
@@ -86,9 +86,9 @@ struct iv_task {
 	};
 };
 
-void INIT_IV_TASK(struct iv_task *);
-void iv_register_task(struct iv_task *);
-void iv_unregister_task(struct iv_task *);
+void IV_TASK_INIT(struct iv_task *);
+void iv_task_register(struct iv_task *);
+void iv_task_unregister(struct iv_task *);
 int iv_task_registered(struct iv_task *);
 
 
@@ -106,9 +106,9 @@ struct iv_timer {
 	};
 };
 
-void INIT_IV_TIMER(struct iv_timer *);
-void iv_register_timer(struct iv_timer *);
-void iv_unregister_timer(struct iv_timer *);
+void IV_TIMER_INIT(struct iv_timer *);
+void iv_timer_register(struct iv_timer *);
+void iv_timer_unregister(struct iv_timer *);
 int iv_timer_registered(struct iv_timer *);
 
 
@@ -122,6 +122,8 @@ int iv_timer_registered(struct iv_timer *);
 #ifdef __cplusplus
 }
 #endif
+
+#include <iv_compat.h>
 
 
 #endif

@@ -256,7 +256,7 @@ void iv_deinit(void)
 
 
 /* file descriptor handling *************************************************/
-void INIT_IV_FD(struct iv_fd *_fd)
+void IV_FD_INIT(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
@@ -267,20 +267,20 @@ void INIT_IV_FD(struct iv_fd *_fd)
 	fd->registered = 0;
 }
 
-void iv_register_fd(struct iv_fd *_fd)
+void iv_fd_register(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int flags;
 	int yes;
 
 	if (fd->registered) {
-		syslog(LOG_CRIT, "iv_register_fd: called with fd which "
+		syslog(LOG_CRIT, "iv_fd_register: called with fd which "
 				 "is still registered");
 		abort();
 	}
 
 	if (fd->fd < 0 || fd->fd >= maxfd) {
-		syslog(LOG_CRIT, "iv_register_fd: called with invalid fd "
+		syslog(LOG_CRIT, "iv_fd_register: called with invalid fd "
 				 "%d (maxfd=%d)", fd->fd, maxfd);
 		abort();
 	}
@@ -312,12 +312,12 @@ void iv_register_fd(struct iv_fd *_fd)
 	notify_fd(fd);
 }
 
-void iv_unregister_fd(struct iv_fd *_fd)
+void iv_fd_unregister(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_unregister_fd: called with fd which "
+		syslog(LOG_CRIT, "iv_fd_unregister: called with fd which "
 				 "is not registered");
 		abort();
 	}

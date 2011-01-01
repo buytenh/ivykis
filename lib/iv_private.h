@@ -48,7 +48,7 @@ struct iv_fd_ {
 
 	/*
 	 * Reflects whether the fd has been registered with
-	 * iv_register_fd().  Will be zero in ->notify_fd() if the
+	 * iv_fd_register().  Will be zero in ->notify_fd() if the
 	 * fd is being unregistered.
 	 */
 	unsigned		registered:1;
