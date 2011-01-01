@@ -35,7 +35,7 @@ static void handler(void *_t)
 	iv_validate_now();
 	t->expires = now;
 	t->expires.tv_sec += 1;
-	iv_register_timer(t);
+	iv_timer_register(t);
 #endif
 }
 
@@ -48,7 +48,7 @@ int main()
 	iv_validate_now();
 
 	for (i = 0; i < NUM; i++) {
-		INIT_IV_TIMER(tim + i);
+		IV_TIMER_INIT(tim + i);
 		tim[i].expires = now;
 		tim[i].expires.tv_sec += 1;
 		tim[i].expires.tv_nsec += i;
@@ -58,7 +58,7 @@ int main()
 		}
 		tim[i].cookie = (void *)&tim[i];
 		tim[i].handler = handler;
-		iv_register_timer(&tim[i]);
+		iv_timer_register(&tim[i]);
 	}
 
 	iv_main();

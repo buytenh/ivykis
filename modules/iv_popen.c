@@ -54,7 +54,7 @@ iv_popen_running_child_wait(void *_ch, int status, struct rusage *rusage)
 	if (ch->parent != NULL)
 		ch->parent->child = NULL;
 	else
-		iv_unregister_timer(&ch->signal_timer);
+		iv_timer_unregister(&ch->signal_timer);
 
 	free(ch);
 }
@@ -174,7 +174,7 @@ static void iv_popen_running_child_timer(void *_ch)
 	iv_validate_now();
 	ch->signal_timer.expires = now;
 	ch->signal_timer.expires.tv_sec += SIGNAL_INTERVAL;
-	iv_register_timer(&ch->signal_timer);
+	iv_timer_register(&ch->signal_timer);
 }
 
 void iv_popen_request_close(struct iv_popen_request *this)
@@ -184,12 +184,12 @@ void iv_popen_request_close(struct iv_popen_request *this)
 	if (ch != NULL) {
 		ch->parent = NULL;
 
-		INIT_IV_TIMER(&ch->signal_timer);
+		IV_TIMER_INIT(&ch->signal_timer);
 		iv_validate_now();
 		ch->signal_timer.expires = now;
 		ch->signal_timer.handler = iv_popen_running_child_timer;
 		ch->signal_timer.cookie = ch;
-		iv_register_timer(&ch->signal_timer);
+		iv_timer_register(&ch->signal_timer);
 
 		ch->num_kills = 0;
 	}

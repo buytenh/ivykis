@@ -57,12 +57,12 @@ int main()
 		exit(-1);
 	}
 
-	INIT_IV_FD(&ifd);
+	IV_FD_INIT(&ifd);
 	ifd.fd = fd;
 	ifd.cookie = NULL;
 	ifd.handler_in = connected;
 	ifd.handler_out = NULL;
-	iv_register_fd(&ifd);
+	iv_fd_register(&ifd);
 
 	connected(NULL);
 

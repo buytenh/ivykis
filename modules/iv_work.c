@@ -54,7 +54,7 @@ static void __iv_work_thread_cleanup(struct work_pool_thread *thr, int timeout)
 	list_del(&thr->list);
 	iv_event_unregister(&thr->kick);
 	if (!timeout)
-		iv_unregister_timer(&thr->idle_timer);
+		iv_timer_unregister(&thr->idle_timer);
 	free(thr);
 
 	pool->started_threads--;
@@ -80,7 +80,7 @@ static void iv_work_thread_got_event(void *_thr)
 		list_del(&work->list);
 
 		list_del(&thr->list);
-		iv_unregister_timer(&thr->idle_timer);
+		iv_timer_unregister(&thr->idle_timer);
 
 		pthread_mutex_unlock(&pool->lock);
 		work->work(work->cookie);
@@ -91,7 +91,7 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_validate_now();
 		thr->idle_timer.expires = now;
 		thr->idle_timer.expires.tv_sec += 10;
-		iv_register_timer(&thr->idle_timer);
+		iv_timer_register(&thr->idle_timer);
 
 		list_add_tail(&work->list, &pool->work_done);
 		iv_event_post(&pool->ev);
@@ -116,7 +116,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 	if (thr->kicked) {
 		thr->idle_timer.expires = now;
 		thr->idle_timer.expires.tv_sec += 10;
-		iv_register_timer(&thr->idle_timer);
+		iv_timer_register(&thr->idle_timer);
 
 		pthread_mutex_unlock(&pool->lock);
 
@@ -143,13 +143,13 @@ static void iv_work_thread(void *_thr)
 	thr->kick.handler = iv_work_thread_got_event;
 	iv_event_register(&thr->kick);
 
-	INIT_IV_TIMER(&thr->idle_timer);
+	IV_TIMER_INIT(&thr->idle_timer);
 	iv_validate_now();
 	thr->idle_timer.expires = now;
 	thr->idle_timer.expires.tv_sec += 10;
 	thr->idle_timer.cookie = thr;
 	thr->idle_timer.handler = iv_work_thread_idle_timeout;
-	iv_register_timer(&thr->idle_timer);
+	iv_timer_register(&thr->idle_timer);
 
 	pthread_mutex_lock(&thr->pool->lock);
 	list_add_tail(&thr->list, &thr->pool->idle_threads);

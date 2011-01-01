@@ -37,7 +37,7 @@ static void timeout(void *_c)
 	struct client_connection *c = (struct client_connection *)_c;
 	struct linger l;
 
-	iv_unregister_fd(&c->fd);
+	iv_fd_unregister(&c->fd);
 
 	/* Force a TCP RST on close.  */
 	l.l_onoff = 1;
@@ -71,18 +71,18 @@ static void got_connection(void *_dummy)
 		return;
 	}
 
-	INIT_IV_FD(&c->fd);
+	IV_FD_INIT(&c->fd);
 	c->fd.fd = ret;
 	c->fd.cookie = (void *)c;
-	iv_register_fd(&c->fd);
+	iv_fd_register(&c->fd);
 
-	INIT_IV_TIMER(&c->tim);
+	IV_TIMER_INIT(&c->tim);
 	c->tim.cookie = (void *)c;
 	c->tim.handler = timeout;
 	iv_validate_now();
 	c->tim.expires = now;
 	c->tim.expires.tv_sec += 1;
-	iv_register_timer(&c->tim);
+	iv_timer_register(&c->tim);
 }
 
 static void server_init(void)
@@ -106,10 +106,10 @@ static void server_init(void)
 
 	listen(sock, 5);
 
-	INIT_IV_FD(&server_socket);
+	IV_FD_INIT(&server_socket);
 	server_socket.fd = sock;
 	server_socket.handler_in = got_connection;
-	iv_register_fd(&server_socket);
+	iv_fd_register(&server_socket);
 }
 
 
@@ -161,12 +161,12 @@ int main()
 		exit(-1);
 	}
 
-	INIT_IV_FD(&ifd);
+	IV_FD_INIT(&ifd);
 	ifd.fd = fd;
 	ifd.cookie = NULL;
 	ifd.handler_in = connected;
 	ifd.handler_out = connected;
-	iv_register_fd(&ifd);
+	iv_fd_register(&ifd);
 
 	connected(NULL);
 

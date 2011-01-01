@@ -36,11 +36,11 @@ static void done(struct req *req, int timeout)
 {
 	iv_popen_request_close(&req->popen_req);
 
-	iv_unregister_fd(&req->popen_fd);
+	iv_fd_unregister(&req->popen_fd);
 	close(req->popen_fd.fd);
 
 	if (!timeout)
-		iv_unregister_timer(&req->closeit);
+		iv_timer_unregister(&req->closeit);
 }
 
 static void got_data(void *_req)
@@ -88,19 +88,19 @@ static void open_child_request(struct req *req)
 
 	printf("submitted the popen request, fd is %d\n", f);
 
-	INIT_IV_FD(&req->popen_fd);
+	IV_FD_INIT(&req->popen_fd);
 	req->popen_fd.fd = f;
 	req->popen_fd.cookie = req;
 	req->popen_fd.handler_in = got_data;
-	iv_register_fd(&req->popen_fd);
+	iv_fd_register(&req->popen_fd);
 
-	INIT_IV_TIMER(&req->closeit);
+	IV_TIMER_INIT(&req->closeit);
 	iv_validate_now();
 	req->closeit.expires = now;
 	req->closeit.expires.tv_sec += 5;
 	req->closeit.cookie = req;
 	req->closeit.handler = do_close;
-	iv_register_timer(&req->closeit);
+	iv_timer_register(&req->closeit);
 }
 
 int main()

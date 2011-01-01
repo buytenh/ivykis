@@ -50,12 +50,12 @@ static void gotev0(void *_x)
 
 	iv_event_raw_unregister(&ev0);
 
-	INIT_IV_TIMER(&ev1);
+	IV_TIMER_INIT(&ev1);
 	iv_validate_now();
 	ev1.expires = now;
 	ev1.expires.tv_sec++;
 	ev1.handler = gotev1;
-	iv_register_timer(&ev1);
+	iv_timer_register(&ev1);
 }
 
 int main()

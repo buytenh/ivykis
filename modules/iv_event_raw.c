@@ -110,11 +110,11 @@ int iv_event_raw_register(struct iv_event_raw *this)
 		}
 	}
 
-	INIT_IV_FD(&this->event_rfd);
+	IV_FD_INIT(&this->event_rfd);
 	this->event_rfd.fd = fd[0];
 	this->event_rfd.cookie = this;
 	this->event_rfd.handler_in = iv_event_raw_got_event;
-	iv_register_fd(&this->event_rfd);
+	iv_fd_register(&this->event_rfd);
 
 	this->event_wfd = fd[1];
 	if (eventfd_unavailable) {
@@ -138,7 +138,7 @@ int iv_event_raw_register(struct iv_event_raw *this)
 
 void iv_event_raw_unregister(struct iv_event_raw *this)
 {
-	iv_unregister_fd(&this->event_rfd);
+	iv_fd_unregister(&this->event_rfd);
 	close(this->event_rfd.fd);
 
 	if (eventfd_unavailable)

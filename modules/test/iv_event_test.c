@@ -37,7 +37,7 @@ static void got_ev0(void *_dummy)
 	iv_validate_now();
 	tim0.expires = now;
 	tim0.expires.tv_sec++;
-	iv_register_timer(&tim0);
+	iv_timer_register(&tim0);
 }
 
 static void got_tim0(void *_dummy)
@@ -54,7 +54,7 @@ static void got_ev1(void *_dummy)
 	iv_validate_now();
 	tim1.expires = now;
 	tim1.expires.tv_sec++;
-	iv_register_timer(&tim1);
+	iv_timer_register(&tim1);
 }
 
 static void got_tim1(void *_dummy)
@@ -71,7 +71,7 @@ static void *thread1(void *_dummy)
 	ev1.handler = got_ev1;
 	iv_event_register(&ev1);
 
-	INIT_IV_TIMER(&tim1);
+	IV_TIMER_INIT(&tim1);
 	tim1.handler = got_tim1;
 
 	iv_main();
@@ -88,7 +88,7 @@ int main()
 	ev0.handler = got_ev0;
 	iv_event_register(&ev0);
 
-	INIT_IV_TIMER(&tim0);
+	IV_TIMER_INIT(&tim0);
 	tim0.handler = got_tim0;
 
 	pthread_create(&foo, NULL, thread1, NULL);
@@ -96,7 +96,7 @@ int main()
 	iv_validate_now();
 	tim0.expires = now;
 	tim0.expires.tv_sec++;
-	iv_register_timer(&tim0);
+	iv_timer_register(&tim0);
 
 	iv_main();
 

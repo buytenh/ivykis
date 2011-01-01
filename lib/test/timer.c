@@ -33,20 +33,20 @@ static void handler(void *_t)
 	iv_validate_now();
 	t->expires = now;
 	t->expires.tv_sec += 1;
-	iv_register_timer(t);
+	iv_timer_register(t);
 }
 
 int main()
 {
 	iv_init();
 
-	INIT_IV_TIMER(&tim);
+	IV_TIMER_INIT(&tim);
 	iv_validate_now();
 	tim.expires = now;
 	tim.expires.tv_sec += 1;
 	tim.cookie = (void *)&tim;
 	tim.handler = handler;
-	iv_register_timer(&tim);
+	iv_timer_register(&tim);
 
 	iv_main();
 

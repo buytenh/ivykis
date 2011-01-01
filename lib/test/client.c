@@ -48,7 +48,7 @@ static void connected(void *c)
 	fprintf(stderr, ".");
 #endif
 
-	iv_unregister_fd(&conn->fd);
+	iv_fd_unregister(&conn->fd);
 	close(conn->fd.fd);
 	create_connector(conn, &conn->addr);
 }
@@ -63,12 +63,12 @@ static void create_connector(struct connector *conn, struct sockaddr_in *addr)
 		exit(-1);
 	}
 
-	INIT_IV_FD(&conn->fd);
+	IV_FD_INIT(&conn->fd);
 	conn->fd.fd = fd;
 	conn->fd.cookie = (void *)conn;
 	conn->fd.handler_in = connected;
 	conn->fd.handler_out = NULL;
-	iv_register_fd(&conn->fd);
+	iv_fd_register(&conn->fd);
 
 	conn->addr.sin_family = addr->sin_family;
 	conn->addr.sin_addr = addr->sin_addr;

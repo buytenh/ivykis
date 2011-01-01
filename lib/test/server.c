@@ -90,13 +90,13 @@ static void create_handle(struct handle *h, int port)
 
 	listen(sock, 5);
 
-	INIT_IV_FD(&h->fd);
+	IV_FD_INIT(&h->fd);
 	h->fd.fd = sock;
 	h->fd.handler_in = handler;
 	h->fd.handler_out = NULL;
 	h->fd.cookie = h;
 	h->port = port;
-	iv_register_fd(&h->fd);
+	iv_fd_register(&h->fd);
 }
 
 static void create_run_handles(int fp, int numhandles)

@@ -30,12 +30,12 @@ int main()
 
 	iv_init();
 
-	INIT_IV_FD(&fd);
+	IV_FD_INIT(&fd);
 	fd.fd = 0;
 	fd.cookie = NULL;
 	fd.handler_in = NULL;
 	fd.handler_out = NULL;
-	iv_register_fd(&fd);
+	iv_fd_register(&fd);
 
 	iv_main();
 
