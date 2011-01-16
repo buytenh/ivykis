@@ -36,6 +36,10 @@ struct iv_event {
 	struct list_head	list;
 };
 
+static inline void IV_EVENT_INIT(struct iv_event *this)
+{
+}
+
 int iv_event_register(struct iv_event *this);
 void iv_event_unregister(struct iv_event *this);
 void iv_event_post(struct iv_event *this);

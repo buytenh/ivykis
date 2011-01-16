@@ -44,6 +44,10 @@ struct iv_wait_interest {
 	unsigned		dead:1;
 };
 
+static inline void IV_WAIT_INTEREST_INIT(struct iv_wait_interest *this)
+{
+}
+
 void iv_wait_interest_register(struct iv_wait_interest *this);
 int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 				    void (*fn)(void *cookie), void *cookie);

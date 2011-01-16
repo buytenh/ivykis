@@ -41,6 +41,10 @@ struct iv_signal {
 	int			active;
 };
 
+static inline void IV_SIGNAL_INIT(struct iv_signal *this)
+{
+}
+
 int iv_signal_register(struct iv_signal *this);
 void iv_signal_unregister(struct iv_signal *this);
 

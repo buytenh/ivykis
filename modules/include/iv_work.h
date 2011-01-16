@@ -44,6 +44,14 @@ struct iv_work_item {
 	struct list_head	list;
 };
 
+static inline void IV_WORK_POOL_INIT(struct iv_work_pool *this)
+{
+}
+
+static inline void IV_WORK_ITEM_INIT(struct iv_work_item *this)
+{
+}
+
 int iv_work_pool_create(struct iv_work_pool *this);
 void iv_work_pool_put(struct iv_work_pool *this);
 void iv_work_pool_submit_work(struct iv_work_pool *this,

@@ -33,6 +33,10 @@ struct iv_popen_request {
 	void		*child;
 };
 
+static inline void IV_POPEN_REQUEST_INIT(struct iv_popen_request *this)
+{
+}
+
 int iv_popen_request_submit(struct iv_popen_request *this);
 void iv_popen_request_close(struct iv_popen_request *this);
 
