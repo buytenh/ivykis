@@ -27,47 +27,47 @@ extern "C" {
 
 #define __deprecated __attribute__((deprecated))
 
-extern inline void __deprecated INIT_IV_FD(struct iv_fd *fd)
+static inline void __deprecated INIT_IV_FD(struct iv_fd *fd)
 {
 	IV_FD_INIT(fd);
 }
 
-extern inline void __deprecated iv_register_fd(struct iv_fd *fd)
+static inline void __deprecated iv_register_fd(struct iv_fd *fd)
 {
 	iv_fd_register(fd);
 }
 
-extern inline void __deprecated iv_unregister_fd(struct iv_fd *fd)
+static inline void __deprecated iv_unregister_fd(struct iv_fd *fd)
 {
 	iv_fd_unregister(fd);
 }
 
-extern inline void __deprecated INIT_IV_TASK(struct iv_task *t)
+static inline void __deprecated INIT_IV_TASK(struct iv_task *t)
 {
 	IV_TASK_INIT(t);
 }
 
-extern inline void __deprecated iv_register_task(struct iv_task *t)
+static inline void __deprecated iv_register_task(struct iv_task *t)
 {
 	iv_task_register(t);
 }
 
-extern inline void __deprecated iv_unregister_task(struct iv_task *t)
+static inline void __deprecated iv_unregister_task(struct iv_task *t)
 {
 	iv_task_unregister(t);
 }
 
-extern inline void __deprecated INIT_IV_TIMER(struct iv_timer *t)
+static inline void __deprecated INIT_IV_TIMER(struct iv_timer *t)
 {
 	IV_TIMER_INIT(t);
 }
 
-extern inline void __deprecated iv_register_timer(struct iv_timer *t)
+static inline void __deprecated iv_register_timer(struct iv_timer *t)
 {
 	iv_timer_register(t);
 }
 
-extern inline void __deprecated iv_unregister_timer(struct iv_timer *t)
+static inline void __deprecated iv_unregister_timer(struct iv_timer *t)
 {
 	iv_timer_unregister(t);
 }
