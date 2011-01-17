@@ -35,6 +35,7 @@ extern "C" {
  * Library initialisation, main loop.
  */
 void iv_init(void);
+int iv_inited(void);
 void iv_main(void);
 void iv_quit(void);
 void iv_deinit(void);

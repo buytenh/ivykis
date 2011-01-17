@@ -131,6 +131,7 @@ static void iv_init_first_thread(void)
 
 
 /* main loop ****************************************************************/
+static __thread int		initialised;
 static __thread struct iv_fd_	*handled_fd;
 static __thread int		numfds;
 static __thread int		quit;
@@ -144,11 +145,17 @@ void iv_init(void)
 		abort();
 	}
 
+	initialised = 1;
 	handled_fd = NULL;
 	numfds = 0;
 
 	iv_task_init();
 	iv_timer_init();
+}
+
+int iv_inited(void)
+{
+        return initialised;
 }
 
 void iv_quit(void)
@@ -249,6 +256,8 @@ void iv_main(void)
 
 void iv_deinit(void)
 {
+	initialised = 0;
+
 	method->deinit();
 
 	iv_timer_deinit();
