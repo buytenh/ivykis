@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <iv_avl.h>
+#include <iv_list.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>

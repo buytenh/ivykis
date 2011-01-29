@@ -112,13 +112,6 @@ void iv_timer_unregister(struct iv_timer *);
 int iv_timer_registered(struct iv_timer *);
 
 
-/*
- * Misc functions.
- */
-#define container_of(ptr, type, member) ({			\
-	const typeof(((type *)0)->member) *__ptr = (ptr);	\
-	(type *)((char *)__ptr - (unsigned long)(&((type *)0)->member)); })
-
 #ifdef __cplusplus
 }
 #endif

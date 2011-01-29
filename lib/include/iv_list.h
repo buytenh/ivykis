@@ -78,6 +78,10 @@ static inline int list_empty(struct list_head *head)
 	return head->next == head;
 }
 
+#define container_of(ptr, type, member) ({			\
+	const typeof(((type *)0)->member) *__ptr = (ptr);	\
+	(type *)((char *)__ptr - (unsigned long)(&((type *)0)->member)); })
+
 #define list_entry(lh, type, member) \
 	container_of(lh, type, member)
 
