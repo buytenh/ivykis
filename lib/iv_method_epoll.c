@@ -136,6 +136,30 @@ static void iv_epoll_notify_fd(struct iv_fd_ *fd, int wanted)
 	fd->registered_bands = wanted;
 }
 
+static int iv_epoll_pollable(int fd)
+{
+	struct epoll_event event;
+        int ret;
+
+	event.data.fd = fd;
+	event.events = SET_IN | SET_OUT;
+	do {
+		ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0 && errno == EPERM)
+		return 0;
+        if (ret >= 0) {
+		ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, &event);
+		if (ret < 0) {
+			syslog(LOG_CRIT, "iv_epoll_pollable: got error %d[%s]",
+			       errno, strerror(errno));
+			abort();
+		}
+        }
+	return 1;
+}
+
 static void iv_epoll_deinit(void)
 {
 	close(epoll_fd);
@@ -147,5 +171,6 @@ struct iv_poll_method iv_method_epoll = {
 	.init		= iv_epoll_init,
 	.poll		= iv_epoll_poll,
 	.notify_fd	= iv_epoll_notify_fd,
+	.pollable	= iv_epoll_pollable,
 	.deinit		= iv_epoll_deinit,
 };

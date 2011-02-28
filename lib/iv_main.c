@@ -436,3 +436,11 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 	if (notify)
 		notify_fd(fd);
 }
+
+int iv_fd_pollable(int fd)
+{
+        if (method->pollable)
+                return method->pollable(fd);
+        return 1;
+
+}

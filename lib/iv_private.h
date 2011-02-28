@@ -116,6 +116,7 @@ struct iv_poll_method {
 	void	(*register_fd)(struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_fd_ *fd, int wanted_bands);
+	int     (*pollable)(int fd);
 	void	(*deinit)(void);
 };
 
