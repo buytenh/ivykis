@@ -78,6 +78,52 @@ static inline int list_empty(struct list_head *head)
 	return head->next == head;
 }
 
+static inline void __list_splice(struct list_head *lh,
+				 struct list_head *prev,
+				 struct list_head *next)
+{
+	struct list_head *first = lh->next;
+	struct list_head *last = lh->prev;
+
+	first->prev = prev;
+	prev->next = first;
+
+	last->next = next;
+	next->prev = last;
+}
+
+static inline void list_splice(struct list_head *lh,
+			       struct list_head *head)
+{
+	if (!list_empty(lh))
+		__list_splice(lh, head, head->next);
+}
+
+static inline void list_splice_init(struct list_head *lh,
+				    struct list_head *head)
+{
+	if (!list_empty(lh)) {
+		__list_splice(lh, head, head->next);
+		INIT_LIST_HEAD(lh);
+	}
+}
+
+static inline void list_splice_tail(struct list_head *lh,
+				    struct list_head *head)
+{
+	if (!list_empty(lh))
+		__list_splice(lh, head->prev, head);
+}
+
+static inline void list_splice_tail_init(struct list_head *lh,
+					 struct list_head *head)
+{
+	if (!list_empty(lh)) {
+		__list_splice(lh, head->prev, head);
+		INIT_LIST_HEAD(lh);
+	}
+}
+
 #define container_of(ptr, type, member) ({			\
 	const typeof(((type *)0)->member) *__ptr = (ptr);	\
 	(type *)((char *)__ptr - (unsigned long)(&((type *)0)->member)); })
