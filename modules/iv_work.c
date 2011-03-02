@@ -31,6 +31,9 @@ struct work_pool_priv {
 	pthread_mutex_t		lock;
 	struct iv_event		ev;
 	struct iv_work_pool	*public;
+	void			*cookie;
+	void			(*thread_start)(void *cookie);
+	void			(*thread_stop)(void *cookie);
 	int			started_threads;
 	struct list_head	idle_threads;
 	struct list_head	work_items;
@@ -134,6 +137,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 static void iv_work_thread(void *_thr)
 {
 	struct work_pool_thread *thr = _thr;
+	struct work_pool_priv *pool = thr->pool;
 
 	iv_init();
 
@@ -152,13 +156,19 @@ static void iv_work_thread(void *_thr)
 	thr->idle_timer.handler = iv_work_thread_idle_timeout;
 	iv_timer_register(&thr->idle_timer);
 
-	pthread_mutex_lock(&thr->pool->lock);
-	list_add_tail(&thr->list, &thr->pool->idle_threads);
-	pthread_mutex_unlock(&thr->pool->lock);
+	pthread_mutex_lock(&pool->lock);
+	list_add_tail(&thr->list, &pool->idle_threads);
+	pthread_mutex_unlock(&pool->lock);
+
+	if (pool->thread_start != NULL)
+		pool->thread_start(pool->cookie);
 
 	iv_event_post(&thr->kick);
 
 	iv_main();
+
+	if (pool->thread_stop != NULL)
+		pool->thread_stop(pool->cookie);
 
 	iv_deinit();
 }
@@ -216,6 +226,9 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	iv_event_register(&pool->ev);
 
 	pool->public = this;
+	pool->cookie = this->cookie;
+	pool->thread_start = this->thread_start;
+	pool->thread_stop = this->thread_stop;
 	pool->started_threads = 0;
 	INIT_LIST_HEAD(&pool->idle_threads);
 	INIT_LIST_HEAD(&pool->work_items);

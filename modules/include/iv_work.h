@@ -32,6 +32,9 @@ extern "C" {
 
 struct iv_work_pool {
 	int		max_threads;
+	void		*cookie;
+	void		(*thread_start)(void *cookie);
+	void		(*thread_stop)(void *cookie);
 
 	void		*priv;
 };
@@ -46,6 +49,8 @@ struct iv_work_item {
 
 static inline void IV_WORK_POOL_INIT(struct iv_work_pool *this)
 {
+	this->thread_start = NULL;
+	this->thread_stop = NULL;
 }
 
 static inline void IV_WORK_ITEM_INIT(struct iv_work_item *this)
