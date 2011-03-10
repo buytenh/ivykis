@@ -68,6 +68,7 @@ static void *thread1(void *_dummy)
 {
 	iv_init();
 
+	IV_EVENT_INIT(&ev1);
 	ev1.handler = got_ev1;
 	iv_event_register(&ev1);
 
@@ -85,6 +86,7 @@ int main()
 
 	iv_init();
 
+	IV_EVENT_INIT(&ev0);
 	ev0.handler = got_ev0;
 	iv_event_register(&ev0);
 

@@ -127,6 +127,7 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 	if (thr == NULL)
 		return -1;
 
+	IV_EVENT_INIT(&thr->dead);
 	thr->dead.cookie = thr;
 	thr->dead.handler = iv_thread_died;
 	iv_event_register(&thr->dead);

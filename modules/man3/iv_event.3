@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_event 3 2010-09-03 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_event_register, iv_event_unregister, iv_event_post \- manage ivykis objects for event notification
+IV_EVENT_INIT, iv_event_register, iv_event_unregister, iv_event_post \- manage ivykis objects for event notification
 .SH SYNOPSIS
 .B #include <iv_event.h>
 .sp
@@ -16,6 +16,8 @@ struct iv_event {
 };
 .fi
 .sp
+.BI "int IV_EVENT_INIT(struct iv_event *" this ");"
+.br
 .BI "int iv_event_register(struct iv_event *" this ");"
 .br
 .BI "void iv_event_unregister(struct iv_event *" this ");"
@@ -29,10 +31,16 @@ provides a way for delivering events to
 recipients across thread boundaries.
 .PP
 The intended event recipient calls
-.B iv_event_register
+.B IV_EVENT_INIT
 on a
 .B struct iv_event
-object.
+object, fills in
+.B ->cookie
+and
+.B ->handler,
+and then calls
+.B iv_event_register
+on the object.
 .PP
 To generate an event, call
 .B iv_event_post

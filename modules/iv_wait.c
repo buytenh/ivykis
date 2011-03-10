@@ -180,6 +180,7 @@ static void __iv_wait_interest_register(struct iv_wait_interest *this)
 		iv_signal_register(&tinfo.sigchld_interest);
 	}
 
+	IV_EVENT_INIT(&this->ev);
 	this->ev.handler = iv_wait_completion;
 	this->ev.cookie = this;
 	iv_event_register(&this->ev);

@@ -139,6 +139,7 @@ static void iv_work_thread(void *_thr)
 
 	thr->kicked = 0;
 
+	IV_EVENT_INIT(&thr->kick);
 	thr->kick.cookie = thr;
 	thr->kick.handler = iv_work_thread_got_event;
 	iv_event_register(&thr->kick);
@@ -209,6 +210,7 @@ int iv_work_pool_create(struct iv_work_pool *this)
 		return -1;
 	}
 
+	IV_EVENT_INIT(&pool->ev);
 	pool->ev.cookie = pool;
 	pool->ev.handler = iv_work_event;
 	iv_event_register(&pool->ev);
