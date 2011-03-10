@@ -174,6 +174,7 @@ static __thread struct iv_wait_thr_info {
 static void __iv_wait_interest_register(struct iv_wait_interest *this)
 {
 	if (!tinfo.wait_count++) {
+		IV_SIGNAL_INIT(&tinfo.sigchld_interest);
 		tinfo.sigchld_interest.signum = SIGCHLD;
 		tinfo.sigchld_interest.exclusive = 1;
 		tinfo.sigchld_interest.handler = iv_wait_got_sigchld;

@@ -45,10 +45,12 @@ int main()
 {
 	iv_init();
 
+	IV_SIGNAL_INIT(&is_sigint);
 	is_sigint.signum = SIGINT;
 	is_sigint.handler = got_sigint;
 	iv_signal_register(&is_sigint);
 
+	IV_SIGNAL_INIT(&is_sigquit);
 	is_sigquit.signum = SIGQUIT;
 	is_sigquit.handler = got_sigquit;
 	iv_signal_register(&is_sigquit);

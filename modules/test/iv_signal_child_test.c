@@ -40,6 +40,7 @@ int main()
 
 	iv_init();
 
+	IV_SIGNAL_INIT(&is_sigterm);
 	is_sigterm.signum = SIGTERM;
 	is_sigterm.handler = got_sigterm;
 	iv_signal_register(&is_sigterm);

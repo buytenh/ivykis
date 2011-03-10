@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_signal 3 2010-09-03 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_signal_register, iv_signal_unregister \- ivykis signal handling
+IV_SIGNAL_INIT, iv_signal_register, iv_signal_unregister \- ivykis signal handling
 .SH SYNOPSIS
 .B #include <iv_signal.h>
 .sp
@@ -18,6 +18,8 @@ struct iv_signal {
 };
 .fi
 .sp
+.BI "void IV_SIGNAL_INIT(struct iv_signal *" this ");"
+.br
 .BI "int iv_signal_register(struct iv_signal *" this ");"
 .br
 .BI "void iv_signal_unregister(struct iv_signal *" this ");"
@@ -33,7 +35,9 @@ An ivykis application desiring signal notification registers a
 .B struct iv_signal
 object by calling
 .B iv_signal_register,
-after having filled in the
+after having initialised it with
+.B IV_SIGNAL_INIT
+and subsequently having filled in the
 .B ->signum,
 .B ->cookie
 and
