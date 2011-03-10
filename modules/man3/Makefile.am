@@ -17,6 +17,7 @@ man3_MANS	= iv_event.3				\
 		  iv_thread_set_debug_state.3		\
 		  iv_wait.3				\
 		  iv_wait_interest_register.3		\
+		  iv_wait_interest_register_spawn.3	\
 		  iv_wait_interest_unregister.3		\
 		  iv_work.3				\
 		  iv_work_pool_create.3			\
