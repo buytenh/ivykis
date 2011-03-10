@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_popen 3 2010-09-04 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_popen_request_submit, iv_popen_request_close \-
+IV_POPEN_REQUEST_INIT, iv_popen_request_submit, iv_popen_request_close \-
 .BR popen (3)
 for ivykis applications
 .SH SYNOPSIS
@@ -19,6 +19,8 @@ struct iv_popen_request {
 };
 .fi
 .sp
+.BI "void IV_POPEN_REQUEST_INIT(struct iv_popen_request *" this ");"
+.br
 .BI "int iv_popen_request_submit(struct iv_popen_request *" this ");"
 .br
 .BI "void iv_popen_request_close(struct iv_popen_request *" this ");"
@@ -31,17 +33,26 @@ applications with an asynchronous version of
 .BR popen (3)
 that is integrated with the ivykis event loop.
 .PP
-.B iv_popen_request_submit
-forks off a child process, and in the child process calls
-.BR execvp(2)
-on the
+After initialising a
+.B struct iv_popen_request
+object using
+.B IV_POPEN_REQUEST_INIT
+and assigning its
 .B ->file
 and
 .B ->argv
-members specified in the
-.B struct iv_popen_request
-parameter, while in the parent process returning a file descriptor
-that is connected to the child's standard input (if
+and
+.B ->type
+members, one can call
+.B iv_popen_request_submit
+on it to fork off a child process which will call
+.BR execvp(2)
+on
+.B ->file
+and
+.B ->argv,
+while in the parent process returning a file descriptor that is
+connected to the child's standard input (if
 .B ->type
 equals "w") or standard output (if
 .B ->type

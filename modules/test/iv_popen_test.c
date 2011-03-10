@@ -78,6 +78,7 @@ static void open_child_request(struct req *req)
 {
 	int f;
 
+	IV_POPEN_REQUEST_INIT(&req->popen_req);
 	req->popen_req.file = "/usr/bin/vmstat";
 	req->argv[0] = "/usr/bin/vmstat";
 	req->argv[1] = "1";

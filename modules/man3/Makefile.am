@@ -10,6 +10,7 @@ man3_MANS	= iv_event.3				\
 		  iv_event_unregister.3			\
 		  iv_popen.3				\
 		  iv_popen_request_close.3		\
+		  IV_POPEN_REQUEST_INIT.3		\
 		  iv_popen_request_submit.3		\
 		  iv_signal.3				\
 		  iv_signal_register.3			\

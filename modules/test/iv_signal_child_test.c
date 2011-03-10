@@ -44,6 +44,7 @@ int main()
 	is_sigterm.handler = got_sigterm;
 	iv_signal_register(&is_sigterm);
 
+	IV_POPEN_REQUEST_INIT(&popen_req);
 	popen_req.file = "/bin/sleep";
 	argv[0] = "/bin/sleep";
 	argv[1] = "3600";
