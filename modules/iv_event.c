@@ -62,6 +62,7 @@ int iv_event_register(struct iv_event *this)
 	if (!tinfo.event_count++) {
 		int ret;
 
+		IV_EVENT_RAW_INIT(&tinfo.ier);
 		tinfo.ier.handler = iv_event_run_pending_events;
 
 		ret = iv_event_raw_register(&tinfo.ier);

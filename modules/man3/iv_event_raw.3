@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_event_raw 3 2010-09-02 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_event_raw_register, iv_event_raw_unregister, iv_event_raw_post \- manage ivykis objects for event notification
+IV_EVENT_RAW_INIT, iv_event_raw_register, iv_event_raw_unregister, iv_event_raw_post \- manage ivykis objects for event notification
 .SH SYNOPSIS
 .B #include <iv_event_raw.h>
 .sp
@@ -16,6 +16,8 @@ struct iv_event_raw {
 };
 .fi
 .sp
+.BI "void IV_EVENT_RAW_INIT(struct iv_event_raw *" this ");"
+.br
 .BI "int iv_event_raw_register(struct iv_event_raw *" this ");"
 .br
 .BI "void iv_event_raw_unregister(struct iv_event_raw *" this ");"
@@ -29,10 +31,16 @@ provides a way for delivering events to
 recipients across thread and process boundaries.
 .PP
 The intended event recipient calls
-.B iv_event_raw_register
+.B IV_EVENT_RAW_INIT
 on a
 .B struct iv_event_raw
-object.
+object, fills in
+.B ->cookie
+and
+.B ->handler,
+and then calls
+.B iv_event_raw_register
+on the object.
 .PP
 To generate an event, call
 .B iv_event_raw_post

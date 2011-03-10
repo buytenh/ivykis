@@ -2,6 +2,7 @@ man3_MANS	= iv_event.3				\
 		  IV_EVENT_INIT.3			\
 		  iv_event_post.3			\
 		  iv_event_raw.3			\
+		  IV_EVENT_RAW_INIT.3			\
 		  iv_event_raw_post.3			\
 		  iv_event_raw_register.3		\
 		  iv_event_raw_unregister.3		\

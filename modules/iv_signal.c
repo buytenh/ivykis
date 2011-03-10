@@ -88,6 +88,7 @@ int iv_signal_register(struct iv_signal *this)
 	if (this->signum < 0 || this->signum >= MAX_SIGS)
 		return -EINVAL;
 
+	IV_EVENT_RAW_INIT(&this->ev);
 	this->ev.cookie = this;
 	this->ev.handler = iv_signal_event;
 	iv_event_raw_register(&this->ev);

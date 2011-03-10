@@ -38,6 +38,7 @@ static void gotev1(void *_x)
 {
 	printf("got ev1\n");
 
+	IV_EVENT_RAW_INIT(&ev2);
 	ev2.handler = gotev2;
 	iv_event_raw_register(&ev2);
 
@@ -62,6 +63,7 @@ int main()
 {
 	iv_init();
 
+	IV_EVENT_RAW_INIT(&ev0);
 	ev0.handler = gotev0;
 	iv_event_raw_register(&ev0);
 
