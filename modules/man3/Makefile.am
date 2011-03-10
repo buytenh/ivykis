@@ -25,6 +25,8 @@ man3_MANS	= iv_event.3				\
 		  iv_wait_interest_register_spawn.3	\
 		  iv_wait_interest_unregister.3		\
 		  iv_work.3				\
+		  IV_WORK_ITEM_INIT.3			\
 		  iv_work_pool_create.3			\
+		  IV_WORK_POOL_INIT.3			\
 		  iv_work_pool_put.3			\
 		  iv_work_pool_submit_work.3

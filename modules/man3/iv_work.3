@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_work 3 2010-09-14 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_work_pool_create, iv_work_pool_put, iv_work_pool_submit_work \- ivykis
+IV_WORK_POOL_INIT, iv_work_pool_create, iv_work_pool_put, IV_WORK_ITEM_INIT, iv_work_pool_submit_work \- ivykis
 worker thread management
 .SH SYNOPSIS
 .B #include <iv_work.h>
@@ -22,14 +22,23 @@ struct iv_work_item {
 };
 .fi
 .sp
+.BI "void IV_WORK_POOL_INIT(struct iv_work_pool *" this ");"
+.br
 .BI "int iv_work_pool_create(struct iv_work_pool *" this ");"
 .br
 .BI "int iv_work_pool_put(struct iv_work_pool *" this ");"
 .br
+.BI "void IV_WORK_ITEM_INIT(struct iv_work_item *" work ");"
+.br
 .BI "int iv_work_pool_submit_work(struct iv_work_pool *" this ", struct iv_work_item *" work ");"
 .br
 .SH DESCRIPTION
+Calling
 .B iv_work_pool_create
+on a
+.B struct iv_work_pool
+object previously initialised by
+.B IV_WORK_POOL_INIT
 creates a pool of worker threads that can be used to offload CPU
 intensive tasks to, so as to prevent negatively influencing event
 handling latency in the calling thread, and to enable the use of
@@ -44,7 +53,12 @@ member of
 specifies the maximum number of threads that will be created in this
 pool.
 .PP
+Calling
 .B iv_work_pool_submit_work
+on a
+.B struct iv_work_item
+object previously initialised by
+.B IV_WORK_ITEM_INIT
 submits a work item to a pool.  The
 .B ->work
 member of

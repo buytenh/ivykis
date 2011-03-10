@@ -60,24 +60,29 @@ int main()
 
 	iv_thread_set_debug_state(1);
 
+	IV_WORK_POOL_INIT(&pool);
 	pool.max_threads = 8;
 	iv_work_pool_create(&pool);
 
+	IV_WORK_ITEM_INIT(&item_a);
 	item_a.cookie = "a";
 	item_a.work = work;
 	item_a.completion = work_complete;
 	iv_work_pool_submit_work(&pool, &item_a);
 
+	IV_WORK_ITEM_INIT(&item_b);
 	item_b.cookie = "b";
 	item_b.work = work;
 	item_b.completion = work_complete;
 	iv_work_pool_submit_work(&pool, &item_b);
 
+	IV_WORK_ITEM_INIT(&item_c);
 	item_c.cookie = "c";
 	item_c.work = work;
 	item_c.completion = work_complete;
 	iv_work_pool_submit_work(&pool, &item_c);
 
+	IV_WORK_ITEM_INIT(&item_d);
 	item_d.cookie = "d";
 	item_d.work = work;
 	item_d.completion = work_complete;
