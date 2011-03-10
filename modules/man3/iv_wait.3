@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_wait 3 2010-09-03 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_wait_interest_register, iv_wait_interest_register_spawn, iv_wait_interest_unregister, iv_wait_interest_kill \- ivykis
+IV_WAIT_INTEREST_INIT, iv_wait_interest_register, iv_wait_interest_register_spawn, iv_wait_interest_unregister, iv_wait_interest_kill \- ivykis
 .BR wait4 (2)
 wrapper
 .SH SYNOPSIS
@@ -20,6 +20,8 @@ struct iv_wait_interest {
 };
 .fi
 .sp
+.BI "void IV_WAIT_INTEREST_INIT(struct iv_wait_interest *" this ");"
+.br
 .BI "int iv_wait_interest_register(struct iv_wait_interest *" this ");"
 .br
 .BI "int iv_wait_interest_register_spawn(struct iv_wait_interest *" this ", void (*" fn ")(void *), void *" cookie ");"
@@ -40,8 +42,10 @@ An ivykis application desiring process state change notifications
 registers a
 .B struct iv_wait_interest
 object by calling
-.B iv_wait_interest_register
-after having filled in the
+.B iv_wait_interest_register,
+after having initialised it with
+.B IV_WAIT_INTEREST_INIT
+and subsequently having filled in the
 .B ->pid,
 .B ->cookie
 and

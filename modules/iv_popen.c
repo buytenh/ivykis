@@ -125,6 +125,7 @@ int iv_popen_request_submit(struct iv_popen_request *this)
 		return -1;
 	}
 
+	IV_WAIT_INTEREST_INIT(&ch->wait);
 	ch->wait.cookie = ch;
 	ch->wait.handler = iv_popen_running_child_wait;
 	ch->parent = this;

@@ -106,6 +106,7 @@ int main()
 
 	iv_init();
 
+	IV_WAIT_INTEREST_INIT(&this);
 	this.cookie = &this;
 	this.handler = handler;
 
