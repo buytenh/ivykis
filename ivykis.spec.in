@@ -34,6 +34,9 @@ make DESTDIR=%{buildroot} install
 rm -rf %{buildroot}
 
 %changelog
+* Thu Mar 31 2011 Lennert Buytenhek <buytenh@wantstofly.org>
+- Release ivykis 0.20.
+
 * Mon Nov 15 2010 Lennert Buytenhek <buytenh@wantstofly.org>
 - Release ivykis 0.19.
 
