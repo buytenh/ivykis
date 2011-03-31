@@ -25,7 +25,6 @@ make DESTDIR=%{buildroot} install
 
 %files
 %defattr(-,root,root)
-%{_bindir}/*
 %{_includedir}/iv*
 %{_libdir}/lib*
 %{_libdir}/pkgconfig/*
