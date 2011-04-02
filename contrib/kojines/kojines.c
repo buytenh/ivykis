@@ -50,13 +50,13 @@ static void kojine_kill(struct kojine *k, int timeout)
 {
 	list_del(&k->list);
 
-	iv_unregister_fd(&k->client_fd);
+	iv_fd_unregister(&k->client_fd);
 	close(k->client_fd.fd);
-	iv_unregister_fd(&k->server_fd);
+	iv_fd_unregister(&k->server_fd);
 	close(k->server_fd.fd);
 
 	if (k->state < KOJINE_STATE_ESTABLISHED && !timeout)
-		iv_unregister_timer(&k->connect_timeout);
+		iv_timer_unregister(&k->connect_timeout);
 
 	free(k);
 }
@@ -305,7 +305,7 @@ static void got_server_connect_reply(void *_k)
 	iv_fd_set_handler_err(&k->client_fd, got_client_error);
 	iv_fd_set_handler_in(&k->server_fd, got_server_data);
 	iv_fd_set_handler_err(&k->server_fd, got_server_error);
-	iv_unregister_timer(&k->connect_timeout);
+	iv_timer_unregister(&k->connect_timeout);
 	k->us_buf_length = 0;
 	k->us_saw_fin = 0;
 	k->su_buf_length = 0;
@@ -462,24 +462,24 @@ static void got_kojine(void *_ki)
 
 	list_add_tail(&k->list, &ki->kojines);
 	k->state = KOJINE_STATE_CONNECTING;
-	INIT_IV_FD(&k->client_fd);
+	IV_FD_INIT(&k->client_fd);
 	k->client_fd.fd = client;
 	k->client_fd.cookie = (void *)k;
-	iv_register_fd(&k->client_fd);
-	INIT_IV_FD(&k->server_fd);
+	iv_fd_register(&k->client_fd);
+	IV_FD_INIT(&k->server_fd);
 	k->server_fd.fd = server;
 	k->server_fd.cookie = (void *)k;
 	k->server_fd.handler_in = got_server_connect;
 	k->server_fd.handler_out = got_server_connect;
-	iv_register_fd(&k->server_fd);
+	iv_fd_register(&k->server_fd);
 	k->orig_dst = orig_dst;
-	INIT_IV_TIMER(&k->connect_timeout);
+	IV_TIMER_INIT(&k->connect_timeout);
 	k->connect_timeout.cookie = (void *)k;
 	k->connect_timeout.handler = server_connect_timeout;
 	iv_validate_now();
 	k->connect_timeout.expires = now;
 	k->connect_timeout.expires.tv_sec += 120;
-	iv_register_timer(&k->connect_timeout);
+	iv_timer_register(&k->connect_timeout);
 
 	ret = connect(k->server_fd.fd, (struct sockaddr *)&nexthop, sizeof(nexthop));
 	if (ret == 0 || errno != EINPROGRESS)
@@ -516,11 +516,11 @@ int kojines_instance_register(struct kojines_instance *ki)
 		return 0;
 	}
 
-	INIT_IV_FD(&ki->listen_fd);
+	IV_FD_INIT(&ki->listen_fd);
 	ki->listen_fd.fd = fd;
 	ki->listen_fd.cookie = (void *)ki;
 	ki->listen_fd.handler_in = got_kojine;
-	iv_register_fd(&ki->listen_fd);
+	iv_fd_register(&ki->listen_fd);
 
 	INIT_LIST_HEAD(&ki->kojines);
 
@@ -532,7 +532,7 @@ void kojines_instance_unregister(struct kojines_instance *ki)
 	struct list_head *lh;
 	struct list_head *lh2;
 
-	iv_unregister_fd(&ki->listen_fd);
+	iv_fd_unregister(&ki->listen_fd);
 	close(ki->listen_fd.fd);
 
 	list_for_each_safe (lh, lh2, &ki->kojines) {

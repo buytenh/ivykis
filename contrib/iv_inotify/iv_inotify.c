@@ -216,11 +216,11 @@ int iv_inotify_init(struct iv_inotify *inotify)
 		return -1;
 
 	/* Register the descriptor for ivykis notification. */
-	INIT_IV_FD(&inotify->fd);
+	IV_FD_INIT(&inotify->fd);
 	inotify->fd.fd = fd;
 	inotify->fd.cookie = inotify;
 	inotify->fd.handler_in = __iv_inotify_in;
-	iv_register_fd(&inotify->fd);
+	iv_fd_register(&inotify->fd);
 
 	/* Initialize the watch descriptor hash table. */
 	for (i = 0; i < IV_INOTIFY_HASH_SIZE; i++)
@@ -238,7 +238,7 @@ void iv_inotify_destroy(struct iv_inotify *inotify)
 	 * as the kernel will close all registered watches when there are
 	 * no more references to the inotify descriptor.
 	 */
-	iv_unregister_fd(&inotify->fd);
+	iv_fd_unregister(&inotify->fd);
 	close(inotify->fd.fd);
 
 	/* If we destroyed the instance currently dispatched, we must

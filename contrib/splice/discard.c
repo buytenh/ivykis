@@ -42,7 +42,7 @@ static int pfd[2];
 
 static void conn_kill(struct connection *conn)
 {
-	iv_unregister_fd(&conn->sock);
+	iv_fd_unregister(&conn->sock);
 	close(conn->sock.fd);
 	free(conn);
 }
@@ -95,11 +95,11 @@ static void got_connection(void *_dummy)
 		abort();
 	}
 
-	INIT_IV_FD(&conn->sock);
+	IV_FD_INIT(&conn->sock);
 	conn->sock.fd = ret;
 	conn->sock.cookie = (void *)conn;
 	conn->sock.handler_in = conn_pollin;
-	iv_register_fd(&conn->sock);
+	iv_fd_register(&conn->sock);
 }
 
 static int open_listening_socket(void)
@@ -123,11 +123,11 @@ static int open_listening_socket(void)
 
 	listen(sock, 5);
 
-	INIT_IV_FD(&listening_socket);
+	IV_FD_INIT(&listening_socket);
 	listening_socket.fd = sock;
 	listening_socket.cookie = NULL;
 	listening_socket.handler_in = got_connection;
-	iv_register_fd(&listening_socket);
+	iv_fd_register(&listening_socket);
 
 	return 0;
 }
