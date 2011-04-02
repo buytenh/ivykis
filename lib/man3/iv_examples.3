@@ -20,7 +20,7 @@ is called somewhere during execution of the program.
 .PP
 An application asks ivykis to monitor a certain file descriptor by
 filling out a structure of type 'struct iv_fd' with a file descriptor
-number and a callback function, and calling the function iv_register_fd.
+number and a callback function, and calling the function iv_fd_register.
 .PP
 The first example program waits for data from standard input, and
 writes a message to standard out whenever something is received:
@@ -52,10 +52,10 @@ int main()
 {
         iv_init();
 
-        INIT_IV_FD(&fd_stdin);
+        IV_FD_INIT(&fd_stdin);
         fd_stdin.fd = 0;
         fd_stdin.handler_in = callback;
-        iv_register_fd(&fd_stdin);
+        iv_fd_register(&fd_stdin);
 
         iv_main();
 
@@ -68,9 +68,9 @@ int main()
 The application is responsible for memory management of 'struct iv_fd's
 passed to ivykis.  For example, it should not free memory that contains
 such structures that are still registered with ivykis (i.e. haven't
-had iv_unregister_fd called on them).
+had iv_fd_unregister called on them).
 .PP
-iv_register_fd transparently sets the passed file descriptor to
+iv_fd_register transparently sets the passed file descriptor to
 nonblocking mode, in anticipation of its future usage.
 .PP
 File descriptor callbacks are called in a level-triggered fashion.
@@ -113,7 +113,7 @@ void connection_handler(void *_conn)
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
-                iv_unregister_fd(&conn->fd);
+                iv_fd_unregister(&conn->fd);
                 close(conn->fd.fd);
                 free(conn);
                 return;
@@ -146,11 +146,11 @@ void listening_socket_handler(void *_sock)
                 return;
         }
 
-        INIT_IV_FD(&conn->fd);
+        IV_FD_INIT(&conn->fd);
         conn->fd.fd = fd;
         conn->fd.cookie = (void *)conn;
         conn->fd.handler_in = connection_handler;
-        iv_register_fd(&conn->fd);
+        iv_fd_register(&conn->fd);
 }
 
 int main()
@@ -180,11 +180,11 @@ int main()
 
         iv_init();
 
-        INIT_IV_FD(&s.fd);
+        IV_FD_INIT(&s.fd);
         s.fd.fd = fd;
         s.fd.cookie = (void *)&s;
         s.fd.handler_in = listening_socket_handler;
-        iv_register_fd(&s.fd);
+        iv_fd_register(&s.fd);
 
         iv_main();
 
@@ -239,8 +239,8 @@ void connection_handler(void *_conn)
         if (len <= 0) {
                 if (len < 0 && errno == EAGAIN)
                         return;
-                iv_unregister_timer(&conn->disconnect_timeout);  //XXXX
-                iv_unregister_fd(&conn->fd);
+                iv_timer_unregister(&conn->disconnect_timeout);  //XXXX
+                iv_fd_unregister(&conn->fd);
                 close(conn->fd.fd);
                 free(conn);
                 return;
@@ -248,17 +248,17 @@ void connection_handler(void *_conn)
 
         printf("got %d bytes of data from %p\\n", len, conn);
 
-        iv_unregister_timer(&conn->disconnect_timeout);          //XXXX
+        iv_timer_unregister(&conn->disconnect_timeout);          //XXXX
         iv_validate_now();                                       //XXXX
         conn->disconnect_timeout.expires = now;                  //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
-        iv_register_timer(&conn->disconnect_timeout);            //XXXX
+        iv_timer_register(&conn->disconnect_timeout);            //XXXX
 }
 
 void disconnect_timeout_expired(void *_conn)                     //XXXX
 {                                                                //XXXX
         struct connection *conn = (struct connection *)_conn;    //XXXX
-        iv_unregister_fd(&conn->fd);                             //XXXX
+        iv_fd_unregister(&conn->fd);                             //XXXX
         close(conn->fd.fd);                                      //XXXX
         free(conn);                                              //XXXX
 }                                                                //XXXX
@@ -287,19 +287,19 @@ void listening_socket_handler(void *_sock)
                 return;
         }
 
-        INIT_IV_FD(&conn->fd);
+        IV_FD_INIT(&conn->fd);
         conn->fd.fd = fd;
         conn->fd.cookie = (void *)conn;
         conn->fd.handler_in = connection_handler;
-        iv_register_fd(&conn->fd);
+        iv_fd_register(&conn->fd);
 
-        INIT_IV_TIMER(&conn->disconnect_timeout);                //XXXX
+        IV_TIMER_INIT(&conn->disconnect_timeout);                //XXXX
         iv_validate_now();                                       //XXXX
         conn->disconnect_timeout.cookie = (void *)conn;          //XXXX
         conn->disconnect_timeout.handler = disconnect_timeout_expired;//XXXX
         conn->disconnect_timeout.expires = now;                  //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
-        iv_register_timer(&conn->disconnect_timeout);            //XXXX
+        iv_timer_register(&conn->disconnect_timeout);            //XXXX
 }
 
 int main()
@@ -329,11 +329,11 @@ int main()
 
         iv_init();
 
-        INIT_IV_FD(&s.fd);
+        IV_FD_INIT(&s.fd);
         s.fd.fd = fd;
         s.fd.cookie = (void *)&s;
         s.fd.handler_in = listening_socket_handler;
-        iv_register_fd(&s.fd);
+        iv_fd_register(&s.fd);
 
         iv_main();
 

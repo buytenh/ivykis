@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_task 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_register_task, iv_unregister_task \- deal with ivykis tasks
+iv_task_register, iv_task_unregister \- deal with ivykis tasks
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
@@ -16,17 +16,17 @@ struct iv_task {
 };
 .fi
 .sp
-.BI "INIT_IV_TASK(struct iv_task *" task ");"
+.BI "IV_TASK_INIT(struct iv_task *" task ");"
 .br
-.BI "void iv_register_task(struct iv_task *" task ");"
+.BI "void iv_task_register(struct iv_task *" task ");"
 .br
-.BI "void iv_unregister_task(struct iv_task *" task ");"
+.BI "void iv_task_unregister(struct iv_task *" task ");"
 .br
 .SH DESCRIPTION
 The functions
-.B iv_register_task
+.B iv_task_register
 and
-.B iv_unregister_task
+.B iv_task_unregister
 register, respectively unregister, a task with the current thread's
 ivykis event loop.
 .PP

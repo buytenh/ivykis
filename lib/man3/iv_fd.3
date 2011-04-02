@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_fd 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_register_fd, iv_unregister_fd, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
+iv_fd_register, iv_fd_unregister, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
@@ -19,11 +19,11 @@ struct iv_fd {
 };
 .fi
 .sp
-.BI "INIT_IV_FD(struct iv_fd *" fd ");"
+.BI "IV_FD_INIT(struct iv_fd *" fd ");"
 .br
-.BI "void iv_register_fd(struct iv_fd *" fd ");"
+.BI "void iv_fd_register(struct iv_fd *" fd ");"
 .br
-.BI "void iv_unregister_fd(struct iv_fd *" fd ");"
+.BI "void iv_fd_unregister(struct iv_fd *" fd ");"
 .br
 .BI "void iv_fd_set_handler_in(struct iv_fd *" fd ", void (*" handler ")(void *));"
 .br
@@ -33,9 +33,9 @@ struct iv_fd {
 .br
 .SH DESCRIPTION
 The functions
-.B iv_register_fd
+.B iv_fd_register
 and
-.B iv_unregister_fd
+.B iv_fd_unregister
 register, respectively unregister, a file descriptor with the current
 thread's ivykis event loop.
 .PP
@@ -54,7 +54,7 @@ in.
 .PP
 Before a file descriptor is registered, it must have been
 initialised by calling
-.B INIT_IV_FD
+.B IV_FD_INIT
 on it, and must have had its
 .B ->fd
 member field set to a valid OS file descriptor.  The
