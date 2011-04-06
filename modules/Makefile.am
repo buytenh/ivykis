@@ -23,3 +23,5 @@ include_HEADERS		= include/iv_event.h		\
 			  include/iv_thread.h		\
 			  include/iv_wait.h		\
 			  include/iv_work.h
+
+noinst_HEADERS		= thr.h

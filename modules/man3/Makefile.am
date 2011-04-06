@@ -30,3 +30,5 @@ man3_MANS	= iv_event.3				\
 		  IV_WORK_POOL_INIT.3			\
 		  iv_work_pool_put.3			\
 		  iv_work_pool_submit_work.3
+
+EXTRA_DIST	= ${man3_MANS}

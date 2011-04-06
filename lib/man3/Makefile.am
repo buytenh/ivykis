@@ -19,3 +19,5 @@ man3_MANS	= iv_deinit.3				\
 		  iv_timer_unregister.3			\
 		  iv_validate_now.3			\
 		  ivykis.3
+
+EXTRA_DIST	= ${man3_MANS}
