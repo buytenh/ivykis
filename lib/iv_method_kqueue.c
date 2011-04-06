@@ -165,6 +165,14 @@ static void iv_kqueue_notify_fd(struct iv_fd_ *fd, int wanted)
 		      0, 0, (void *)fd);
 		fd->registered_bands |= MASKOUT;
 	}
+	if (wanted & MASKERR) {
+	        /* NOTE: kqueue doesn't support POLLERR-like interface, but
+	         * we need to set it here, as otherwise we run into a failed
+	         * assertion later on in the ivykis core.
+	         */
+
+	        fd->registered_bands |= MASKERR;
+	}
 }
 
 static void iv_kqueue_deinit(void)
@@ -173,6 +181,37 @@ static void iv_kqueue_deinit(void)
 	close(kqueue_fd);
 }
 
+static int iv_kqueue_pollable(int fd)
+{
+	struct timespec to = { 0, 0 };
+	struct kevent kev;
+        int ret;
+
+	EV_SET(&kev, fd, EVFILT_READ, EV_ADD, 0, 0, &fd);
+
+	do {
+		ret = kevent(kqueue_fd, &kev, 1,
+			     NULL, 0, &to);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0 && errno == ENODEV)
+		return 0;
+        if (ret >= 0) {
+	        EV_SET(&kev, fd, EVFILT_READ, EV_DELETE, 0, 0, &fd);
+
+                do {
+                        ret = kevent(kqueue_fd, &kev, 1,
+                                     NULL, 0, &to);
+                } while (ret < 0 && errno == EINTR);
+
+		if (ret < 0) {
+			syslog(LOG_CRIT, "iv_kqueue_pollable: got error %d[%s]",
+			       errno, strerror(errno));
+			abort();
+		}
+        }
+	return 1;
+}
 
 struct iv_poll_method iv_method_kqueue = {
 	.name		= "kqueue",
@@ -180,5 +219,6 @@ struct iv_poll_method iv_method_kqueue = {
 	.poll		= iv_kqueue_poll,
 	.unregister_fd	= iv_kqueue_unregister_fd,
 	.notify_fd	= iv_kqueue_notify_fd,
+	.pollable	= iv_kqueue_pollable,
 	.deinit		= iv_kqueue_deinit,
 };
