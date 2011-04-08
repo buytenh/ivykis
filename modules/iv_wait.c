@@ -24,6 +24,7 @@
 #include <iv_signal.h>
 #include <iv_wait.h>
 #include <pthread.h>
+#include "config.h"
 #include "thr.h"
 
 #ifndef WCONTINUED
@@ -34,7 +35,9 @@
 struct wait_event {
 	struct list_head	list;
 	int			status;
+#ifdef HAVE_WAIT4
 	struct rusage		rusage;
+#endif
 };
 
 static int
@@ -98,9 +101,11 @@ static void iv_wait_got_sigchld(void *_dummy)
 	while (1) {
 		pid_t pid;
 		int status;
-		struct rusage rusage;
 		struct wait_event *we;
 		struct iv_wait_interest *p;
+
+#ifdef HAVE_WAIT4
+		struct rusage rusage;
 
 		pid = wait4(-1, &status,
 			    WNOHANG | WUNTRACED | WCONTINUED, &rusage);
@@ -109,6 +114,14 @@ static void iv_wait_got_sigchld(void *_dummy)
 				perror("wait4");
 			break;
 		}
+#else
+		pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED);
+		if (pid <= 0) {
+			if (pid < 0 && errno != ECHILD)
+				perror("waitpid");
+			break;
+		}
+#endif
 
 		we = malloc(sizeof(*we));
 		if (we == NULL) {
@@ -117,7 +130,9 @@ static void iv_wait_got_sigchld(void *_dummy)
 		}
 
 		we->status = status;
+#ifdef HAVE_WAIT4
 		we->rusage = rusage;
+#endif
 
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
@@ -157,7 +172,11 @@ static void iv_wait_completion(void *_this)
 		list_del(&we->list);
 
 		pthr_mutex_unlock(&iv_wait_lock);
+#ifdef HAVE_WAIT4
 		this->handler(this->cookie, we->status, &we->rusage);
+#else
+		this->handler(this->cookie, we->status, NULL);
+#endif
 		pthr_mutex_lock(&iv_wait_lock);
 
 		free(we);

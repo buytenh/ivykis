@@ -33,6 +33,7 @@ AC_CHECK_FUNCS([clock_gettime dup2 fork malloc memcmp memmove memset	\
 	AC_MSG_ERROR(some required library functions not available.))
 AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([kqueue])
+AC_CHECK_FUNCS([wait4])
 
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
