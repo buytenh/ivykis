@@ -9,10 +9,9 @@ AC_PROG_CC
 AC_PROG_RANLIB
 
 # Checks for libraries.
-AC_SEARCH_LIBS([clock_gettime], [rt], [],
-	AC_MSG_ERROR(clock_gettime is required to build ivykis.))
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
 	AC_MSG_ERROR(pthreads support is required to build ivykis modules.))
+AC_CHECK_LIB([rt], [clock_gettime])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
@@ -28,9 +27,10 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([clock_gettime dup2 fork malloc memcmp memmove memset	\
+AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
 		select socket strdup strerror], [],
 	AC_MSG_ERROR(some required library functions not available.))
+AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([wait4])

@@ -38,7 +38,18 @@ void iv_invalidate_now(void)
 void iv_validate_now(void)
 {
 	if (!now_valid) {
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
 		clock_gettime(CLOCK_MONOTONIC, &now);
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+		clock_gettime(CLOCK_REALTIME, &now);
+#else
+		struct timeval tv;
+
+		gettimeofday(&tv, NULL);
+		now.tv_sec = tv.tv_sec;
+		now.tv_nsec = 1000L * tv.tv_usec;
+#endif
+
 		now_valid = 1;
 	}
 }
