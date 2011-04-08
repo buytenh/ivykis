@@ -53,7 +53,7 @@ static void gotev0(void *_x)
 
 	IV_TIMER_INIT(&ev1);
 	iv_validate_now();
-	ev1.expires = now;
+	ev1.expires = iv_now;
 	ev1.expires.tv_sec++;
 	ev1.handler = gotev1;
 	iv_timer_register(&ev1);

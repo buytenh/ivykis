@@ -27,15 +27,24 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/poll.h>
+#include "iv_thr.h"
 #include "iv_private.h"
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static __thread struct iv_avl_tree	fds;
-static __thread int			poll_fd;
-static __thread struct pollfd		*upload_queue;
-static __thread int			upload_entries;
+TLS_BLOCK_BEGIN
+{
+	struct iv_avl_tree	fds;
+	int			poll_fd;
+	struct pollfd		*upload_queue;
+	int			upload_entries;
+}
+TLS_BLOCK_END;
 
+#define fds               __tls_deref(fds)
+#define poll_fd           __tls_deref(poll_fd)
+#define upload_queue      __tls_deref(upload_queue)
+#define upload_entries    __tls_deref(upload_entries)
 
 static struct iv_fd_ *find_fd(int fd)
 {

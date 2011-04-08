@@ -22,8 +22,15 @@
 #include <stdlib.h>
 #include <syslog.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
-static __thread struct list_head	tasks;
+TLS_BLOCK_START
+{
+	struct list_head	tasks;
+}
+TLS_BLOCK_END;
+
+#define tasks         __tls_deref(tasks)
 
 void iv_task_init(void)
 {

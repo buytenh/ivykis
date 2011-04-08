@@ -35,7 +35,7 @@ static void got_ev0(void *_dummy)
 	printf("%p: got ev0, starting tim0\n", (void *)pthread_self());
 
 	iv_validate_now();
-	tim0.expires = now;
+	tim0.expires = iv_now;
 	tim0.expires.tv_sec++;
 	iv_timer_register(&tim0);
 }
@@ -52,7 +52,7 @@ static void got_ev1(void *_dummy)
 	printf("%p: got ev1, starting tim1\n", (void *)pthread_self());
 
 	iv_validate_now();
-	tim1.expires = now;
+	tim1.expires = iv_now;
 	tim1.expires.tv_sec++;
 	iv_timer_register(&tim1);
 }
@@ -96,7 +96,7 @@ int main()
 	pthread_create(&foo, NULL, thread1, NULL);
 
 	iv_validate_now();
-	tim0.expires = now;
+	tim0.expires = iv_now;
 	tim0.expires.tv_sec++;
 	iv_timer_register(&tim0);
 

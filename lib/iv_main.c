@@ -29,6 +29,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
 /* process-global state *****************************************************/
 static int			maxfd;
@@ -130,10 +131,20 @@ static void iv_init_first_thread(void)
 
 
 /* main loop ****************************************************************/
-static __thread int		initialised;
-static __thread struct iv_fd_	*handled_fd;
-static __thread int		numfds;
-static __thread int		quit;
+
+TLS_BLOCK_START 
+{
+	struct iv_fd_    *handled_fd;
+	int              numfds;
+	int              quit;
+	int              initialised;
+}
+TLS_BLOCK_END;
+
+#define handled_fd        __tls_deref(handled_fd)
+#define numfds            __tls_deref(numfds)
+#define quit              __tls_deref(quit)
+#define initialised       __tls_deref(initialised)
 
 void iv_init(void)
 {

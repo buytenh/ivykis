@@ -25,7 +25,7 @@
 #include <iv_wait.h>
 #include <pthread.h>
 #include "config.h"
-#include "thr.h"
+#include "iv_thr.h"
 
 #ifndef WCONTINUED
 #define WCONTINUED		0
@@ -190,10 +190,16 @@ static void iv_wait_completion(void *_this)
 		this->term = NULL;
 }
 
-static __thread struct iv_wait_thr_info {
-	int			wait_count;
-	struct iv_signal	sigchld_interest;
-} tinfo;
+TLS_BLOCK_START
+{
+	struct iv_wait_thr_info {
+		int			wait_count;
+		struct iv_signal	sigchld_interest;
+	} tinfo;
+}
+TLS_BLOCK_END;
+
+#define tinfo __tls_deref(tinfo)
 
 static void __iv_wait_interest_register(struct iv_wait_interest *this)
 {

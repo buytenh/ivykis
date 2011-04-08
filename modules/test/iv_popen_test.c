@@ -97,7 +97,7 @@ static void open_child_request(struct req *req)
 
 	IV_TIMER_INIT(&req->closeit);
 	iv_validate_now();
-	req->closeit.expires = now;
+	req->closeit.expires = iv_now;
 	req->closeit.expires.tv_sec += 5;
 	req->closeit.cookie = req;
 	req->closeit.handler = do_close;

@@ -21,9 +21,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv_signal.h>
-#include <pthread.h>
+#include "iv_thr.h"
 #include <inttypes.h>
-#include "thr.h"
 
 #define MAX_SIGS	32
 

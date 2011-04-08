@@ -30,15 +30,27 @@
 #endif
 #include <sys/time.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
-static __thread struct iv_avl_tree	fds;
-static __thread int			setsize;
-static __thread int			fd_max;
-static __thread fd_set			*readfds_master;
-static __thread fd_set			*writefds_master;
-static __thread fd_set			*readfds;
-static __thread fd_set			*writefds;
+TLS_BLOCK_START
+{
+	struct iv_avl_tree	fds;
+	int			setsize;
+	int			fd_max;
+	fd_set			*readfds_master;
+	fd_set			*writefds_master;
+	fd_set			*readfds;
+	fd_set			*writefds;
+}
+TLS_BLOCK_END;
 
+#define fds                   __tls_deref(fds)
+#define setsize               __tls_deref(setsize)
+#define fd_max                __tls_deref(fd_max)
+#define readfds_master        __tls_deref(readfds_master)
+#define writefds_master       __tls_deref(writefds_master)
+#define readfds               __tls_deref(readfds)
+#define writefds              __tls_deref(writefds)
 
 static struct iv_fd_ *find_fd(int fd)
 {

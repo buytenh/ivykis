@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #include <syslog.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
 /*
  * To accommodate systems with older versions of <sys/epoll.h>.
@@ -38,8 +39,13 @@
 #define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
 #define SET_ERR		(EPOLLERR)
 
-static __thread int		epoll_fd;
+TLS_BLOCK_START
+{
+      int		epoll_fd;
+}
+TLS_BLOCK_END;
 
+#define epoll_fd        __tls_deref(epoll_fd)
 
 static int iv_epoll_init(int maxfd)
 {

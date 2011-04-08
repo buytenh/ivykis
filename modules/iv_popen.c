@@ -173,7 +173,7 @@ static void iv_popen_running_child_timer(void *_ch)
 	}
 
 	iv_validate_now();
-	ch->signal_timer.expires = now;
+	ch->signal_timer.expires = iv_now;
 	ch->signal_timer.expires.tv_sec += SIGNAL_INTERVAL;
 	iv_timer_register(&ch->signal_timer);
 }
@@ -187,7 +187,7 @@ void iv_popen_request_close(struct iv_popen_request *this)
 
 		IV_TIMER_INIT(&ch->signal_timer);
 		iv_validate_now();
-		ch->signal_timer.expires = now;
+		ch->signal_timer.expires = iv_now;
 		ch->signal_timer.handler = iv_popen_running_child_timer;
 		ch->signal_timer.cookie = ch;
 		iv_timer_register(&ch->signal_timer);

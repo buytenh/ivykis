@@ -25,6 +25,7 @@
 #include <syslog.h>
 #include <sys/poll.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
 #ifndef POLLMSG
 #define POLLMSG		0
@@ -39,10 +40,17 @@
 #define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
 #define SET_ERR		(POLLERR)
 
-static __thread struct pollfd	*pfds;
-static __thread struct iv_fd_	**fds;
-static __thread int		num_registered_fds;
+TLS_BLOCK_START
+{
+   struct pollfd	*pfds;
+   struct iv_fd_	**fds;
+   int		        num_registered_fds;
+}
+TLS_BLOCK_END;
 
+#define pfds       __tls_deref(pfds)
+#define fds        __tls_deref(fds)
+#define num_registered_fds     __tls_deref(num_registered_fds)
 
 static int iv_poll_init(int maxfd)
 {

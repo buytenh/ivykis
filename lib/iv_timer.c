@@ -25,10 +25,27 @@
 #include <sys/time.h>
 #include <time.h>
 #include "iv_private.h"
+#include "iv_thr.h"
 
 /* time handling ************************************************************/
-__thread struct timespec	now;
-static __thread int		now_valid;
+
+TLS_BLOCK_START
+{
+	struct timespec	now;
+	int		now_valid;
+	int		num_timers;
+	struct ratnode	*timer_root;
+} TLS_BLOCK_END;
+
+#define now         __tls_deref(now)
+#define now_valid   __tls_deref(now_valid)
+#define	num_timers  __tls_deref(num_timers)
+#define timer_root  __tls_deref(timer_root)
+
+struct timespec *iv_get_now(void)
+{
+	return &now;
+}
 
 void iv_invalidate_now(void)
 {
@@ -84,9 +101,6 @@ void iv_validate_now(void)
 #define SPLIT_LEVELS		(2)
 #define SPLIT_MAX		(1 << (SPLIT_BITS * SPLIT_LEVELS))
 struct ratnode { void *child[SPLIT_NODES]; };
-
-static __thread int		num_timers;
-static __thread struct ratnode	*timer_root;
 
 void IV_TIMER_INIT(struct iv_timer *_t)
 {

@@ -26,13 +26,22 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include "iv_thr.h"
 #include "iv_private.h"
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static __thread int		kqueue_fd;
-static __thread struct kevent	*upload_queue;
-static __thread int		upload_entries;
+TLS_BEGIN_BLOCK
+{
+	int		kqueue_fd;
+	struct kevent	*upload_queue;
+	int		upload_entries;
+}
+TLS_END_BLOCK;
+
+#define kqueue_fd         __tls_deref(kqueue_fd)
+#define upload_queue      __tls_deref(upload_queue)
+#define upload_entries    __tls_deref(upload_entries)
 
 
 static int iv_kqueue_init(int maxfd)

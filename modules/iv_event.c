@@ -23,17 +23,21 @@
 #include <iv.h>
 #include <iv_event.h>
 #include <iv_event_raw.h>
-#include <pthread.h>
-#include <signal.h>
-#include "thr.h"
+#include "iv_thr.h"
 
-static __thread struct iv_event_thr_info {
-	int			event_count;
-	struct iv_event_raw	ier;
-	pthread_mutex_t		list_mutex;
-	struct list_head	pending_events;
-	int			dead;
-} tinfo;
+TLS_BLOCK_START
+{
+	struct iv_event_thr_info {
+		int			event_count;
+		struct iv_event_raw	ier;
+		pthread_mutex_t		list_mutex;
+		struct list_head	pending_events;
+		int			dead;
+	} tinfo;
+}
+TLS_BLOCK_END;
+
+#define tinfo __tls_deref(tinfo)
 
 static void iv_event_run_pending_events(void *_dummy)
 {
@@ -74,7 +78,7 @@ int iv_event_register(struct iv_event *this)
 		tinfo.dead = 0;
 	}
 
-	this->tinfo = &tinfo;
+	this->thr_info = &tinfo;
 	INIT_LIST_HEAD(&this->list);
 
 	return 0;
@@ -97,7 +101,7 @@ void iv_event_unregister(struct iv_event *this)
 
 void iv_event_post(struct iv_event *this)
 {
-	struct iv_event_thr_info *t = this->tinfo;
+	struct iv_event_thr_info *t = this->thr_info;
 
 	pthr_mutex_lock(&t->list_mutex);
 	if (list_empty(&this->list)) {

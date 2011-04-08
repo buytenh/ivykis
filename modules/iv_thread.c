@@ -23,7 +23,7 @@
 #include <iv.h>
 #include <iv_event.h>
 #include <iv_thread.h>
-#include <pthread.h>
+#include <iv_thr.h>
 #include <string.h>
 
 /* data structures and global data ******************************************/
@@ -36,7 +36,13 @@ struct iv_thread {
 	void			*arg;
 };
 
-static __thread struct list_head child_threads;
+TLS_BLOCK_START
+{
+	struct list_head child_threads;
+}
+TLS_BLOCK_END;
+
+#define child_threads __tls_deref(child_threads)
 
 static int iv_thread_debug;
 

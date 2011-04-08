@@ -31,7 +31,7 @@ static void handler(void *_t)
 	printf("hoihoihoihoihoi!\n");
 
 	iv_validate_now();
-	t->expires = now;
+	t->expires = iv_now;
 	t->expires.tv_sec += 1;
 	iv_timer_register(t);
 }
@@ -42,7 +42,7 @@ int main()
 
 	IV_TIMER_INIT(&tim);
 	iv_validate_now();
-	tim.expires = now;
+	tim.expires = iv_now;
 	tim.expires.tv_sec += 1;
 	tim.cookie = (void *)&tim;
 	tim.handler = handler;
