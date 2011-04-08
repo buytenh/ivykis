@@ -43,6 +43,8 @@ static int iv_thread_debug;
 
 /* gettid *******************************************************************/
 #ifdef __FreeBSD__
+/* Older FreeBSDs (6.1) don't include ucontext.h in thr.h.  */
+#include <sys/ucontext.h>
 #include <sys/thr.h>
 #endif
 
