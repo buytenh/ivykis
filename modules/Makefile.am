@@ -8,6 +8,8 @@ AM_CFLAGS		= -Wall
 
 lib_LTLIBRARIES		= libivykis-modules.la
 
+libivykis_modules_la_LIBADD = ../lib/libivykis.la
+
 libivykis_modules_la_SOURCES	= iv_event.c			\
 				  iv_event_raw.c		\
 				  iv_popen.c			\
