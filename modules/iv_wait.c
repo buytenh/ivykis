@@ -26,6 +26,11 @@
 #include <pthread.h>
 #include "thr.h"
 
+#ifndef WCONTINUED
+#define WCONTINUED		0
+#define WIFCONTINUED(x)		0
+#endif
+
 struct wait_event {
 	struct list_head	list;
 	int			status;

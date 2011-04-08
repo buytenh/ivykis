@@ -38,11 +38,18 @@ static void handler(void *cookie, int status, struct rusage *rusage)
 	/*
 	 * On FreeBSD, WIFCONTINUED(status) => WIFSIGNALED(status).
 	 */
+#ifdef WIFCONTINUED
 	if (WIFCONTINUED(status)) {
 		printf("resumed by delivery of SIGCONT\n");
-	} else if (WIFSIGNALED(status)) {
-		printf("terminated by signal %d, core %sdumped\n",
-		       WTERMSIG(status), WCOREDUMP(status) ? "" : "not ");
+	} else
+#endif
+	if (WIFSIGNALED(status)) {
+		printf("terminated by signal %d, core %s\n", WTERMSIG(status),
+#ifdef WCOREDUMP
+		       WCOREDUMP(status) ? "dumped" : "not dumped");
+#else
+		       "dump status unknown");
+#endif
 		iv_wait_interest_unregister(this);
 	}
 
