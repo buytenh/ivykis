@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <iv_config.h>
 
 #ifdef __cplusplus
 extern "C" {

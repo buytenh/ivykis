@@ -1,4 +1,6 @@
-AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include	\
+AM_CPPFLAGS		= -D_GNU_SOURCE \
+			  -I$(top_srcdir)/lib/include	\
+			  -I$(top_builddir)/lib/include	\
 			  -I$(top_srcdir)/modules/include
 AM_CFLAGS		= -Wall
 

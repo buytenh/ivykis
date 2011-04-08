@@ -1,4 +1,6 @@
-AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include
+AM_CPPFLAGS		= -D_GNU_SOURCE \
+			  -I$(top_srcdir)/lib/include \
+			  -I$(top_builddir)/lib/include
 
 AM_CFLAGS		= -Wall
 
@@ -23,5 +25,5 @@ server_SOURCES		= server.c
 timer_SOURCES		= timer.c
 timer_rat_SOURCES	= timer_rat.c
 
-server_thread_CPPFLAGS	= -D_GNU_SOURCE -I$(top_srcdir)/lib/include -DTHREAD
+server_thread_CPPFLAGS	= $(AM_CPPFLAGS) -DTHREAD
 server_thread_SOURCES	= server.c
