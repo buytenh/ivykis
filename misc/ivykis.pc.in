@@ -7,4 +7,5 @@ includedir=@includedir@
 Name: ivykis
 Version: @VERSION@
 Description: event handling library
-Libs: -L${libdir} -livykis -lrt
+Libs: -L${libdir} -livykis
+Cflags: -I${includedir}
