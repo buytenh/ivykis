@@ -25,14 +25,14 @@
 #include <iv.h>
 #include <iv_event_raw.h>
 #include <inttypes.h>
-#include <sys/syscall.h>
 #include <unistd.h>
 
 /* eventfd syscall **********************************************************/
-#ifndef __NR_eventfd2
-#if defined(linux) && defined(__x86_64__)
+#ifdef linux
+#include <sys/syscall.h>
+#if !defined(__NR_eventfd2) && defined(__x86_64__)
 #define __NR_eventfd2	290
-#elif defined(linux) && defined(__i386__)
+#elif !defined(__NR_eventfd2) && defined(__i386__)
 #define __NR_eventfd2	328
 #endif
 #endif
