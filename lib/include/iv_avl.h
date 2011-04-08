@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <inttypes.h>
 
 struct iv_avl_node {
 	struct iv_avl_node	*left;

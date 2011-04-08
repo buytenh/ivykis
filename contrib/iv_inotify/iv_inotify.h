@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <inttypes.h>
 #include <sys/inotify.h>
 #include <iv.h>
 #include <iv_list.h>

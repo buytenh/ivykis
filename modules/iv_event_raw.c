@@ -24,7 +24,7 @@
 #include <fcntl.h>
 #include <iv.h>
 #include <iv_event_raw.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
