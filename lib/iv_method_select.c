@@ -23,7 +23,10 @@
 #include <string.h>
 #include <syslog.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif
+#include <sys/time.h>
 #include "iv_private.h"
 
 static __thread struct iv_avl_tree	fds;

@@ -19,7 +19,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 		  stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
-AC_CHECK_HEADERS([sys/devpoll.h])
+AC_CHECK_HEADERS([sys/devpoll.h sys/select.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
