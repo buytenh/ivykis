@@ -26,6 +26,9 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
+#if HAVE_SYS_TIMERS_H
+#  include <sys/timers.h>
+#endif
 #include <iv_config.h>
 
 #ifdef __cplusplus

@@ -96,7 +96,12 @@ AC_CHECK_FUNC(socket, [],
 # functions that we could use if present
 AC_CHECK_FUNCS([clock_gettime gettimeofday pthread_spin_lock kqueue epoll_create wait4])
 
-AC_CHECK_MEMBER(struct timespec.tv_nsec,,,[[#include <pthread.h>]AC_INCLUDES_DEFAULT])
+for hdr in 'sys/timers.h' 'sys/time.h' 'time.h' 'pthread.h'; do
+    AC_CHECK_MEMBER(struct timespec.tv_nsec,
+                    [ac_cv_timespec_hdr=$hdr; break],
+                    [unset ac_cv_member_struct_timespec_tv_nsec],
+                    [[#include <$hdr>] AC_INCLUDES_DEFAULT])
+done
 
 # check if Thread Local Storage is present
 # we should perhaps try
@@ -153,6 +158,10 @@ struct timespec {
 	long int    tv_nsec;       /* nanoseconds */
 };
 __EOF
+        else
+                cat >> $outfile << __EOF
+#include <$ac_cv_timespec_hdr>
+__EOF
 	fi
 cat >> $outfile << __EOF
 #endif /* IV_CONFIG_H */
@@ -160,6 +169,7 @@ __EOF
 	mv $outfile lib/include/iv_config.h
 ], [
         ac_cv_member_struct_timespec_tv_nsec=${ac_cv_member_struct_timespec_tv_nsec}
+        ac_cv_timespec_hdr=${ac_cv_timespec_hdr}
 ])
 
 # defines for config.h
