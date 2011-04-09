@@ -40,4 +40,5 @@ include_HEADERS		= include/iv.h			\
 			  include/iv_list.h		\
 			  include/iv_config.h
 
-noinst_HEADERS		= iv_private.h
+noinst_HEADERS		= iv_private.h			\
+			  iv_thr.h
