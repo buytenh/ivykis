@@ -54,7 +54,6 @@ static inline void pthr_mutex_unlock(pthread_mutex_t *m)
 		pthread_mutex_unlock(m);
 }
 
-
 #pragma weak pthread_sigmask
 static inline int pthr_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 {
@@ -64,6 +63,7 @@ static inline int pthr_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 		return sigprocmask(how, set, oldset);
 }
 
+#if HAVE_PTHREAD_SPIN_LOCK
 
 #pragma weak pthread_spin_init
 static inline int pthr_spin_init(pthread_spinlock_t *lock, int pshared)
@@ -91,6 +91,16 @@ static inline int pthr_spin_unlock(pthread_spinlock_t *lock)
 
 	return 0;
 }
+
+#else
+
+typedef int pthread_spinlock_t;
+
+#define pthr_spin_init(l, s)
+#define pthr_spin_lock(l)
+#define pthr_spin_unlock(l)
+
+#endif
 
 #if !HAVE_TLS
 static struct __tls_variables *__tls_init_thread(pthread_key_t key, size_t size)
