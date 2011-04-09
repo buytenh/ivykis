@@ -110,13 +110,13 @@ static void iv_init_first_thread(void)
 	if (exclude != NULL && getuid() != euid)
 		exclude = NULL;
 
-#ifdef HAVE_SYS_DEVPOLL_H
+#if ENABLE_DEV_POLL
 	consider_poll_method(exclude, &iv_method_dev_poll);
 #endif
-#ifdef HAVE_EPOLL_CREATE
+#if ENABLE_EPOLL
 	consider_poll_method(exclude, &iv_method_epoll);
 #endif
-#ifdef HAVE_KQUEUE
+#if ENABLE_KQUEUE
 	consider_poll_method(exclude, &iv_method_kqueue);
 #endif
 	consider_poll_method(exclude, &iv_method_poll);
