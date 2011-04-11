@@ -5,13 +5,15 @@
 .\" of the modification is added to the header.
 .TH iv_init 3 2010-09-05 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_init, iv_deinit \- initialise and deinitialise ivykis
+iv_init, iv_deinit, iv_inited \- initialise and deinitialise ivykis
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
 .BI "void iv_init(void);"
 .br
 .BI "void iv_deinit(void);"
+.br
+.BI "int iv_inited(void);"
 .br
 .SH DESCRIPTION
 .B iv_init
@@ -33,6 +35,13 @@ can be done concurrently.
 .B iv_deinit
 frees all resources allocated by ivykis in this thread, and should be
 called before this thread exits.
+.PP
+.B iv_inited
+returns true if
+.B iv_init
+has been called in this thread.  After
+.B iv_deinit
+is called, it will return false.
 .SH "SEE ALSO"
 .BR ivykis (3),
 .BR iv_examples (3)

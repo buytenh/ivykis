@@ -7,6 +7,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_fd_set_handler_out.3		\
 		  iv_fd_unregister.3			\
 		  iv_init.3				\
+		  iv_inited.3				\
 		  iv_invalidate_now.3			\
 		  iv_main.3				\
 		  iv_quit.3				\
