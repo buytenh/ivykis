@@ -132,6 +132,16 @@ struct iv_state {
 			struct iv_fd_		**fds;
 			int			num_registered_fds;
 		} poll;
+
+		struct {
+			struct iv_avl_tree	fds;
+			int			setsize;
+			int			fd_max;
+			fd_set			*readfds_master;
+			fd_set			*writefds_master;
+			fd_set			*readfds;
+			fd_set			*writefds;
+		} select;
 	};
 };
 

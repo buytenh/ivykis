@@ -31,20 +31,11 @@
 #include <sys/time.h>
 #include "iv_private.h"
 
-static __thread struct iv_avl_tree	fds;
-static __thread int			setsize;
-static __thread int			fd_max;
-static __thread fd_set			*readfds_master;
-static __thread fd_set			*writefds_master;
-static __thread fd_set			*readfds;
-static __thread fd_set			*writefds;
-
-
-static struct iv_fd_ *find_fd(int fd)
+static struct iv_fd_ *find_fd(struct iv_state *st, int fd)
 {
 	struct iv_avl_node *an;
 
-	an = fds.root;
+	an = st->select.fds.root;
 	while (an != NULL) {
 		struct iv_fd_ *p;
 
@@ -77,9 +68,10 @@ static int fd_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 /* interface ****************************************************************/
 static int iv_select_init(struct iv_state *st, int maxfd)
 {
+	int setsize;
 	unsigned char *fdsets;
 
-	INIT_IV_AVL_TREE(&fds, fd_compare);
+	INIT_IV_AVL_TREE(&st->select.fds, fd_compare);
 
 	setsize = (maxfd + 7) / 8;
 
@@ -89,19 +81,18 @@ static int iv_select_init(struct iv_state *st, int maxfd)
 
 	fprintf(stderr, "warning: using select(2), POLLERR delivery broken\n");
 
-	readfds_master = (fd_set *)fdsets;
-	writefds_master = (fd_set *)(fdsets + setsize);
-	readfds = (fd_set *)(fdsets + 2 * setsize);
-	writefds = (fd_set *)(fdsets + 3 * setsize);
+	st->select.readfds_master = (fd_set *)fdsets;
+	st->select.writefds_master = (fd_set *)(fdsets + setsize);
+	st->select.readfds = (fd_set *)(fdsets + 2 * setsize);
+	st->select.writefds = (fd_set *)(fdsets + 3 * setsize);
 
-	fd_max = 0;
-	memset(readfds_master, 0, 2*setsize);
+	st->select.fd_max = 0;
+	memset(st->select.readfds_master, 0, 2 * setsize);
 
 	return 0;
 }
 
-static void
-iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
+static void iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 {
 	struct timeval to;
 	int ret;
@@ -113,13 +104,13 @@ iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 	if (msec)
 		msec += (1000/100) - 1;
 
-	memcpy(readfds, readfds_master, (fd_max / 8) + 1);
-	memcpy(writefds, writefds_master, (fd_max / 8) + 1);
+	memcpy(st->select.readfds, st->select.readfds_master, (st->select.fd_max / 8) + 1);
+	memcpy(st->select.writefds, st->select.writefds_master, (st->select.fd_max / 8) + 1);
 
 	to.tv_sec = msec / 1000;
 	to.tv_usec = 1000 * (msec % 1000);
 
-	ret = select(fd_max + 1, readfds, writefds, NULL, &to);
+	ret = select(st->select.fd_max + 1, st->select.readfds, st->select.writefds, NULL, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -129,16 +120,16 @@ iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 		abort();
 	}
 
-	for (i = 0; i <= fd_max; i++) {
+	for (i = 0; i <= st->select.fd_max; i++) {
 		int pollin;
 		int pollout;
 
-		pollin = !!FD_ISSET(i, readfds);
-		pollout = !!FD_ISSET(i, writefds);
+		pollin = !!FD_ISSET(i, st->select.readfds);
+		pollout = !!FD_ISSET(i, st->select.writefds);
 		if (pollin || pollout) {
 			struct iv_fd_ *fd;
 
-			fd = find_fd(i);
+			fd = find_fd(st, i);
 			if (fd == NULL) {
 				syslog(LOG_CRIT, "iv_select_poll: just puked "
 						 "on myself... eeeeeeeeeeew");
@@ -158,51 +149,50 @@ static void iv_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
-	ret = iv_avl_tree_insert(&fds, &fd->avl_node);
+	ret = iv_avl_tree_insert(&st->select.fds, &fd->avl_node);
 	if (ret) {
 		syslog(LOG_CRIT, "iv_select_register_fd: got error %d[%s]",
 		       ret, strerror(ret));
 		abort();
 	}
 
-	if (fd->fd > fd_max)
-		fd_max = fd->fd;
+	if (fd->fd > st->select.fd_max)
+		st->select.fd_max = fd->fd;
 }
 
 static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	iv_avl_tree_delete(&fds, &fd->avl_node);
+	iv_avl_tree_delete(&st->select.fds, &fd->avl_node);
 
-	if (fd->fd == fd_max) {
+	if (fd->fd == st->select.fd_max) {
 		struct iv_avl_node *an;
 
-		an = iv_avl_tree_max(&fds);
+		an = iv_avl_tree_max(&st->select.fds);
 		if (an != NULL)
-			fd_max = container_of(an, struct iv_fd_, avl_node)->fd;
+			st->select.fd_max = container_of(an, struct iv_fd_, avl_node)->fd;
 		else
-			fd_max = 0;
+			st->select.fd_max = 0;
 	}
 }
 
-static void
-iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	if (wanted & MASKIN)
-		FD_SET(fd->fd, readfds_master);
+		FD_SET(fd->fd, st->select.readfds_master);
 	else
-		FD_CLR(fd->fd, readfds_master);
+		FD_CLR(fd->fd, st->select.readfds_master);
 
 	if (wanted & MASKOUT)
-		FD_SET(fd->fd, writefds_master);
+		FD_SET(fd->fd, st->select.writefds_master);
 	else
-		FD_CLR(fd->fd, writefds_master);
+		FD_CLR(fd->fd, st->select.writefds_master);
 
 	fd->registered_bands = wanted;
 }
 
 static void iv_select_deinit(struct iv_state *st)
 {
-	free(readfds_master);
+	free(st->select.readfds_master);
 }
 
 
