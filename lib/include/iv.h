@@ -44,9 +44,11 @@ void iv_deinit(void);
 /*
  * Time handling.
  */
-extern __thread struct timespec now;
+struct timespec *__iv_now_location();
 void iv_validate_now(void);
 void iv_invalidate_now(void);
+
+#define now	(*__iv_now_location())
 
 
 /*

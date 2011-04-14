@@ -27,29 +27,32 @@
 #include "iv_private.h"
 
 /* time handling ************************************************************/
-__thread struct timespec	now;
-static __thread int		now_valid;
+void __iv_invalidate_now(struct iv_state *st)
+{
+	st->time_valid = 0;
+}
 
 void iv_invalidate_now(void)
 {
-	now_valid = 0;
-}
+	struct iv_state *st = iv_get_state();
 
+	__iv_invalidate_now(st);
+}
 
 #ifdef HAVE_CLOCK_GETTIME
 static int		clock_source;
 #endif
 
-void iv_validate_now(void)
+static void __iv_validate_now(struct iv_state *st)
 {
-	if (!now_valid) {
+	if (!st->time_valid) {
 		struct timeval tv;
 
-		now_valid = 1;
+		st->time_valid = 1;
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC_RAW)
 		if (clock_source < 1) {
-			if (clock_gettime(CLOCK_MONOTONIC_RAW, &now) >= 0)
+			if (clock_gettime(CLOCK_MONOTONIC_RAW, &st->time) >= 0)
 				return;
 			clock_source = 1;
 		}
@@ -57,7 +60,7 @@ void iv_validate_now(void)
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
 		if (clock_source < 2) {
-			if (clock_gettime(CLOCK_MONOTONIC, &now) >= 0)
+			if (clock_gettime(CLOCK_MONOTONIC, &st->time) >= 0)
 				return;
 			clock_source = 2;
 		}
@@ -65,16 +68,30 @@ void iv_validate_now(void)
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
 		if (clock_source < 3) {
-			if (clock_gettime(CLOCK_REALTIME, &now) >= 0)
+			if (clock_gettime(CLOCK_REALTIME, &st->time) >= 0)
 				return;
 			clock_source = 3;
 		}
 #endif
 
 		gettimeofday(&tv, NULL);
-		now.tv_sec = tv.tv_sec;
-		now.tv_nsec = 1000L * tv.tv_usec;
+		st->time.tv_sec = tv.tv_sec;
+		st->time.tv_nsec = 1000L * tv.tv_usec;
 	}
+}
+
+void iv_validate_now(void)
+{
+	struct iv_state *st = iv_get_state();
+
+	__iv_validate_now(st);
+}
+
+struct timespec *__iv_now_location(void)
+{
+	struct iv_state *st = iv_get_state();
+
+	return &st->time;
 }
 
 
@@ -84,9 +101,6 @@ void iv_validate_now(void)
 #define SPLIT_LEVELS		(2)
 #define SPLIT_MAX		(1 << (SPLIT_BITS * SPLIT_LEVELS))
 struct ratnode { void *child[SPLIT_NODES]; };
-
-static __thread int		num_timers;
-static __thread struct ratnode	*timer_root;
 
 void IV_TIMER_INIT(struct iv_timer *_t)
 {
@@ -106,7 +120,7 @@ static inline int timer_ptr_gt(struct iv_timer_ *a, struct iv_timer_ *b)
 	return timespec_gt(&a->expires, &b->expires);
 }
 
-static struct iv_timer_ **get_node(int index)
+static struct iv_timer_ **get_node(struct iv_state *st, int index)
 {
 	struct ratnode **r;
 	int i;
@@ -114,7 +128,7 @@ static struct iv_timer_ **get_node(int index)
 	if (index < 1 || index >= SPLIT_MAX)
 		return NULL;
 
-	r = &timer_root;
+	r = &st->timer_root;
 	for (i = SPLIT_LEVELS - 1; i >= 0; i--) {
 		int bits;
 
@@ -132,28 +146,28 @@ static struct iv_timer_ **get_node(int index)
 	return (struct iv_timer_ **)r;
 }
 
-void iv_timer_init(void)
+void iv_timer_init(struct iv_state *st)
 {
-	if (get_node(1) == NULL) {
+	if (get_node(st, 1) == NULL) {
 		syslog(LOG_CRIT, "iv_timer_init: can't alloc memory for "
 				 "root ratnode");
 		abort();
 	}
 }
 
-int iv_pending_timers(void)
+int iv_pending_timers(struct iv_state *st)
 {
-	return !!num_timers;
+	return !!st->num_timers;
 }
 
-int iv_get_soonest_timeout(struct timespec *to)
+int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 {
-	if (num_timers) {
-		struct iv_timer_ *t = *get_node(1);
+	if (st->num_timers) {
+		struct iv_timer_ *t = *get_node(st, 1);
 
 		iv_validate_now();
-		to->tv_sec = t->expires.tv_sec - now.tv_sec;
-		to->tv_nsec = t->expires.tv_nsec - now.tv_nsec;
+		to->tv_sec = t->expires.tv_sec - st->time.tv_sec;
+		to->tv_nsec = t->expires.tv_nsec - st->time.tv_nsec;
 		if (to->tv_nsec < 0) {
 			to->tv_sec--;
 			to->tv_nsec += 1000000000;
@@ -186,12 +200,12 @@ static void free_ratnode(struct ratnode *node, int depth)
 	free(node);
 }
 
-void iv_timer_deinit(void)
+void iv_timer_deinit(struct iv_state *st)
 {
-	free_ratnode(timer_root, SPLIT_LEVELS - 1);
+	free_ratnode(st->timer_root, SPLIT_LEVELS - 1);
 }
 
-static void pull_up(int index, struct iv_timer_ **i)
+static void pull_up(struct iv_state *st, int index, struct iv_timer_ **i)
 {
 	while (index != 1) {
 		struct iv_timer_ *et;
@@ -199,7 +213,7 @@ static void pull_up(int index, struct iv_timer_ **i)
 		struct iv_timer_ **p;
 
 		parent = index / 2;
-		p = get_node(parent);
+		p = get_node(st, parent);
 
 		if (!timer_ptr_gt(*p, *i))
 			break;
@@ -218,6 +232,7 @@ static void pull_up(int index, struct iv_timer_ **i)
 
 void iv_timer_register(struct iv_timer *_t)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 	struct iv_timer_ **p;
 	int index;
@@ -228,8 +243,8 @@ void iv_timer_register(struct iv_timer *_t)
 		abort();
 	}
 
-	index = ++num_timers;
-	p = get_node(index);
+	index = ++st->num_timers;
+	p = get_node(st, index);
 	if (p == NULL) {
 		syslog(LOG_CRIT, "iv_timer_register: timer list overflow");
 		abort();
@@ -238,10 +253,10 @@ void iv_timer_register(struct iv_timer *_t)
 	*p = t;
 	t->index = index;
 
-	pull_up(index, p);
+	pull_up(st, index, p);
 }
 
-static void push_down(int index, struct iv_timer_ **i)
+static void push_down(struct iv_state *st, int index, struct iv_timer_ **i)
 {
 	while (1) {
 		struct iv_timer_ *et;
@@ -251,10 +266,10 @@ static void push_down(int index, struct iv_timer_ **i)
 		index_min = index;
 		imin = i;
 
-		if (2 * index <= num_timers) {
+		if (2 * index <= st->num_timers) {
 			struct iv_timer_ **p;
 
-			p = get_node(2 * index);
+			p = get_node(st, 2 * index);
 			if (timer_ptr_gt(*imin, p[0])) {
 				index_min = 2 * index;
 				imin = p;
@@ -282,6 +297,7 @@ static void push_down(int index, struct iv_timer_ **i)
 
 void iv_timer_unregister(struct iv_timer *_t)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 	struct iv_timer_ **m;
 	struct iv_timer_ **p;
@@ -292,40 +308,40 @@ void iv_timer_unregister(struct iv_timer *_t)
 		abort();
 	}
 
-	if (t->index > num_timers) {
+	if (t->index > st->num_timers) {
 		syslog(LOG_CRIT, "iv_timer_unregister: timer index %d > %d",
-		       t->index, num_timers);
+		       t->index, st->num_timers);
 		abort();
 	}
 
-	p = get_node(t->index);
+	p = get_node(st, t->index);
 	if (*p != t) {
 		syslog(LOG_CRIT, "iv_timer_unregister: unregistered timer "
 				 "index belonging to other timer");
 		abort();
 	}
 
-	m = get_node(num_timers);
-	num_timers--;
+	m = get_node(st, st->num_timers);
+	st->num_timers--;
 
 	*p = *m;
 	(*p)->index = t->index;
 	*m = NULL;
 	if (p != m) {
-		pull_up((*p)->index, p);
-		push_down((*p)->index, p);
+		pull_up(st, (*p)->index, p);
+		push_down(st, (*p)->index, p);
 	}
 
 	t->index = -1;
 }
 
-void iv_run_timers(void)
+void iv_run_timers(struct iv_state *st)
 {
-	while (num_timers) {
-		struct iv_timer_ *t = *get_node(1);
+	while (st->num_timers) {
+		struct iv_timer_ *t = *get_node(st, 1);
 
-		iv_validate_now();
-		if (timespec_gt(&t->expires, &now))
+		__iv_validate_now(st);
+		if (timespec_gt(&t->expires, &st->time))
 			break;
 		iv_timer_unregister((struct iv_timer *)t);
 		t->handler(t->cookie);

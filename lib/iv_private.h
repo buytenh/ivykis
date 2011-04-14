@@ -114,6 +114,12 @@ struct iv_state {
 
 	/* iv_task.c  */
 	struct list_head	tasks;
+
+	/* iv_timer.c  */
+	struct timespec		time;
+	int			time_valid;
+	int			num_timers;
+	struct ratnode		*timer_root;
 };
 
 extern __thread struct iv_state __st;
@@ -157,8 +163,9 @@ int iv_pending_tasks(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
 /* iv_timer.c */
-void iv_timer_init(void);
-int iv_pending_timers(void);
-int iv_get_soonest_timeout(struct timespec *to);
-void iv_run_timers(void);
-void iv_timer_deinit(void);
+void __iv_invalidate_now(struct iv_state *st);
+void iv_timer_init(struct iv_state *st);
+int iv_pending_timers(struct iv_state *st);
+int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to);
+void iv_run_timers(struct iv_state *st);
+void iv_timer_deinit(struct iv_state *st);

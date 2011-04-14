@@ -148,7 +148,7 @@ void iv_init(void)
 	st->numfds = 0;
 
 	iv_task_init(st);
-	iv_timer_init();
+	iv_timer_init(st);
 }
 
 int iv_inited(void)
@@ -225,7 +225,7 @@ static int should_quit(struct iv_state *st)
 	if (st->quit)
 		return 1;
 
-	if (!st->numfds && !iv_pending_tasks(st) && !iv_pending_timers())
+	if (!st->numfds && !iv_pending_tasks(st) && !iv_pending_timers(st))
 		return 1;
 
 	return 0;
@@ -243,13 +243,13 @@ void iv_main(void)
 		struct timespec to;
 		int msec;
 
-		iv_run_timers();
+		iv_run_timers(st);
 		iv_run_tasks(st);
 
 		if (should_quit(st))
 			break;
 
-		if (!iv_get_soonest_timeout(&to)) {
+		if (!iv_get_soonest_timeout(st, &to)) {
 			msec = 1000 * to.tv_sec;
 			msec += (to.tv_nsec + 999999) / 1000000;
 		} else {
@@ -257,7 +257,7 @@ void iv_main(void)
 		}
 		method->poll(st->numfds, &active, msec);
 
-		iv_invalidate_now();
+		__iv_invalidate_now(st);
 
 		iv_run_active_list(st, &active);
 	}
@@ -271,7 +271,7 @@ void iv_deinit(void)
 
 	method->deinit();
 
-	iv_timer_deinit();
+	iv_timer_deinit(st);
 }
 
 
