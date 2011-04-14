@@ -120,6 +120,13 @@ struct iv_state {
 	int			time_valid;
 	int			num_timers;
 	struct ratnode		*timer_root;
+
+	/* poll methods  */
+	union {
+		struct {
+			int			epoll_fd;
+		} epoll;
+	};
 };
 
 extern __thread struct iv_state __st;

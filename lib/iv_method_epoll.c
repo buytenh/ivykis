@@ -38,21 +38,18 @@
 #define SET_OUT		(EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND)
 #define SET_ERR		(EPOLLERR)
 
-static __thread int		epoll_fd;
-
-
 static int iv_epoll_init(struct iv_state *st, int maxfd)
 {
 	int flags;
 
-	epoll_fd = epoll_create(maxfd);
-	if (epoll_fd < 0)
+	st->epoll.epoll_fd = epoll_create(maxfd);
+	if (st->epoll.epoll_fd < 0)
 		return -1;
 
-	flags = fcntl(epoll_fd, F_GETFD);
+	flags = fcntl(st->epoll.epoll_fd, F_GETFD);
 	if (!(flags & FD_CLOEXEC)) {
 		flags |= FD_CLOEXEC;
-		fcntl(epoll_fd, F_SETFD, flags);
+		fcntl(st->epoll.epoll_fd, F_SETFD, flags);
 	}
 
 	return 0;
@@ -65,7 +62,7 @@ iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 	int ret;
 	int i;
 
-	ret = epoll_wait(epoll_fd, batch, st->numfds ? : 1, msec);
+	ret = epoll_wait(st->epoll.epoll_fd, batch, st->numfds ? : 1, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -126,7 +123,7 @@ iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 	event.data.ptr = fd;
 	event.events = bits_to_poll_mask(wanted);
 	do {
-		ret = epoll_ctl(epoll_fd, op, fd->fd, &event);
+		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -140,7 +137,7 @@ iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 
 static void iv_epoll_deinit(struct iv_state *st)
 {
-	close(epoll_fd);
+	close(st->epoll.epoll_fd);
 }
 
 
