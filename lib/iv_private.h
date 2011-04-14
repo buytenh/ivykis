@@ -21,6 +21,7 @@
 #include "iv.h"
 #include "iv_avl.h"
 #include "iv_list.h"
+#include "config.h"
 
 /*
  * Private versions of the fd/task/timer structures, exposing their
