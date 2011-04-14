@@ -111,6 +111,9 @@ struct iv_state {
 	struct iv_fd_		*handled_fd;
 	int			numfds;
 	int			quit;
+
+	/* iv_task.c  */
+	struct list_head	tasks;
 };
 
 extern __thread struct iv_state __st;
@@ -149,9 +152,9 @@ extern struct iv_poll_method iv_method_select;
 void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands);
 
 /* iv_task.c */
-void iv_task_init(void);
-int iv_pending_tasks(void);
-void iv_run_tasks(void);
+void iv_task_init(struct iv_state *st);
+int iv_pending_tasks(struct iv_state *st);
+void iv_run_tasks(struct iv_state *st);
 
 /* iv_timer.c */
 void iv_timer_init(void);

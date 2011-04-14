@@ -147,7 +147,7 @@ void iv_init(void)
 	st->handled_fd = NULL;
 	st->numfds = 0;
 
-	iv_task_init();
+	iv_task_init(st);
 	iv_timer_init();
 }
 
@@ -225,7 +225,7 @@ static int should_quit(struct iv_state *st)
 	if (st->quit)
 		return 1;
 
-	if (!st->numfds && !iv_pending_tasks() && !iv_pending_timers())
+	if (!st->numfds && !iv_pending_tasks(st) && !iv_pending_timers())
 		return 1;
 
 	return 0;
@@ -244,7 +244,7 @@ void iv_main(void)
 		int msec;
 
 		iv_run_timers();
-		iv_run_tasks();
+		iv_run_tasks(st);
 
 		if (should_quit(st))
 			break;

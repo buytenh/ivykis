@@ -23,24 +23,22 @@
 #include <syslog.h>
 #include "iv_private.h"
 
-static __thread struct list_head	tasks;
-
-void iv_task_init(void)
+void iv_task_init(struct iv_state *st)
 {
-	INIT_LIST_HEAD(&tasks);
+	INIT_LIST_HEAD(&st->tasks);
 }
 
-int iv_pending_tasks(void)
+int iv_pending_tasks(struct iv_state *st)
 {
-	return !list_empty(&tasks);
+	return !list_empty(&st->tasks);
 }
 
-void iv_run_tasks(void)
+void iv_run_tasks(struct iv_state *st)
 {
-	while (!list_empty(&tasks)) {
+	while (!list_empty(&st->tasks)) {
 		struct iv_task_ *t;
 
-		t = list_entry(tasks.next, struct iv_task_, list);
+		t = list_entry(st->tasks.next, struct iv_task_, list);
 		list_del_init(&t->list);
 
 		t->handler(t->cookie);
@@ -56,6 +54,7 @@ void IV_TASK_INIT(struct iv_task *_t)
 
 void iv_task_register(struct iv_task *_t)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	if (!list_empty(&t->list)) {
@@ -64,7 +63,7 @@ void iv_task_register(struct iv_task *_t)
 		abort();
 	}
 
-	list_add_tail(&t->list, &tasks);
+	list_add_tail(&t->list, &st->tasks);
 }
 
 void iv_task_unregister(struct iv_task *_t)
