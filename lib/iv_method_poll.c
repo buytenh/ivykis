@@ -44,7 +44,7 @@ static __thread struct iv_fd_	**fds;
 static __thread int		num_registered_fds;
 
 
-static int iv_poll_init(int maxfd)
+static int iv_poll_init(struct iv_state *st, int maxfd)
 {
 	pfds = malloc(maxfd * sizeof(struct pollfd));
 	if (pfds == NULL)
@@ -61,7 +61,8 @@ static int iv_poll_init(int maxfd)
 	return 0;
 }
 
-static void iv_poll_poll(int numfds, struct list_head *active, int msec)
+static void
+iv_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 {
 	int ret;
 	int i;
@@ -96,7 +97,7 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 	}
 }
 
-static void iv_poll_register_fd(struct iv_fd_ *fd)
+static void iv_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	fd->index = -1;
 }
@@ -116,7 +117,8 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_poll_notify_fd(struct iv_fd_ *fd, int wanted)
+static void
+iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	if (fd->registered_bands == wanted)
 		return;
@@ -144,7 +146,7 @@ static void iv_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 	fd->registered_bands = wanted;
 }
 
-static void iv_poll_deinit(void)
+static void iv_poll_deinit(struct iv_state *st)
 {
 	free(fds);
 	free(pfds);

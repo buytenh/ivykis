@@ -75,7 +75,7 @@ static int fd_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 
 
 /* interface ****************************************************************/
-static int iv_select_init(int maxfd)
+static int iv_select_init(struct iv_state *st, int maxfd)
 {
 	unsigned char *fdsets;
 
@@ -100,7 +100,8 @@ static int iv_select_init(int maxfd)
 	return 0;
 }
 
-static void iv_select_poll(int numfds, struct list_head *active, int msec)
+static void
+iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 {
 	struct timeval to;
 	int ret;
@@ -153,7 +154,7 @@ static void iv_select_poll(int numfds, struct list_head *active, int msec)
 	}
 }
 
-static void iv_select_register_fd(struct iv_fd_ *fd)
+static void iv_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
@@ -168,7 +169,7 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 		fd_max = fd->fd;
 }
 
-static void iv_select_unregister_fd(struct iv_fd_ *fd)
+static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&fds, &fd->avl_node);
 
@@ -183,7 +184,8 @@ static void iv_select_unregister_fd(struct iv_fd_ *fd)
 	}
 }
 
-static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
+static void
+iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	if (wanted & MASKIN)
 		FD_SET(fd->fd, readfds_master);
@@ -198,7 +200,7 @@ static void iv_select_notify_fd(struct iv_fd_ *fd, int wanted)
 	fd->registered_bands = wanted;
 }
 
-static void iv_select_deinit(void)
+static void iv_select_deinit(struct iv_state *st)
 {
 	free(readfds_master);
 }

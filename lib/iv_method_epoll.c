@@ -41,7 +41,7 @@
 static __thread int		epoll_fd;
 
 
-static int iv_epoll_init(int maxfd)
+static int iv_epoll_init(struct iv_state *st, int maxfd)
 {
 	int flags;
 
@@ -58,13 +58,14 @@ static int iv_epoll_init(int maxfd)
 	return 0;
 }
 
-static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
+static void
+iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 {
-	struct epoll_event batch[numfds ? : 1];
+	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
 	int i;
 
-	ret = epoll_wait(epoll_fd, batch, numfds ? : 1, msec);
+	ret = epoll_wait(epoll_fd, batch, st->numfds ? : 1, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -105,7 +106,8 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_epoll_notify_fd(struct iv_fd_ *fd, int wanted)
+static void
+iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	struct epoll_event event;
 	int op;
@@ -136,7 +138,7 @@ static void iv_epoll_notify_fd(struct iv_fd_ *fd, int wanted)
 	fd->registered_bands = wanted;
 }
 
-static void iv_epoll_deinit(void)
+static void iv_epoll_deinit(struct iv_state *st)
 {
 	close(epoll_fd);
 }

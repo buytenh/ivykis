@@ -72,7 +72,7 @@ static int fd_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 
 
 /* interface ****************************************************************/
-static int iv_dev_poll_init(int maxfd)
+static int iv_dev_poll_init(struct iv_state *st, int maxfd)
 {
 	poll_fd = open("/dev/poll", O_RDWR);
 	if (poll_fd < 0)
@@ -119,9 +119,10 @@ static void flush_upload_queue(void)
 	upload_entries = 0;
 }
 
-static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
+static void
+iv_dev_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 {
-	struct pollfd batch[numfds];
+	struct pollfd batch[st->numfds];
 	struct dvpoll dvp;
 	int ret;
 	int i;
@@ -139,7 +140,7 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 		flush_upload_queue();
 
 	dvp.dp_fds = batch;
-	dvp.dp_nfds = numfds;
+	dvp.dp_nfds = st->numfds;
 	dvp.dp_timeout = msec;
 
 	ret = ioctl(poll_fd, DP_POLL, &dvp);
@@ -173,7 +174,7 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 	}
 }
 
-static void iv_dev_poll_register_fd(struct iv_fd_ *fd)
+static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
@@ -185,7 +186,7 @@ static void iv_dev_poll_register_fd(struct iv_fd_ *fd)
 	}
 }
 
-static void iv_dev_poll_unregister_fd(struct iv_fd_ *fd)
+static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&fds, &fd->avl_node);
 }
@@ -205,7 +206,8 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_dev_poll_notify_fd(struct iv_fd_ *fd, int wanted)
+static void
+iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	if (upload_entries > UPLOAD_QUEUE_SIZE - 2)
 		flush_upload_queue();
@@ -225,7 +227,7 @@ static void iv_dev_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 	fd->registered_bands = wanted;
 }
 
-static void iv_dev_poll_deinit(void)
+static void iv_dev_poll_deinit(struct iv_state *state)
 {
 	free(upload_queue);
 	close(poll_fd);

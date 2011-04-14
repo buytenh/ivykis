@@ -35,7 +35,7 @@ static __thread struct kevent	*upload_queue;
 static __thread int		upload_entries;
 
 
-static int iv_kqueue_init(int maxfd)
+static int iv_kqueue_init(struct iv_state *st, int maxfd)
 {
 	int flags;
 
@@ -62,10 +62,11 @@ static int iv_kqueue_init(int maxfd)
 	return 0;
 }
 
-static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
+static void
+iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 {
 	struct timespec to;
-	struct kevent batch[numfds ? : 1];
+	struct kevent batch[st->numfds ? : 1];
 	int ret;
 	int i;
 
@@ -76,14 +77,14 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 	 * jump or move depends on uninitialised value(s)".  Zero the
 	 * udata fields here as an ugly workaround.
 	 */
-	for (i = 0; i < (numfds ? : 1); i++)
+	for (i = 0; i < (st->numfds ? : 1); i++)
 		batch[i].udata = 0;
 
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
 	ret = kevent(kqueue_fd, upload_queue, upload_entries,
-		     batch, numfds ? : 1, &to);
+		     batch, st->numfds ? : 1, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -130,7 +131,7 @@ static void flush_upload_queue(void)
 	upload_entries = 0;
 }
 
-static void iv_kqueue_unregister_fd(struct iv_fd_ *fd)
+static void iv_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	flush_upload_queue();
 }
@@ -146,7 +147,8 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
-static void iv_kqueue_notify_fd(struct iv_fd_ *fd, int wanted)
+static void
+iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 {
 	if ((fd->registered_bands & MASKIN) && !(wanted & MASKIN)) {
 		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
@@ -167,7 +169,7 @@ static void iv_kqueue_notify_fd(struct iv_fd_ *fd, int wanted)
 	}
 }
 
-static void iv_kqueue_deinit(void)
+static void iv_kqueue_deinit(struct iv_state *st)
 {
 	free(upload_queue);
 	close(kqueue_fd);

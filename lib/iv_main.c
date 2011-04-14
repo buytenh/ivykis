@@ -84,15 +84,16 @@ static int method_is_excluded(char *exclude, char *name)
 	return 0;
 }
 
-static void consider_poll_method(char *exclude, struct iv_poll_method *m)
+static void consider_poll_method(struct iv_state *st, char *exclude,
+				 struct iv_poll_method *m)
 {
 	if (method == NULL && !method_is_excluded(exclude, m->name)) {
-		if (m->init(maxfd) >= 0)
+		if (m->init(st, maxfd) >= 0)
 			method = m;
 	}
 }
 
-static void iv_init_first_thread(void)
+static void iv_init_first_thread(struct iv_state *st)
 {
 	int euid;
 	char *exclude;
@@ -110,16 +111,16 @@ static void iv_init_first_thread(void)
 		exclude = NULL;
 
 #ifdef HAVE_SYS_DEVPOLL_H
-	consider_poll_method(exclude, &iv_method_dev_poll);
+	consider_poll_method(st, exclude, &iv_method_dev_poll);
 #endif
 #ifdef HAVE_EPOLL_CREATE
-	consider_poll_method(exclude, &iv_method_epoll);
+	consider_poll_method(st, exclude, &iv_method_epoll);
 #endif
 #ifdef HAVE_KQUEUE
-	consider_poll_method(exclude, &iv_method_kqueue);
+	consider_poll_method(st, exclude, &iv_method_kqueue);
 #endif
-	consider_poll_method(exclude, &iv_method_poll);
-	consider_poll_method(exclude, &iv_method_select);
+	consider_poll_method(st, exclude, &iv_method_poll);
+	consider_poll_method(st, exclude, &iv_method_select);
 
 	if (method == NULL) {
 		syslog(LOG_CRIT, "iv_init: can't find suitable event "
@@ -137,8 +138,8 @@ void iv_init(void)
 	struct iv_state *st = iv_get_state();
 
 	if (method == NULL) {
-		iv_init_first_thread();
-	} else if (method->init(maxfd) < 0) {
+		iv_init_first_thread(st);
+	} else if (method->init(st, maxfd) < 0) {
 		syslog(LOG_CRIT, "iv_init: can't initialize event dispatcher");
 		abort();
 	}
@@ -165,7 +166,7 @@ void iv_quit(void)
 	st->quit = 1;
 }
 
-static void notify_fd(struct iv_fd_ *fd)
+static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int wanted;
 
@@ -179,7 +180,7 @@ static void notify_fd(struct iv_fd_ *fd)
 			wanted |= MASKERR;
 	}
 
-	method->notify_fd(fd, wanted);
+	method->notify_fd(st, fd, wanted);
 }
 
 static void iv_run_active_list(struct iv_state *st, struct list_head *active)
@@ -216,7 +217,7 @@ static void iv_run_active_list(struct iv_state *st, struct list_head *active)
 		}
 
 		if (st->handled_fd != NULL && notify)
-			notify_fd(fd);
+			notify_fd(st, fd);
 	}
 }
 
@@ -255,7 +256,7 @@ void iv_main(void)
 		} else {
 			msec = 0;
 		}
-		method->poll(st->numfds, &active, msec);
+		method->poll(st, &active, msec);
 
 		__iv_invalidate_now(st);
 
@@ -269,7 +270,7 @@ void iv_deinit(void)
 
 	st->initialised = 0;
 
-	method->deinit();
+	method->deinit(st);
 
 	iv_timer_deinit(st);
 }
@@ -329,8 +330,8 @@ void iv_fd_register(struct iv_fd *_fd)
 	st->numfds++;
 
 	if (method->register_fd != NULL)
-		method->register_fd(fd);
-	notify_fd(fd);
+		method->register_fd(st, fd);
+	notify_fd(st, fd);
 }
 
 void iv_fd_unregister(struct iv_fd *_fd)
@@ -347,9 +348,9 @@ void iv_fd_unregister(struct iv_fd *_fd)
 
 	list_del(&fd->list_active);
 
-	notify_fd(fd);
+	notify_fd(st, fd);
 	if (method->unregister_fd != NULL)
-		method->unregister_fd(fd);
+		method->unregister_fd(st, fd);
 
 	st->numfds--;
 
@@ -375,6 +376,7 @@ void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands)
 
 void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int notify;
 
@@ -396,11 +398,12 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 
 	fd->handler_in = handler_in;
 	if (notify)
-		notify_fd(fd);
+		notify_fd(st, fd);
 }
 
 void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int notify;
 
@@ -422,11 +425,12 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 
 	fd->handler_out = handler_out;
 	if (notify)
-		notify_fd(fd);
+		notify_fd(st, fd);
 }
 
 void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int notify;
 
@@ -448,5 +452,5 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 
 	fd->handler_err = handler_err;
 	if (notify)
-		notify_fd(fd);
+		notify_fd(st, fd);
 }

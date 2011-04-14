@@ -139,12 +139,14 @@ static inline struct iv_state *iv_get_state(void)
 
 struct iv_poll_method {
 	char	*name;
-	int	(*init)(int maxfd);
-	void	(*poll)(int numfds, struct list_head *active, int msec);
-	void	(*register_fd)(struct iv_fd_ *fd);
-	void	(*unregister_fd)(struct iv_fd_ *fd);
-	void	(*notify_fd)(struct iv_fd_ *fd, int wanted_bands);
-	void	(*deinit)(void);
+	int	(*init)(struct iv_state *st, int maxfd);
+	void	(*poll)(struct iv_state *st, 
+			struct list_head *active, int msec);
+	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
+	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
+	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd,
+			     int wanted_bands);
+	void	(*deinit)(struct iv_state *st);
 };
 
 extern struct iv_poll_method iv_method_dev_poll;
