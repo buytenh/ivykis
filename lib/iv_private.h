@@ -126,6 +126,12 @@ struct iv_state {
 		struct {
 			int			epoll_fd;
 		} epoll;
+
+		struct {
+			struct pollfd		*pfds;
+			struct iv_fd_		**fds;
+			int			num_registered_fds;
+		} poll;
 	};
 };
 

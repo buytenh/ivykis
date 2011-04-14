@@ -39,24 +39,19 @@
 #define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
 #define SET_ERR		(POLLERR)
 
-static __thread struct pollfd	*pfds;
-static __thread struct iv_fd_	**fds;
-static __thread int		num_registered_fds;
-
-
 static int iv_poll_init(struct iv_state *st, int maxfd)
 {
-	pfds = malloc(maxfd * sizeof(struct pollfd));
-	if (pfds == NULL)
+	st->poll.pfds = malloc(maxfd * sizeof(struct pollfd));
+	if (st->poll.pfds == NULL)
 		return -1;
 
-	fds = malloc(maxfd * sizeof(struct iv_fd_ *));
-	if (fds == NULL) {
-		free(pfds);
+	st->poll.fds = malloc(maxfd * sizeof(struct iv_fd_ *));
+	if (st->poll.fds == NULL) {
+		free(st->poll.pfds);
 		return -1;
 	}
 
-	num_registered_fds = 0;
+	st->poll.num_registered_fds = 0;
 
 	return 0;
 }
@@ -75,7 +70,7 @@ iv_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 	errno = EINTR;
 #endif
 
-	ret = poll(pfds, num_registered_fds, msec);
+	ret = poll(st->poll.pfds, st->poll.num_registered_fds, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -85,14 +80,14 @@ iv_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 		abort();
 	}
 
-	for (i = 0; i < num_registered_fds; i++) {
-		struct iv_fd_ *fd = fds[i];
+	for (i = 0; i < st->poll.num_registered_fds; i++) {
+		struct iv_fd_ *fd = st->poll.fds[i];
 
-		if (pfds[i].revents & (SET_IN | SET_ERR))
+		if (st->poll.pfds[i].revents & (SET_IN | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKIN);
-		if (pfds[i].revents & (SET_OUT | SET_ERR))
+		if (st->poll.pfds[i].revents & (SET_OUT | SET_ERR))
 			iv_fd_make_ready(active, fd, MASKOUT);
-		if (pfds[i].revents & SET_ERR)
+		if (st->poll.pfds[i].revents & SET_ERR)
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
@@ -124,23 +119,26 @@ iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 		return;
 
 	if (fd->index == -1 && wanted) {
-		fd->index = num_registered_fds++;
-		pfds[fd->index].fd = fd->fd;
-		pfds[fd->index].events = bits_to_poll_mask(wanted);
-		fds[fd->index] = fd;
+		fd->index = st->poll.num_registered_fds++;
+		st->poll.pfds[fd->index].fd = fd->fd;
+		st->poll.pfds[fd->index].events = bits_to_poll_mask(wanted);
+		st->poll.fds[fd->index] = fd;
 	} else if (fd->index != -1 && !wanted) {
-		if (fd->index != num_registered_fds - 1) {
-			struct iv_fd_ *last = fds[num_registered_fds - 1];
+		if (fd->index != st->poll.num_registered_fds - 1) {
+			struct iv_fd_ *last;
 
+			st->poll.pfds[fd->index] =
+				st->poll.pfds[st->poll.num_registered_fds - 1];
+
+			last = st->poll.fds[st->poll.num_registered_fds - 1];
 			last->index = fd->index;
-			pfds[fd->index] = pfds[num_registered_fds - 1];
-			fds[fd->index] = last;
+			st->poll.fds[fd->index] = last;
 		}
-		num_registered_fds--;
+		st->poll.num_registered_fds--;
 
 		fd->index = -1;
 	} else {
-		pfds[fd->index].events = bits_to_poll_mask(wanted);
+		st->poll.pfds[fd->index].events = bits_to_poll_mask(wanted);
 	}
 
 	fd->registered_bands = wanted;
@@ -148,8 +146,8 @@ iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 
 static void iv_poll_deinit(struct iv_state *st)
 {
-	free(fds);
-	free(pfds);
+	free(st->poll.fds);
+	free(st->poll.pfds);
 }
 
 
