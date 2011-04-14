@@ -103,6 +103,25 @@ struct iv_timer_ {
 
 
 /*
+ * Per-thread state.
+ */
+struct iv_state {
+	/* iv_main.c  */
+	int			initialised;
+	struct iv_fd_		*handled_fd;
+	int			numfds;
+	int			quit;
+};
+
+extern __thread struct iv_state __st;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return &__st;
+}
+
+
+/*
  * Misc internal stuff.
  */
 #define MASKIN		1

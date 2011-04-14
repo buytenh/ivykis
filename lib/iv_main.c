@@ -130,13 +130,12 @@ static void iv_init_first_thread(void)
 
 
 /* main loop ****************************************************************/
-static __thread int		initialised;
-static __thread struct iv_fd_	*handled_fd;
-static __thread int		numfds;
-static __thread int		quit;
+__thread struct iv_state __st;
 
 void iv_init(void)
 {
+	struct iv_state *st = iv_get_state();
+
 	if (method == NULL) {
 		iv_init_first_thread();
 	} else if (method->init(maxfd) < 0) {
@@ -144,9 +143,9 @@ void iv_init(void)
 		abort();
 	}
 
-	initialised = 1;
-	handled_fd = NULL;
-	numfds = 0;
+	st->initialised = 1;
+	st->handled_fd = NULL;
+	st->numfds = 0;
 
 	iv_task_init();
 	iv_timer_init();
@@ -154,12 +153,16 @@ void iv_init(void)
 
 int iv_inited(void)
 {
-        return initialised;
+	struct iv_state *st = iv_get_state();
+
+	return st->initialised;
 }
 
 void iv_quit(void)
 {
-	quit = 1;
+	struct iv_state *st = iv_get_state();
+
+	st->quit = 1;
 }
 
 static void notify_fd(struct iv_fd_ *fd)
@@ -179,7 +182,7 @@ static void notify_fd(struct iv_fd_ *fd)
 	method->notify_fd(fd, wanted);
 }
 
-static void iv_run_active_list(struct list_head *active)
+static void iv_run_active_list(struct iv_state *st, struct list_head *active)
 {
 	while (!list_empty(active)) {
 		struct iv_fd_ *fd;
@@ -188,7 +191,7 @@ static void iv_run_active_list(struct list_head *active)
 		fd = list_entry(active->next, struct iv_fd_, list_active);
 		list_del_init(&fd->list_active);
 
-		handled_fd = fd;
+		st->handled_fd = fd;
 		notify = 0;
 
 		if (fd->ready_bands & MASKERR) {
@@ -198,37 +201,44 @@ static void iv_run_active_list(struct list_head *active)
 				notify = 1;
 		}
 
-		if (handled_fd != NULL && fd->ready_bands & MASKIN) {
+		if (st->handled_fd != NULL && fd->ready_bands & MASKIN) {
 			if (fd->handler_in != NULL)
 				fd->handler_in(fd->cookie);
 			else
 				notify = 1;
 		}
 
-		if (handled_fd != NULL && fd->ready_bands & MASKOUT) {
+		if (st->handled_fd != NULL && fd->ready_bands & MASKOUT) {
 			if (fd->handler_out != NULL)
 				fd->handler_out(fd->cookie);
 			else
 				notify = 1;
 		}
 
-		if (handled_fd != NULL && notify)
+		if (st->handled_fd != NULL && notify)
 			notify_fd(fd);
 	}
 }
 
-static int should_quit(void)
+static int should_quit(struct iv_state *st)
 {
-	return quit || (!numfds && !iv_pending_tasks() && !iv_pending_timers());
+	if (st->quit)
+		return 1;
+
+	if (!st->numfds && !iv_pending_tasks() && !iv_pending_timers())
+		return 1;
+
+	return 0;
 }
 
 void iv_main(void)
 {
+	struct iv_state *st = iv_get_state();
 	struct list_head active;
 
 	INIT_LIST_HEAD(&active);
 
-	quit = 0;
+	st->quit = 0;
 	while (1) {
 		struct timespec to;
 		int msec;
@@ -236,7 +246,7 @@ void iv_main(void)
 		iv_run_timers();
 		iv_run_tasks();
 
-		if (should_quit())
+		if (should_quit(st))
 			break;
 
 		if (!iv_get_soonest_timeout(&to)) {
@@ -245,17 +255,19 @@ void iv_main(void)
 		} else {
 			msec = 0;
 		}
-		method->poll(numfds, &active, msec);
+		method->poll(st->numfds, &active, msec);
 
 		iv_invalidate_now();
 
-		iv_run_active_list(&active);
+		iv_run_active_list(st, &active);
 	}
 }
 
 void iv_deinit(void)
 {
-	initialised = 0;
+	struct iv_state *st = iv_get_state();
+
+	st->initialised = 0;
 
 	method->deinit();
 
@@ -277,6 +289,7 @@ void IV_FD_INIT(struct iv_fd *_fd)
 
 void iv_fd_register(struct iv_fd *_fd)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 	int flags;
 	int yes;
@@ -313,7 +326,7 @@ void iv_fd_register(struct iv_fd *_fd)
 	fd->ready_bands = 0;
 	fd->registered_bands = 0;
 
-	numfds++;
+	st->numfds++;
 
 	if (method->register_fd != NULL)
 		method->register_fd(fd);
@@ -322,6 +335,7 @@ void iv_fd_register(struct iv_fd *_fd)
 
 void iv_fd_unregister(struct iv_fd *_fd)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
@@ -337,10 +351,10 @@ void iv_fd_unregister(struct iv_fd *_fd)
 	if (method->unregister_fd != NULL)
 		method->unregister_fd(fd);
 
-	numfds--;
+	st->numfds--;
 
-	if (handled_fd == fd)
-		handled_fd = NULL;
+	if (st->handled_fd == fd)
+		st->handled_fd = NULL;
 }
 
 int iv_fd_registered(struct iv_fd *_fd)
