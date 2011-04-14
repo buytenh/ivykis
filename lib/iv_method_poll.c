@@ -34,10 +34,10 @@
 #define POLLRDHUP	0
 #endif
 
-#define SET_IN		(POLLIN | POLLPRI | POLLRDNORM | \
+#define SET_IN		(POLLIN | POLLPRI | POLLHUP | POLLRDNORM | \
 			 POLLRDBAND | POLLMSG | POLLRDHUP)
 #define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
-#define SET_ERR		(POLLERR | POLLHUP)
+#define SET_ERR		(POLLERR)
 
 static __thread struct pollfd	*pfds;
 static __thread struct iv_fd_	**fds;
