@@ -75,7 +75,7 @@ static void iv_epoll_poll(int numfds, struct list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]",
+		fprintf(stderr, "iv_epoll_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -134,7 +134,7 @@ static void iv_epoll_notify_fd(struct iv_fd_ *fd, int wanted)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_epoll_notify_fd: got error %d[%s]",
+		fprintf(stderr, "iv_epoll_notify_fd: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -158,7 +158,7 @@ static int iv_epoll_pollable(int fd)
         if (ret >= 0) {
 		ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, &event);
 		if (ret < 0) {
-			syslog(LOG_CRIT, "iv_epoll_pollable: got error %d[%s]",
+			fprintf(stderr, "iv_epoll_pollable: got error %d[%s]",
 			       errno, strerror(errno));
 			abort();
 		}

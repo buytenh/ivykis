@@ -135,7 +135,7 @@ static void iv_select_poll(int numfds, struct list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_select_poll: got error %d[%s]", errno,
+		fprintf(stderr, "iv_select_poll: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();
 	}
@@ -151,7 +151,7 @@ static void iv_select_poll(int numfds, struct list_head *active, int msec)
 
 			fd = find_fd(i);
 			if (fd == NULL) {
-				syslog(LOG_CRIT, "iv_select_poll: just puked "
+				fprintf(stderr, "iv_select_poll: just puked "
 						 "on myself... eeeeeeeeeeew");
 				abort();
 			}
@@ -171,7 +171,7 @@ static void iv_select_register_fd(struct iv_fd_ *fd)
 
 	ret = iv_avl_tree_insert(&fds, &fd->avl_node);
 	if (ret) {
-		syslog(LOG_CRIT, "iv_select_register_fd: got error %d[%s]",
+		fprintf(stderr, "iv_select_register_fd: got error %d[%s]",
 		       ret, strerror(ret));
 		abort();
 	}

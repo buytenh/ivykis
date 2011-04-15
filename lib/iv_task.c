@@ -66,7 +66,7 @@ void iv_task_register(struct iv_task *_t)
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	if (!list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_task_register: called with task still "
+		fprintf(stderr, "iv_task_register: called with task still "
 				 "on a list");
 		abort();
 	}
@@ -79,7 +79,7 @@ void iv_task_unregister(struct iv_task *_t)
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	if (list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_task_unregister: called with task not "
+		fprintf(stderr, "iv_task_unregister: called with task not "
 				 "on a list");
 		abort();
 	}

@@ -123,7 +123,7 @@ static void iv_init_first_thread(void)
 	consider_poll_method(exclude, &iv_method_select);
 
 	if (method == NULL) {
-		syslog(LOG_CRIT, "iv_init: can't find suitable event "
+		fprintf(stderr, "iv_init: can't find suitable event "
 				 "dispatcher");
 		abort();
 	}
@@ -151,7 +151,7 @@ void iv_init(void)
 	if (method == NULL) {
 		iv_init_first_thread();
 	} else if (method->init(maxfd) < 0) {
-		syslog(LOG_CRIT, "iv_init: can't initialize event dispatcher");
+		fprintf(stderr, "iv_init: can't initialize event dispatcher");
 		abort();
 	}
 
@@ -293,13 +293,13 @@ void iv_fd_register(struct iv_fd *_fd)
 	int yes;
 
 	if (fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_register: called with fd which "
+		fprintf(stderr, "iv_fd_register: called with fd which "
 				 "is still registered");
 		abort();
 	}
 
 	if (fd->fd < 0 || fd->fd >= maxfd) {
-		syslog(LOG_CRIT, "iv_fd_register: called with invalid fd "
+		fprintf(stderr, "iv_fd_register: called with invalid fd "
 				 "%d (maxfd=%d)", fd->fd, maxfd);
 		abort();
 	}
@@ -336,7 +336,7 @@ void iv_fd_unregister(struct iv_fd *_fd)
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_unregister: called with fd which "
+		fprintf(stderr, "iv_fd_unregister: called with fd which "
 				 "is not registered");
 		abort();
 	}
@@ -376,7 +376,7 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 	int notify;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_in: called with fd "
+		fprintf(stderr, "iv_fd_set_handler_in: called with fd "
 				 "which is not registered");
 		abort();
 	}
@@ -384,7 +384,7 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 	notify = 0;
 	if (handler_in != NULL && !(fd->registered_bands & MASKIN)) {
 		if (fd->handler_in != NULL) {
-			syslog(LOG_CRIT, "iv_fd_set_handler_in: old handler "
+			fprintf(stderr, "iv_fd_set_handler_in: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}
@@ -402,7 +402,7 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 	int notify;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_out: called with fd "
+		fprintf(stderr, "iv_fd_set_handler_out: called with fd "
 				 "which is not registered");
 		abort();
 	}
@@ -410,7 +410,7 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 	notify = 0;
 	if (handler_out != NULL && !(fd->registered_bands & MASKOUT)) {
 		if (fd->handler_out != NULL) {
-			syslog(LOG_CRIT, "iv_fd_set_handler_out: old handler "
+			fprintf(stderr, "iv_fd_set_handler_out: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}
@@ -428,7 +428,7 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 	int notify;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_err: called with fd "
+		fprintf(stderr, "iv_fd_set_handler_err: called with fd "
 				 "which is not registered");
 		abort();
 	}
@@ -436,7 +436,7 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 	notify = 0;
 	if (handler_err != NULL && !(fd->registered_bands & MASKERR)) {
 		if (fd->handler_err != NULL) {
-			syslog(LOG_CRIT, "iv_fd_set_handler_err: old handler "
+			fprintf(stderr, "iv_fd_set_handler_err: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}

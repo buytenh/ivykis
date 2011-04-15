@@ -32,7 +32,7 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-TLS_BLOCK_BEGIN
+TLS_BLOCK_START
 {
 	struct iv_avl_tree	fds;
 	int			poll_fd;
@@ -116,7 +116,7 @@ static void flush_upload_queue(void)
 		} while (ret < 0 && errno == EINTR);
 
 		if (ret < 0) {
-			syslog(LOG_CRIT, "flush_upload_queue: got error %d[%s]",
+			fprintf(stderr, "flush_upload_queue: got error %d[%s]",
 			       errno, strerror(errno));
 			abort();
 		}
@@ -156,7 +156,7 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_dev_poll_poll: got error %d[%s]",
+		fprintf(stderr, "iv_dev_poll_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -166,7 +166,7 @@ static void iv_dev_poll_poll(int numfds, struct list_head *active, int msec)
 
 		fd = find_fd(batch[i].fd);
 		if (fd == NULL) {
-			syslog(LOG_CRIT, "iv_dev_poll_poll: got event for "
+			fprintf(stderr, "iv_dev_poll_poll: got event for "
 					 "unknown fd %d", batch[i].fd);
 			abort();
 		}
@@ -188,7 +188,7 @@ static void iv_dev_poll_register_fd(struct iv_fd_ *fd)
 
 	ret = iv_avl_tree_insert(&fds, &fd->avl_node);
 	if (ret) {
-		syslog(LOG_CRIT, "iv_dev_poll_register_fd: got error %d[%s]",
+		fprintf(stderr, "iv_dev_poll_register_fd: got error %d[%s]",
 		       ret, strerror(ret));
 		abort();
 	}

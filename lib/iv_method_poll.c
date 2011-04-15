@@ -87,7 +87,7 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_poll_poll: got error %d[%s]", errno,
+		fprintf(stderr, "iv_poll_poll: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();
 	}

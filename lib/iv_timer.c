@@ -149,7 +149,7 @@ static struct iv_timer_ **get_node(int index)
 void iv_timer_init(void)
 {
 	if (get_node(1) == NULL) {
-		syslog(LOG_CRIT, "iv_timer_init: can't alloc memory for "
+		fprintf(stderr, "iv_timer_init: can't alloc memory for "
 				 "root ratnode");
 		abort();
 	}
@@ -237,7 +237,7 @@ void iv_timer_register(struct iv_timer *_t)
 	int index;
 
 	if (t->index != -1) {
-		syslog(LOG_CRIT, "iv_timer_register: called with timer still "
+		fprintf(stderr, "iv_timer_register: called with timer still "
 				 "on the heap");
 		abort();
 	}
@@ -245,7 +245,7 @@ void iv_timer_register(struct iv_timer *_t)
 	index = ++num_timers;
 	p = get_node(index);
 	if (p == NULL) {
-		syslog(LOG_CRIT, "iv_timer_register: timer list overflow");
+		fprintf(stderr, "iv_timer_register: timer list overflow");
 		abort();
 	}
 
@@ -301,20 +301,20 @@ void iv_timer_unregister(struct iv_timer *_t)
 	struct iv_timer_ **p;
 
 	if (t->index == -1) {
-		syslog(LOG_CRIT, "iv_timer_unregister: called with timer not "
+		fprintf(stderr, "iv_timer_unregister: called with timer not "
 				 "on the heap");
 		abort();
 	}
 
 	if (t->index > num_timers) {
-		syslog(LOG_CRIT, "iv_timer_unregister: timer index %d > %d",
+		fprintf(stderr, "iv_timer_unregister: timer index %d > %d",
 		       t->index, num_timers);
 		abort();
 	}
 
 	p = get_node(t->index);
 	if (*p != t) {
-		syslog(LOG_CRIT, "iv_timer_unregister: unregistered timer "
+		fprintf(stderr, "iv_timer_unregister: unregistered timer "
 				 "index belonging to other timer");
 		abort();
 	}

@@ -97,7 +97,7 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_kqueue_poll: got error %d[%s]",
+		fprintf(stderr, "iv_kqueue_poll: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -113,7 +113,7 @@ static void iv_kqueue_poll(int numfds, struct list_head *active, int msec)
 		} else if (batch[i].filter == EVFILT_WRITE) {
 			iv_fd_make_ready(active, fd, MASKOUT);
 		} else {
-			syslog(LOG_CRIT, "iv_kqueue_poll: got message from "
+			fprintf(stderr, "iv_kqueue_poll: got message from "
 					 "filter %d", batch[i].filter);
 			abort();
 		}
@@ -131,7 +131,7 @@ static void flush_upload_queue(void)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
-		syslog(LOG_CRIT, "flush_upload_queue: got error %d[%s]",
+		fprintf(stderr, "flush_upload_queue: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
@@ -214,7 +214,7 @@ static int iv_kqueue_pollable(int fd)
                 } while (ret < 0 && errno == EINTR);
 
 		if (ret < 0) {
-			syslog(LOG_CRIT, "iv_kqueue_pollable: got error %d[%s]",
+			fprintf(stderr, "iv_kqueue_pollable: got error %d[%s]",
 			       errno, strerror(errno));
 			abort();
 		}
