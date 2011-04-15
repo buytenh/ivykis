@@ -130,6 +130,11 @@ if test "x$enable_epoll" = "xauto"; then
     enable_epoll="$ac_cv_func_epoll_create"
 fi
 
+if test "x$enable_dev_poll" == "xauto"; then
+    enable_dev_poll="$ac_cv_header_sys_devpoll_h"
+    echo "TEST DEVPOLL: $enable_dev_poll"
+fi
+
 dnl ***************************************************************************
 dnl generate an installed config header (named iv_config.h) that can contain
 dnl platform specific matters, that affect the API.
@@ -174,12 +179,12 @@ __EOF
 
 # defines for config.h
 AC_DEFINE_UNQUOTED([HAVE_TLS], [`test x$ac_have_tls = xyes && echo 1 || echo 0`], [Whether the __thread keyword should be used])
-AC_DEFINE_UNQUOTED([ENABLE_DEV_POLL], [`test x$enable_devpoll = xyes && echo 1 || echo 0`], [Whether Solaris /dev/poll support should be compiled in])
+AC_DEFINE_UNQUOTED([ENABLE_DEV_POLL], [`test x$enable_dev_poll = xyes && echo 1 || echo 0`], [Whether Solaris /dev/poll support should be compiled in])
 AC_DEFINE_UNQUOTED([ENABLE_EPOLL], [`test x$enable_epoll = xyes && echo 1 || echo 0`], [Whether Linux epoll support should be compiled in])
 AC_DEFINE_UNQUOTED([ENABLE_KQUEUE], [`test x$enable_kqueue = xyes && echo 1 || echo 0`], [Whether FreeBSD kqueue support should be compiled in])
 
 # Conditionals for poll methods.
-AM_CONDITIONAL([ENABLE_DEV_POLL], [test x$enable_devpoll = xyes])
+AM_CONDITIONAL([ENABLE_DEV_POLL], [test x$enable_dev_poll = xyes])
 AM_CONDITIONAL([ENABLE_EPOLL], [test x$enable_epoll = xyes])
 AM_CONDITIONAL([ENABLE_KQUEUE], [test x$enable_kqueue = xyes])
 
