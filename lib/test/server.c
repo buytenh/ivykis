@@ -70,14 +70,14 @@ static void create_handle(struct handle *h, int port)
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
 		perror("socket");
-		exit(-1);
+		exit(1);
 	}
 
 	yes = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
 		       &yes, sizeof(yes)) < 0) {
 		perror("setsockopt");
-		exit(-1);
+		exit(1);
 	}
 
 	addr.sin_family = AF_INET;
@@ -85,7 +85,7 @@ static void create_handle(struct handle *h, int port)
 	addr.sin_port = htons(port);
 	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
-		exit(-1);
+		exit(1);
 	}
 
 	listen(sock, 5);

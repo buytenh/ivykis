@@ -126,7 +126,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 		we = malloc(sizeof(*we));
 		if (we == NULL) {
 			fprintf(stderr, "iv_wait_got_sigchld: OOM\n");
-			exit(-1);
+			exit(1);
 		}
 
 		we->status = status;
@@ -241,7 +241,7 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 
 	if (pid == 0) {
 		fn(cookie);
-		exit(-1);
+		exit(1);
 	} else {
 		this->pid = pid;
 		__iv_wait_interest_register(this);

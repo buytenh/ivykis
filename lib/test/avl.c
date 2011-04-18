@@ -175,7 +175,7 @@ int main()
 
 		if (ret) {
 			fprintf(stderr, "error %d\n", ret);
-			exit(-1);
+			exit(1);
 		}
 
 		tree_check(&x, i + 1);

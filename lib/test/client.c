@@ -60,7 +60,7 @@ static void create_connector(struct connector *conn, struct sockaddr_in *addr)
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("socket");
-		exit(-1);
+		exit(1);
 	}
 
 	IV_FD_INIT(&conn->fd);

@@ -54,7 +54,7 @@ int main()
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("socket");
-		exit(-1);
+		exit(1);
 	}
 
 	IV_FD_INIT(&ifd);

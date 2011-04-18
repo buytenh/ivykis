@@ -73,7 +73,7 @@ static void iv_popen_child(void *cookie)
 	devnull = open("/dev/null", O_RDWR);
 	if (devnull < 0) {
 		perror("open(\"/dev/null\")");
-		exit(-1);
+		exit(1);
 	}
 
 	if (info->for_read) {
