@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_task 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_task_register, iv_task_unregister \- deal with ivykis tasks
+iv_task_register, iv_task_unregister, iv_task_registered \- deal with ivykis tasks
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
@@ -22,6 +22,8 @@ struct iv_task {
 .br
 .BI "void iv_task_unregister(struct iv_task *" task ");"
 .br
+.BI "int iv_task_registered(struct iv_task *" task ");"
+.br
 .SH DESCRIPTION
 The functions
 .B iv_task_register
@@ -29,6 +31,8 @@ and
 .B iv_task_unregister
 register, respectively unregister, a task with the current thread's
 ivykis event loop.
+.B iv_task_registered
+on a task returns true if that task is currently registered with ivykis.
 .PP
 A task is like a timer, but with an immediate timeout.  When a task
 is registered, unless it is unregistered again first, the callback

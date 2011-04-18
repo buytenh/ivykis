@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_timer 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_timer_register, iv_timer_unregister \- deal with ivykis timers
+iv_timer_register, iv_timer_unregister, iv_timer_registered \- deal with ivykis timers
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
@@ -23,6 +23,8 @@ struct iv_timer {
 .br
 .BI "void iv_timer_unregister(struct iv_timer *" timer ");"
 .br
+.BI "int iv_timer_registered(struct iv_timer *" timer ");"
+.br
 .SH DESCRIPTION
 The functions
 .B iv_timer_register
@@ -30,6 +32,9 @@ and
 .B iv_timer_unregister
 register, respectively unregister, a timer with the current thread's
 ivykis event loop.
+.B iv_timer_registered
+on a timer returns true if that timer is currently registered with
+ivykis.
 .PP
 When a timer that is registered becomes 'ready', due to the current
 system clock value becoming greater than or equal to the timer's
