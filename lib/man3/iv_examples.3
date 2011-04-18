@@ -39,10 +39,12 @@ void callback(void *dummy)
 
         len = read(fd_stdin.fd, buf, sizeof(buf));
         if (len <= 0) {
-                if (len < 0 && errno == EAGAIN)
-                        return;
-                perror("read");
-                exit(-1);
+                if (len < 0) {
+                        if (errno == EAGAIN)
+                                return;
+                        perror("read");
+                }
+                exit(1);
         }
 
         printf("read %d bytes of data from stdin\\n", len);
@@ -89,6 +91,8 @@ connection, a message is printed to standard out.
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
+#include <netinet/in.h>
+#include <syslog.h>
 
 struct connection
 {
@@ -132,11 +136,11 @@ void listening_socket_handler(void *_sock)
 
         addrlen = sizeof(addr);
         fd = accept(sock->fd.fd, (struct sockaddr *)&addr, &addrlen);
-        if (fd <= 0) {
-                if (fd < 0 && errno == EAGAIN)
+        if (fd < 0) {
+                if (errno == EAGAIN)
                         return;
                 perror("accept");
-                exit(-1);
+                exit(1);
         }
 
         conn = malloc(sizeof(*conn));
@@ -162,7 +166,7 @@ int main()
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
                 perror("socket");
-                exit(-1);
+                exit(1);
         }
 
         addr.sin_family = AF_INET;
@@ -170,12 +174,12 @@ int main()
         addr.sin_port = htons(6667);
         if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
                 perror("bind");
-                exit(-1);
+                exit(1);
         }
 
         if (listen(fd, 4) < 0) {
                 perror("listen");
-                exit(-1);
+                exit(1);
         }
 
         iv_init();
@@ -212,6 +216,8 @@ in example 2 are indicated by '//XXXX' in the right-hand margin.
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
+#include <netinet/in.h>
+#include <syslog.h>
 
 #define CONNECTION_TIMEOUT      (10)
 
@@ -273,11 +279,11 @@ void listening_socket_handler(void *_sock)
 
         addrlen = sizeof(addr);
         fd = accept(sock->fd.fd, (struct sockaddr *)&addr, &addrlen);
-        if (fd <= 0) {
-                if (fd < 0 && errno == EAGAIN)
+        if (fd < 0) {
+                if (errno == EAGAIN)
                         return;
                 perror("accept");
-                exit(-1);
+                exit(1);
         }
 
         conn = malloc(sizeof(*conn));
@@ -311,7 +317,7 @@ int main()
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
                 perror("socket");
-                exit(-1);
+                exit(1);
         }
 
         addr.sin_family = AF_INET;
@@ -319,12 +325,12 @@ int main()
         addr.sin_port = htons(6667);
         if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
                 perror("bind");
-                exit(-1);
+                exit(1);
         }
 
         if (listen(fd, 4) < 0) {
                 perror("listen");
-                exit(-1);
+                exit(1);
         }
 
         iv_init();
