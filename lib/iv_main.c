@@ -131,11 +131,70 @@ static void iv_init_first_thread(struct iv_state *st)
 
 
 /* main loop ****************************************************************/
+#ifdef HAVE_THREAD
 __thread struct iv_state __st;
+
+static void iv_state_allocate_key(void)
+{
+}
+
+static struct iv_state *iv_allocate_state(void)
+{
+	return &__st;
+}
+
+static void iv_destroy_state(struct iv_state *st)
+{
+}
+#else
+#include <pthread.h>
+
+static pthread_key_t iv_state_key;
+
+static void iv_state_destructor(void *data)
+{
+	free(data);
+}
+
+static void iv_state_allocate_key(void)
+{
+	if (pthread_key_create(&iv_state_key, iv_state_destructor)) {
+		fprintf(stderr, "iv_state_allocate_key: failed to allocate "
+				"TLS key\n");
+		abort();
+	}
+}
+
+static struct iv_state *iv_allocate_state(void)
+{
+	struct iv_state *st;
+
+	st = calloc(1, sizeof(*st));
+	pthread_setspecific(iv_state_key, st);
+
+	return st;
+}
+
+struct iv_state *iv_get_state(void)
+{
+	return pthread_getspecific(iv_state_key);
+}
+
+static void iv_destroy_state(struct iv_state *st)
+{
+	pthread_setspecific(iv_state_key, NULL);
+	free(st);
+}
+#endif
 
 void iv_init(void)
 {
-	struct iv_state *st = iv_get_state();
+	struct iv_state *st;
+
+	if (method == NULL)
+		iv_state_allocate_key();
+
+	st = iv_allocate_state();
 
 	if (method == NULL) {
 		iv_init_first_thread(st);
@@ -273,6 +332,8 @@ void iv_deinit(void)
 	method->deinit(st);
 
 	iv_timer_deinit(st);
+
+	iv_destroy_state(st);
 }
 
 

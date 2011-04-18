@@ -145,12 +145,16 @@ struct iv_state {
 	};
 };
 
+#ifdef HAVE_THREAD
 extern __thread struct iv_state __st;
 
 static inline struct iv_state *iv_get_state(void)
 {
 	return &__st;
 }
+#else
+struct iv_state *iv_get_state(void);
+#endif
 
 
 /*

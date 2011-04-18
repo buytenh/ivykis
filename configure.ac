@@ -35,6 +35,13 @@ AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([wait4])
 
+# Check for __thread.
+AC_MSG_CHECKING([for __thread])
+AC_COMPILE_IFELSE([static __thread int p = 0;],
+	[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler supports __thread.)
+	 AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no])])
+
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
