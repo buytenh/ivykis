@@ -32,10 +32,8 @@ int main()
 	ki.listen_port = 63636;
 	ki.cookie = NULL;
 	ki.get_nexthop = get_nexthop;
-	if (kojines_instance_register(&ki) < 0)
-		abort();
-
-	iv_main();
+	if (kojines_instance_register(&ki) > 0)
+		iv_main();
 
 	return 0;
 }
