@@ -32,7 +32,7 @@ writes a message to standard out whenever something is received:
 
 struct iv_fd fd_stdin;
 
-void callback(void *dummy)
+static void callback(void *dummy)
 {
         char buf[1024];
         int len;
@@ -107,7 +107,7 @@ struct listening_socket
 };
 
 
-void connection_handler(void *_conn)
+static void connection_handler(void *_conn)
 {
         struct connection *conn = (struct connection *)_conn;
         char buf[1024];
@@ -126,7 +126,7 @@ void connection_handler(void *_conn)
         printf("got %d bytes of data from %p\\n", len, conn);
 }
 
-void listening_socket_handler(void *_sock)
+static void listening_socket_handler(void *_sock)
 {
         struct listening_socket *sock = (struct listening_socket *)_sock;
         struct sockaddr_in addr;
@@ -235,7 +235,7 @@ struct listening_socket
 };
 
 
-void connection_handler(void *_conn)
+static void connection_handler(void *_conn)
 {
         struct connection *conn = (struct connection *)_conn;
         char buf[1024];
@@ -261,7 +261,7 @@ void connection_handler(void *_conn)
         iv_timer_register(&conn->disconnect_timeout);            //XXXX
 }
 
-void disconnect_timeout_expired(void *_conn)                     //XXXX
+static void disconnect_timeout_expired(void *_conn)              //XXXX
 {                                                                //XXXX
         struct connection *conn = (struct connection *)_conn;    //XXXX
         iv_fd_unregister(&conn->fd);                             //XXXX
@@ -269,7 +269,7 @@ void disconnect_timeout_expired(void *_conn)                     //XXXX
         free(conn);                                              //XXXX
 }                                                                //XXXX
 
-void listening_socket_handler(void *_sock)
+static void listening_socket_handler(void *_sock)
 {
         struct listening_socket *sock = (struct listening_socket *)_sock;
         struct sockaddr_in addr;
