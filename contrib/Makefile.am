@@ -1,3 +1,3 @@
-SUBDIRS = iv_inotify kojines splice
+SUBDIRS = iv_inotify iv_openssl kojines splice
 
 EXTRA_DIST = 00README.txt
