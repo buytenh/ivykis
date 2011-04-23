@@ -168,6 +168,11 @@ int iv_inited(void)
         return initialised;
 }
 
+const char *iv_get_method_name(void)
+{
+	return method->name;
+}
+
 void iv_quit(void)
 {
 	quit = 1;
