@@ -36,6 +36,7 @@ extern "C" {
  */
 void iv_init(void);
 int iv_inited(void);
+const char *iv_poll_method_name(void);
 void iv_main(void);
 void iv_quit(void);
 void iv_deinit(void);

@@ -220,6 +220,11 @@ int iv_inited(void)
 	return st != NULL && st->initialised;
 }
 
+const char *iv_poll_method_name(void)
+{
+	return method != NULL ? method->name : NULL;
+}
+
 void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
