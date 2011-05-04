@@ -66,6 +66,14 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 	int ret;
 	int i;
 
+#if _AIX
+	/*
+	 * AIX sometimes leaves errno uninitialized even if poll
+	 * returns -1.
+	 */
+	errno = EINTR;
+#endif
+
 	ret = poll(pfds, num_registered_fds, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
