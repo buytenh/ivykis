@@ -41,7 +41,7 @@
 
 static __thread struct pollfd	*pfds;
 static __thread struct iv_fd_	**fds;
-static __thread int		numfds;
+static __thread int		num_registered_fds;
 
 
 static int iv_poll_init(int maxfd)
@@ -56,7 +56,7 @@ static int iv_poll_init(int maxfd)
 		return -1;
 	}
 
-	numfds = 0;
+	num_registered_fds = 0;
 
 	return 0;
 }
@@ -66,7 +66,7 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 	int ret;
 	int i;
 
-	ret = poll(pfds, numfds, msec);
+	ret = poll(pfds, num_registered_fds, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -76,7 +76,7 @@ static void iv_poll_poll(int numfds, struct list_head *active, int msec)
 		abort();
 	}
 
-	for (i = 0; i < numfds; i++) {
+	for (i = 0; i < num_registered_fds; i++) {
 		struct iv_fd_ *fd = fds[i];
 
 		if (pfds[i].revents & (SET_IN | SET_ERR))
@@ -114,18 +114,18 @@ static void iv_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 		return;
 
 	if (fd->index == -1 && wanted) {
-		fd->index = numfds++;
+		fd->index = num_registered_fds++;
 		pfds[fd->index].fd = fd->fd;
 		pfds[fd->index].events = bits_to_poll_mask(wanted);
 		fds[fd->index] = fd;
 	} else if (fd->index != -1 && !wanted) {
-		if (fd->index != numfds - 1) {
-			struct iv_fd_ *last = fds[numfds - 1];
+		if (fd->index != num_registered_fds - 1) {
+			struct iv_fd_ *last = fds[num_registered_fds - 1];
 
-			pfds[fd->index] = pfds[numfds - 1];
+			pfds[fd->index] = pfds[num_registered_fds - 1];
 			fds[fd->index] = last;
 		}
-		numfds--;
+		num_registered_fds--;
 
 		fd->index = -1;
 	} else {
