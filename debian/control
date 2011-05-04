@@ -1,0 +1,24 @@
+Source: ivykis
+Section: libs
+Priority: extra
+Maintainer: Balazs Scheidler <bazsi@balabit.hu>
+Build-depends: debhelper (>=4)
+Standards-Version: 3.6.2
+
+Package: libivykis
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}
+Description: libivykis
+
+Package: libivykis-dbg
+Architecture: any
+Section: libdevel
+Depends: libivykis (= ${Source-Version})
+Description: libivykis-dbg
+
+Package: libivykis-dev
+Architecture: any
+Section: libdevel
+Depends: libivykis
+Description: libivykis-dev

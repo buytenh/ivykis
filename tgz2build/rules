@@ -1,0 +1,57 @@
+#!/usr/bin/make -f
+
+STAMPDIR=tgz2build/stamps
+
+CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --enable-shared --includedir="$(ZBS_PREFIX)/include/ivykis" --disable-kqueue
+
+LDFLAGS+=-L$(PWD)/lib -L$(PWD)/lib/.libs
+ifeq (,$(CC))
+CC=gcc
+endif
+
+ifneq (,$(findstring i386,$(ZBS_ARCH)))
+# need to force the architecture because uname reports amd64/x86_64 on the
+# linux builders, but it breaks FreeBSD/i386 ...
+	ifeq (linux,$(findstring linux,$(ZBS_DIST)))
+		CONFIGURE_OPTS+= --build=$(ZBS_ARCH)-unknown-linux-gnu
+	endif
+endif
+
+ifneq (,$(findstring solaris,$(ZBS_DIST)))
+	ifneq (,$(findstring amd64,$(ZBS_ARCH)))
+		CONFIGURE_OPTS +=
+	endif
+endif
+
+ifneq (,$(findstring linux-glibc2.3.2,$(ZBS_DIST)))
+  CONFIGURE_OPTS+= --disable-epoll
+  # syslog-ng needs a C99 standtard compliant C compiler. GCC 2.95 is not compliant so we have to use a home built GCC 3.3 for this.
+endif
+
+all: binary
+
+binary: setup configure build install
+
+setup: $(STAMPDIR)/stamp-setup
+$(STAMPDIR)/stamp-setup:
+	mkdir tgz2build/stamps || true
+	touch $@
+
+configure: $(STAMPDIR)/stamp-configure
+$(STAMPDIR)/stamp-configure:
+	LDFLAGS="$(LDFLAGS) -g -liconv" CFLAGS="$(CFLAGS) -g -O2" ./configure $(CONFIGURE_OPTS)
+	touch $@
+
+build: $(STAMPDIR)/stamp-build
+$(STAMPDIR)/stamp-build:
+	$(MAKE)
+	touch $@
+
+install:
+	rm -rf $(ZBS_STAGE_DIR)
+	$(MAKE) install DESTDIR=$(ZBS_STAGE_DIR)
+
+clean:
+	rm -rf tgz2build/stamps || true
+	rm -rf tgz2build/staging || true
+	$(MAKE) clean
