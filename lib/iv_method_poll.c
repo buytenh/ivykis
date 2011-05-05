@@ -130,6 +130,7 @@ static void iv_poll_notify_fd(struct iv_fd_ *fd, int wanted)
 		if (fd->index != num_registered_fds - 1) {
 			struct iv_fd_ *last = fds[num_registered_fds - 1];
 
+			last->index = fd->index;
 			pfds[fd->index] = pfds[num_registered_fds - 1];
 			fds[fd->index] = last;
 		}
