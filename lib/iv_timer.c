@@ -35,22 +35,45 @@ void iv_invalidate_now(void)
 	now_valid = 0;
 }
 
+
+#ifdef HAVE_CLOCK_GETTIME
+static int		clock_source;
+#endif
+
 void iv_validate_now(void)
 {
 	if (!now_valid) {
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
-		clock_gettime(CLOCK_MONOTONIC, &now);
-#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
-		clock_gettime(CLOCK_REALTIME, &now);
-#else
 		struct timeval tv;
+
+		now_valid = 1;
+
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC_RAW)
+		if (clock_source < 1) {
+			if (clock_gettime(CLOCK_MONOTONIC_RAW, &now) >= 0)
+				return;
+			clock_source = 1;
+		}
+#endif
+
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+		if (clock_source < 2) {
+			if (clock_gettime(CLOCK_MONOTONIC, &now) >= 0)
+				return;
+			clock_source = 2;
+		}
+#endif
+
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+		if (clock_source < 3) {
+			if (clock_gettime(CLOCK_REALTIME, &now) >= 0)
+				return;
+			clock_source = 3;
+		}
+#endif
 
 		gettimeofday(&tv, NULL);
 		now.tv_sec = tv.tv_sec;
 		now.tv_nsec = 1000L * tv.tv_usec;
-#endif
-
-		now_valid = 1;
 	}
 }
 
