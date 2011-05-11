@@ -226,40 +226,8 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 	pthr_mutex_unlock(&iv_wait_lock);
 }
 
-int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
-				    void (*fn)(void *cookie), void *cookie)
+static void __iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
-	pid_t pid;
-
-	pthr_mutex_lock(&iv_wait_lock);
-
-	pid = fork();
-	if (pid < 0) {
-		pthr_mutex_unlock(&iv_wait_lock);
-		return pid;
-	}
-
-	if (pid == 0) {
-		fn(cookie);
-		exit(1);
-	} else {
-		this->pid = pid;
-		__iv_wait_interest_register(this);
-		iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
-	}
-
-	pthr_mutex_unlock(&iv_wait_lock);
-
-	return 0;
-}
-
-void iv_wait_interest_unregister(struct iv_wait_interest *this)
-{
-	pthr_mutex_lock(&iv_wait_lock);
-	if (!this->dead)
-		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
-	pthr_mutex_unlock(&iv_wait_lock);
-
 	iv_event_unregister(&this->ev);
 
 	while (!list_empty(&this->events)) {
@@ -275,6 +243,45 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 
 	if (!--tinfo.wait_count)
 		iv_signal_unregister(&tinfo.sigchld_interest);
+}
+
+int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
+				    void (*fn)(void *cookie), void *cookie)
+{
+	pid_t pid;
+
+	__iv_wait_interest_register(this);
+
+	pthr_mutex_lock(&iv_wait_lock);
+
+	pid = fork();
+	if (pid < 0) {
+		pthr_mutex_unlock(&iv_wait_lock);
+		__iv_wait_interest_unregister(this);
+		return pid;
+	}
+
+	if (pid == 0) {
+		fn(cookie);
+		exit(1);
+	} else {
+		this->pid = pid;
+		iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
+	}
+
+	pthr_mutex_unlock(&iv_wait_lock);
+
+	return 0;
+}
+
+void iv_wait_interest_unregister(struct iv_wait_interest *this)
+{
+	pthr_mutex_lock(&iv_wait_lock);
+	if (!this->dead)
+		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
+	pthr_mutex_unlock(&iv_wait_lock);
+
+	__iv_wait_interest_unregister(this);
 }
 
 int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
