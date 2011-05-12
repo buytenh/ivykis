@@ -112,8 +112,11 @@ __iv_inotify_dispatch_loop(struct iv_inotify *inotify,
 		 * mess.  We discard such events.
 		 */
 		watch = __find_watch(inotify, event->wd);
-		if (watch == NULL)
+		if (watch == NULL) {
+			event_queue_ptr +=
+				event->len + sizeof(struct inotify_event);
 			continue;
+		}
 
 		/*
 		 * In case of IN_IGNORED in the event, or IN_ONESHOT in
