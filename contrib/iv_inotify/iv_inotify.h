@@ -30,9 +30,7 @@ extern "C" {
 #include <inttypes.h>
 #include <sys/inotify.h>
 #include <iv.h>
-#include <iv_list.h>
-
-#define IV_INOTIFY_HASH_SIZE	512
+#include <iv_avl.h>
 
 struct iv_inotify_watch {
 	const char		*pathname;
@@ -43,14 +41,14 @@ struct iv_inotify_watch {
 	/* Read-only members */
 	int			wd;
 
-	/* Private members; internal use only */
-	struct list_head	list_hash;
+	/* Private members: internal use only */
+	struct iv_avl_node	avl_node;
 };
 
 struct iv_inotify {
 	struct iv_fd		fd;
-	struct list_head	hash_chains[IV_INOTIFY_HASH_SIZE];
 	size_t			watches;
+	struct iv_avl_tree	avl_tree;
 };
 
 int iv_inotify_init(struct iv_inotify *);
@@ -61,6 +59,5 @@ int iv_inotify_rm_watch(struct iv_inotify *, struct iv_inotify_watch *);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif
