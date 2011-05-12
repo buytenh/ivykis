@@ -3,7 +3,7 @@
  *
  * Dedicated to Kanna Ishihara.
  *
- * Copyright (C) 2008, 2009 Ronald Huizer
+ * Copyright (C) 2008-2011 Ronald Huizer
  *
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version
@@ -22,20 +22,21 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
-#include <iv.h>
-#include <iv_list.h>
 #include <sys/ioctl.h>
 #include <sys/inotify.h>
+#include <iv.h>
+#include <iv_avl.h>
+#include <iv_list.h>
 #include "iv_inotify.h"
 
 #ifndef NAME_MAX
 #define NAME_MAX	255
 #endif
 
-static struct iv_inotify __default_instance;
-static int __default_initialized = 0;
-static struct iv_inotify *__dispatched_instance = NULL;
-static int __dispatched_instance_destroyed = 0;
+static struct iv_inotify	__default_instance;
+static int			__default_initialized = 0;
+static struct iv_inotify	*__dispatched_instance = NULL;
+static int			__dispatched_instance_destroyed = 0;
 
 static void __iv_inotify_cleanup_watch(struct iv_inotify *inotify,
                                        struct iv_inotify_watch *watch);
@@ -52,27 +53,42 @@ static ssize_t read_no_eintr(int fd, void *buf, size_t count)
 	return ret;
 }
 
-/* Hash function to hash watch descriptors. */
-static unsigned int __wd_hash(unsigned int wd)
-{
-	return wd % IV_INOTIFY_HASH_SIZE;
-}
-
 static struct iv_inotify_watch *
 __find_watch(struct iv_inotify *iv_ip, int wd)
 {
-	struct list_head *lh;
-	int hash = __wd_hash(wd);
+	struct iv_avl_node *an;
 
-	list_for_each(lh, &iv_ip->hash_chains[hash]) {
+	an = iv_ip->avl_tree.root;
+	while (an != NULL) {
 		struct iv_inotify_watch *watch;
 
-		watch = list_entry(lh, struct iv_inotify_watch, list_hash);
+		watch = container_of(an, struct iv_inotify_watch, avl_node);
 		if (watch->wd == wd)
 			return watch;
+
+		if (watch->wd > wd)
+			an = an->left;
+		else
+			an = an->right;
 	}
 
 	return NULL;
+}
+
+static int __watch_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+{
+	struct iv_inotify_watch *a =
+		container_of(_a, struct iv_inotify_watch, avl_node);
+	struct iv_inotify_watch *b =
+		container_of(_b, struct iv_inotify_watch, avl_node);
+
+	if (a->wd < b->wd)
+		return -1;
+
+	if (a->wd > b->wd)
+		return 1;
+
+	return 0;
 }
 
 static void
@@ -102,7 +118,7 @@ __iv_inotify_dispatch_loop(struct iv_inotify *inotify,
 		/*
 		 * In case of IN_IGNORED in the event, or IN_ONESHOT in
 		 * the watch we know the current watch is to be removed,
-		 * so we need to clean it from the lists.
+		 * so we need to clean it from the avl tree.
 		 * We do this before calling the handler, as we have no
 		 * idea wether the user will destroy the watch there.
 		 */
@@ -209,7 +225,6 @@ static void __iv_inotify_in(void *cookie)
 int iv_inotify_init(struct iv_inotify *inotify)
 {
 	int fd;
-	unsigned int i;
 
 	/* Get an inotify instance descriptor. */
 	if ((fd = inotify_init()) == -1)
@@ -222,9 +237,8 @@ int iv_inotify_init(struct iv_inotify *inotify)
 	inotify->fd.handler_in = __iv_inotify_in;
 	iv_fd_register(&inotify->fd);
 
-	/* Initialize the watch descriptor hash table. */
-	for (i = 0; i < IV_INOTIFY_HASH_SIZE; i++)
-		INIT_LIST_HEAD(&inotify->hash_chains[i]);
+	/* Initialize the watch descriptor avl tree. */
+	INIT_IV_AVL_TREE(&inotify->avl_tree, __watch_compare);
 	inotify->watches = 0;
 
 	return 0;
@@ -271,7 +285,8 @@ iv_inotify_add_watch(struct iv_inotify *inotify,
 		return -1;
 
 	watch->wd = wd;
-	list_add(&watch->list_hash, &inotify->hash_chains[__wd_hash(wd)]);
+	if (iv_avl_tree_insert(&inotify->avl_tree, &watch->avl_node) != 0)
+		abort();
 	inotify->watches++;
 
 	return 0;
@@ -281,10 +296,8 @@ static void
 __iv_inotify_cleanup_watch(struct iv_inotify *inotify,
                            struct iv_inotify_watch *watch)
 {
-	if (!list_empty(&watch->list_hash)) {
-		list_del_init(&watch->list_hash);
-		inotify->watches--;
-	}
+	iv_avl_tree_delete(&inotify->avl_tree, &watch->avl_node);
+	inotify->watches--;
 
 	if (inotify == &__default_instance && inotify->watches == 0) {
 		iv_inotify_destroy(inotify);
