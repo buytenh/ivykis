@@ -27,11 +27,22 @@
 
 #define MAX_SIGS	32
 
-static pthread_mutex_t sig_init_lock = PTHREAD_MUTEX_INITIALIZER;
-static int sig_initialized;
 static pid_t sig_owner;
 static pthread_spinlock_t sig_interests_lock;
 static struct list_head sig_interests[MAX_SIGS];
+
+static void iv_signal_init(void) __attribute__((constructor));
+static void iv_signal_init(void)
+{
+	int i;
+
+	sig_owner = getpid();
+
+	pthr_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
+
+	for (i = 0; i < MAX_SIGS; i++)
+		INIT_LIST_HEAD(&sig_interests[i]);
+}
 
 static void iv_signal_handler(int signum)
 {
@@ -94,19 +105,6 @@ int iv_signal_register(struct iv_signal *this)
 	iv_event_raw_register(&this->ev);
 
 	this->active = 0;
-
-	pthr_mutex_lock(&sig_init_lock);
-	if (!sig_initialized) {
-		int i;
-
-		sig_initialized = 1;
-
-		sig_owner = getpid();
-		pthr_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
-		for (i = 0; i < MAX_SIGS; i++)
-			INIT_LIST_HEAD(&sig_interests[i]);
-	}
-	pthr_mutex_unlock(&sig_init_lock);
 
 	sigfillset(&mask);
 	pthr_sigmask(SIG_BLOCK, &mask, &mask);
