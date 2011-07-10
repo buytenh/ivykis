@@ -38,6 +38,7 @@ struct iv_signal {
 
 	struct list_head	list;
 	struct iv_event_raw	ev;
+	pid_t			owner;
 	int			active;
 };
 

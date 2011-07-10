@@ -27,7 +27,6 @@
 
 #define MAX_SIGS	32
 
-static pid_t sig_owner;
 static pthread_spinlock_t sig_interests_lock;
 static struct list_head sig_interests[MAX_SIGS];
 
@@ -35,8 +34,6 @@ static void iv_signal_init(void) __attribute__((constructor));
 static void iv_signal_init(void)
 {
 	int i;
-
-	sig_owner = getpid();
 
 	pthr_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
 
@@ -51,19 +48,19 @@ static void iv_signal_handler(int signum)
 	if (signum < 0 || signum >= MAX_SIGS)
 		return;
 
-	/*
-	 * Prevent signals delivered to child processes from causing
-	 * callbacks to be invoked.
-	 */
-	if (sig_owner != getpid())
-		return;
-
 	pthr_spin_lock(&sig_interests_lock);
 
 	list_for_each (lh, &sig_interests[signum]) {
 		struct iv_signal *is;
 
 		is = container_of(lh, struct iv_signal, list);
+
+		/*
+		 * Prevent signals delivered to child processes
+		 * from causing callbacks to be invoked.
+		 */
+		if (is->owner != getpid())
+			continue;
 
 		iv_event_raw_post(&is->ev);
 		is->active = 1;
@@ -104,6 +101,7 @@ int iv_signal_register(struct iv_signal *this)
 	this->ev.handler = iv_signal_event;
 	iv_event_raw_register(&this->ev);
 
+	this->owner = getpid();
 	this->active = 0;
 
 	sigfillset(&mask);
