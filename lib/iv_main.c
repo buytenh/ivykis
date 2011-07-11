@@ -130,7 +130,7 @@ static void iv_init_first_thread(struct iv_state *st)
 }
 
 
-/* main loop ****************************************************************/
+/* tls handling *************************************************************/
 #ifdef HAVE_THREAD
 __thread struct iv_state __st;
 
@@ -187,6 +187,8 @@ static void iv_destroy_state(struct iv_state *st)
 }
 #endif
 
+
+/* main loop ****************************************************************/
 void iv_init(void)
 {
 	struct iv_state *st;
