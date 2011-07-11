@@ -21,8 +21,42 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <openssl/err.h>
+#include <pthread.h>
+#include <signal.h>
 #include "iv_openssl.h"
+#include "../../modules/thr.h"
 
+/* openssl pthreads locking *************************************************/
+static pthread_mutex_t *openssl_lock;
+
+static void iv_openssl_lock_cb(int mode, int n, const char *file, int line)
+{
+	if (mode & CRYPTO_LOCK)
+		pthr_mutex_lock(&openssl_lock[n]);
+	else
+		pthr_mutex_unlock(&openssl_lock[n]);
+}
+
+static void iv_openssl_init(void) __attribute__((constructor));
+static void iv_openssl_init(void)
+{
+	int num_locks = CRYPTO_num_locks();
+	int i;
+
+	openssl_lock = malloc(num_locks * sizeof(pthread_mutex_t));
+	if (openssl_lock == NULL) {
+		fprintf(stderr, "iv_openssl_init: out of memory\n");
+		exit(1);
+	}
+
+	for (i = 0; i < num_locks; i++)
+		pthr_mutex_init(openssl_lock + i, NULL);
+
+	CRYPTO_set_locking_callback(iv_openssl_lock_cb);
+}
+
+
+/* iv_openssl proper ********************************************************/
 int iv_openssl_register(struct iv_openssl *ssl)
 {
 	ssl->ssl = SSL_new(ssl->ctx);
