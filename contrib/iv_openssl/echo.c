@@ -20,11 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
+#include <iv_thread.h>
 #include <netinet/in.h>
 #include "iv_openssl.h"
-
-static SSL_CTX *ctx;
-static struct iv_fd listening_socket;
 
 struct connection {
 	int				fd;
@@ -87,6 +85,15 @@ static void accept_done(void *_conn, int ret)
 		return;
 	}
 
+	if (0) {
+		int bits;
+
+		SSL_get_cipher_bits(conn->ssl.ssl, &bits);
+		printf("%s connection established with %s (%d bit)\n",
+			SSL_get_cipher_version(conn->ssl.ssl),
+			SSL_get_cipher_name(conn->ssl.ssl), bits);
+	}
+
 	conn->req_rd.ssl = &conn->ssl;
 	conn->req_rd.type = IV_OPENSSL_REQ_READ;
 	conn->req_rd.readbuf = conn->buf;
@@ -96,15 +103,22 @@ static void accept_done(void *_conn, int ret)
 	iv_openssl_request_submit(&conn->req_rd);
 }
 
-static void got_connection(void *_dummy)
+
+struct worker_thread {
+	SSL_CTX *ctx;
+	struct iv_fd sock;
+};
+
+static void got_connection(void *_wt)
 {
+	struct worker_thread *wt = _wt;
 	struct sockaddr_in addr;
 	socklen_t addrlen;
 	struct connection *conn;
 	int fd;
 
 	addrlen = sizeof(addr);
-	fd = accept(listening_socket.fd, (struct sockaddr *)&addr, &addrlen);
+	fd = accept(wt->sock.fd, (struct sockaddr *)&addr, &addrlen);
 	if (fd <= 0) {
 		if (fd < 0 && errno == EAGAIN)
 			return;
@@ -120,7 +134,7 @@ static void got_connection(void *_dummy)
 
 	conn->fd = fd;
 
-	conn->ssl.ctx = ctx;
+	conn->ssl.ctx = wt->ctx;
 	conn->ssl.fd = fd;
 	iv_openssl_register(&conn->ssl);
 
@@ -137,17 +151,37 @@ static void got_connection(void *_dummy)
 	iv_openssl_request_init(&conn->req_wr);
 }
 
+
+static int fd;
+
+static void worker(void *_dummy)
+{
+	struct worker_thread wt;
+
+	wt.ctx = SSL_CTX_new(TLSv1_method());
+	if (wt.ctx == NULL)
+		return;
+
+	iv_init();
+
+	IV_FD_INIT(&wt.sock);
+	wt.sock.fd = fd;
+	wt.sock.cookie = &wt;
+	wt.sock.handler_in = got_connection;
+	iv_fd_register(&wt.sock);
+
+	iv_main();
+
+	iv_deinit();
+}
+
 int main()
 {
-	int fd;
 	struct sockaddr_in addr;
+	int i;
 
 	SSL_load_error_strings();
 	SSL_library_init();
-
-	ctx = SSL_CTX_new(TLSv1_method());
-	if (ctx == NULL)
-		return 1;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -163,17 +197,19 @@ int main()
 		exit(-1);
 	}
 
-	if (listen(fd, 4) < 0) {
+	if (listen(fd, 1000) < 0) {
 		perror("listen");
 		exit(-1);
 	}
 
 	iv_init();
 
-	IV_FD_INIT(&listening_socket);
-	listening_socket.fd = fd;
-	listening_socket.handler_in = got_connection;
-	iv_fd_register(&listening_socket);
+	for (i = 0; i < 16; i++) {
+		char name[16];
+
+		snprintf(name, sizeof(name), "worker %d", i);
+		iv_thread_create(name, worker, NULL);
+	}
 
 	iv_main();
 
