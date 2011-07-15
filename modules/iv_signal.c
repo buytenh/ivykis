@@ -23,7 +23,6 @@
 #include <iv_signal.h>
 #include <pthread.h>
 #include <inttypes.h>
-#include "thr.h"
 
 #define MAX_SIGS	32
 
@@ -35,7 +34,7 @@ static void iv_signal_init(void)
 {
 	int i;
 
-	pthr_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
+	pthread_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
 
 	for (i = 0; i < MAX_SIGS; i++)
 		INIT_LIST_HEAD(&sig_interests[i]);
@@ -48,7 +47,7 @@ static void iv_signal_handler(int signum)
 	if (signum < 0 || signum >= MAX_SIGS)
 		return;
 
-	pthr_spin_lock(&sig_interests_lock);
+	pthread_spin_lock(&sig_interests_lock);
 
 	list_for_each (lh, &sig_interests[signum]) {
 		struct iv_signal *is;
@@ -69,7 +68,7 @@ static void iv_signal_handler(int signum)
 			break;
 	}
 
-	pthr_spin_unlock(&sig_interests_lock);
+	pthread_spin_unlock(&sig_interests_lock);
 }
 
 static void iv_signal_event(void *_this)
@@ -78,13 +77,13 @@ static void iv_signal_event(void *_this)
 	sigset_t mask;
 
 	sigfillset(&mask);
-	pthr_sigmask(SIG_BLOCK, &mask, &mask);
-	pthr_spin_lock(&sig_interests_lock);
+	pthread_sigmask(SIG_BLOCK, &mask, &mask);
+	pthread_spin_lock(&sig_interests_lock);
 
 	this->active = 0;
 
-	pthr_spin_unlock(&sig_interests_lock);
-	pthr_sigmask(SIG_SETMASK, &mask, NULL);
+	pthread_spin_unlock(&sig_interests_lock);
+	pthread_sigmask(SIG_SETMASK, &mask, NULL);
 
 	this->handler(this->cookie);
 }
@@ -105,8 +104,8 @@ int iv_signal_register(struct iv_signal *this)
 	this->active = 0;
 
 	sigfillset(&mask);
-	pthr_sigmask(SIG_BLOCK, &mask, &mask);
-	pthr_spin_lock(&sig_interests_lock);
+	pthread_sigmask(SIG_BLOCK, &mask, &mask);
+	pthread_spin_lock(&sig_interests_lock);
 
 	if (list_empty(&sig_interests[this->signum])) {
 		struct sigaction sa;
@@ -118,8 +117,8 @@ int iv_signal_register(struct iv_signal *this)
 	}
 	list_add_tail(&this->list, &sig_interests[this->signum]);
 
-	pthr_spin_unlock(&sig_interests_lock);
-	pthr_sigmask(SIG_SETMASK, &mask, NULL);
+	pthread_spin_unlock(&sig_interests_lock);
+	pthread_sigmask(SIG_SETMASK, &mask, NULL);
 
 	return 0;
 }
@@ -129,8 +128,8 @@ void iv_signal_unregister(struct iv_signal *this)
 	sigset_t mask;
 
 	sigfillset(&mask);
-	pthr_sigmask(SIG_BLOCK, &mask, &mask);
-	pthr_spin_lock(&sig_interests_lock);
+	pthread_sigmask(SIG_BLOCK, &mask, &mask);
+	pthread_spin_lock(&sig_interests_lock);
 
 	list_del(&this->list);
 	if (list_empty(&sig_interests[this->signum])) {
@@ -148,8 +147,8 @@ void iv_signal_unregister(struct iv_signal *this)
 		iv_event_raw_post(&nxt->ev);
 	}
 
-	pthr_spin_unlock(&sig_interests_lock);
-	pthr_sigmask(SIG_SETMASK, &mask, NULL);
+	pthread_spin_unlock(&sig_interests_lock);
+	pthread_sigmask(SIG_SETMASK, &mask, NULL);
 
 	iv_event_raw_unregister(&this->ev);
 }

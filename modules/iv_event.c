@@ -25,7 +25,6 @@
 #include <iv_event_raw.h>
 #include <pthread.h>
 #include <signal.h>
-#include "thr.h"
 
 static __thread struct iv_event_thr_info {
 	int			event_count;
@@ -37,7 +36,7 @@ static __thread struct iv_event_thr_info {
 
 static void iv_event_run_pending_events(void *_dummy)
 {
-	pthr_mutex_lock(&tinfo.list_mutex);
+	pthread_mutex_lock(&tinfo.list_mutex);
 	while (!list_empty(&tinfo.pending_events)) {
 		struct iv_event *ie;
 
@@ -46,15 +45,15 @@ static void iv_event_run_pending_events(void *_dummy)
 
 		list_del_init(&ie->list);
 
-		pthr_mutex_unlock(&tinfo.list_mutex);
+		pthread_mutex_unlock(&tinfo.list_mutex);
 
 		ie->handler(ie->cookie);
 		if (tinfo.dead)
 			return;
 
-		pthr_mutex_lock(&tinfo.list_mutex);
+		pthread_mutex_lock(&tinfo.list_mutex);
 	}
-	pthr_mutex_unlock(&tinfo.list_mutex);
+	pthread_mutex_unlock(&tinfo.list_mutex);
 }
 
 int iv_event_register(struct iv_event *this)
@@ -69,7 +68,7 @@ int iv_event_register(struct iv_event *this)
 		if (ret)
 			return ret;
 
-		pthr_mutex_init(&tinfo.list_mutex, NULL);
+		pthread_mutex_init(&tinfo.list_mutex, NULL);
 		INIT_LIST_HEAD(&tinfo.pending_events);
 		tinfo.dead = 0;
 	}
@@ -83,14 +82,14 @@ int iv_event_register(struct iv_event *this)
 void iv_event_unregister(struct iv_event *this)
 {
 	if (!list_empty(&this->list)) {
-		pthr_mutex_lock(&tinfo.list_mutex);
+		pthread_mutex_lock(&tinfo.list_mutex);
 		list_del(&this->list);
-		pthr_mutex_unlock(&tinfo.list_mutex);
+		pthread_mutex_unlock(&tinfo.list_mutex);
 	}
 
 	if (!--tinfo.event_count) {
 		tinfo.dead = 1;
-		pthr_mutex_destroy(&tinfo.list_mutex);
+		pthread_mutex_destroy(&tinfo.list_mutex);
 		iv_event_raw_unregister(&tinfo.ier);
 	}
 }
@@ -99,10 +98,10 @@ void iv_event_post(struct iv_event *this)
 {
 	struct iv_event_thr_info *t = this->tinfo;
 
-	pthr_mutex_lock(&t->list_mutex);
+	pthread_mutex_lock(&t->list_mutex);
 	if (list_empty(&this->list)) {
 		list_add_tail(&this->list, &t->pending_events);
 		iv_event_raw_post(&t->ier);
 	}
-	pthr_mutex_unlock(&t->list_mutex);
+	pthread_mutex_unlock(&t->list_mutex);
 }

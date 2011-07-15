@@ -24,7 +24,6 @@
 #include <pthread.h>
 #include <signal.h>
 #include "iv_openssl.h"
-#include "../../modules/thr.h"
 
 /* openssl pthreads locking *************************************************/
 static pthread_mutex_t *openssl_lock;
@@ -32,9 +31,9 @@ static pthread_mutex_t *openssl_lock;
 static void iv_openssl_lock_cb(int mode, int n, const char *file, int line)
 {
 	if (mode & CRYPTO_LOCK)
-		pthr_mutex_lock(&openssl_lock[n]);
+		pthread_mutex_lock(&openssl_lock[n]);
 	else
-		pthr_mutex_unlock(&openssl_lock[n]);
+		pthread_mutex_unlock(&openssl_lock[n]);
 }
 
 static void iv_openssl_init(void) __attribute__((constructor));
@@ -50,7 +49,7 @@ static void iv_openssl_init(void)
 	}
 
 	for (i = 0; i < num_locks; i++)
-		pthr_mutex_init(openssl_lock + i, NULL);
+		pthread_mutex_init(openssl_lock + i, NULL);
 
 	CRYPTO_set_locking_callback(iv_openssl_lock_cb);
 }
