@@ -217,7 +217,7 @@ int iv_inited(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	return st->initialised;
+	return st != NULL && st->initialised;
 }
 
 void iv_quit(void)
