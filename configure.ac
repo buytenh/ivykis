@@ -370,6 +370,7 @@ AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
 		 contrib/iv_getaddrinfo/Makefile	\
+		 contrib/iv_urcu_call/Makefile	\
 		 contrib/kojines/Makefile	\
 		 lib/Makefile			\
 		 lib/include/iv.h		\
