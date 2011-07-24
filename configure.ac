@@ -331,6 +331,10 @@ solaris*)
 	;;
 esac
 
+# Check for librucu.
+AC_SEARCH_LIBS([rcu_register_thread_qsbr], [urcu-qsbr], [],
+	AC_MSG_ERROR(liburcu support is required to build ivykis.))
+
 # Check for linker version script support.
 ac_save_LDFLAGS=$LDFLAGS
 AC_CACHE_CHECK(whether $LD supports symbol version scripts,

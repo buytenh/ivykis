@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#define _LGPL_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -26,6 +28,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <sys/resource.h>
+#include <urcu-qsbr.h>
 #include "iv_private.h"
 
 /* process-global state *****************************************************/
@@ -143,6 +146,8 @@ static void __iv_deinit(struct iv_state *st)
 	iv_timer_deinit(st);
 	iv_tls_thread_deinit(st);
 
+	rcu_unregister_thread();
+
 	pthread_setspecific(iv_state_key, NULL);
 #ifdef HAVE_THREAD
 	__st = NULL;
@@ -197,6 +202,9 @@ void iv_init(void)
 	iv_task_init(st);
 	iv_timer_init(st);
 	iv_tls_thread_init(st);
+
+	rcu_register_thread();
+	rcu_thread_offline();
 }
 
 int iv_inited(void)
@@ -258,9 +266,13 @@ void iv_main(void)
 
 	INIT_IV_LIST_HEAD(&active);
 
+	rcu_thread_online();
+
 	st->quit = 0;
 	while (1) {
 		struct timespec to;
+
+		rcu_quiescent_state();
 
 		iv_run_tasks(st);
 		iv_run_timers(st);
@@ -271,13 +283,19 @@ void iv_main(void)
 		if (iv_pending_tasks(st) || iv_get_soonest_timeout(st, &to)) {
 			to.tv_sec = 0;
 			to.tv_nsec = 0;
+			method->poll(st, &active, &to);
+		} else {
+			rcu_thread_offline();
+			method->poll(st, &active, &to);
+			rcu_thread_online();
 		}
-		method->poll(st, &active, &to);
 
 		__iv_invalidate_now(st);
 
 		iv_run_active_list(st, &active);
 	}
+
+	rcu_thread_offline();
 }
 
 void iv_deinit(void)
