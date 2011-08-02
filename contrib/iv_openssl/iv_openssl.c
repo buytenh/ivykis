@@ -118,6 +118,10 @@ __iv_openssl_attempt_request(struct iv_openssl *ssl,
 		ret = SSL_accept(ssl->ssl);
 		break;
 
+	case IV_OPENSSL_REQ_DO_HANDSHAKE:
+		ret = SSL_do_handshake(ssl->ssl);
+		break;
+
 	case IV_OPENSSL_REQ_READ:
 		ret = SSL_read(ssl->ssl, req->readbuf, req->num);
 		break;

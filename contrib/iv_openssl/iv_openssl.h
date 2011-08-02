@@ -40,6 +40,7 @@ void iv_openssl_unregister(struct iv_openssl *ssl);
 enum iv_openssl_req_type {
 	IV_OPENSSL_REQ_CONNECT,
 	IV_OPENSSL_REQ_ACCEPT,
+	IV_OPENSSL_REQ_DO_HANDSHAKE,
 	IV_OPENSSL_REQ_READ,
 	IV_OPENSSL_REQ_WRITE,
 	IV_OPENSSL_REQ_SHUTDOWN,
