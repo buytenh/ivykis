@@ -43,6 +43,13 @@ static void kill_connection(struct connection *conn)
 	free(conn);
 }
 
+static void shutdown_done(void *_conn, int ret)
+{
+	struct connection *conn = _conn;
+
+	kill_connection(conn);
+}
+
 static void write_done(void *_conn, int ret)
 {
 	struct connection *conn = _conn;
@@ -63,16 +70,16 @@ static void read_done(void *_conn, int ret)
 {
 	struct connection *conn = _conn;
 
-	/* @@@ Implement sending close notify.  */
 	if (ret <= 0) {
-		kill_connection(conn);
-		return;
+		conn->req.type = IV_OPENSSL_REQ_SHUTDOWN;
+		conn->req.handler = shutdown_done;
+	} else {
+		conn->req.type = IV_OPENSSL_REQ_WRITE;
+		conn->req.writebuf = conn->buf;
+		conn->req.num = ret;
+		conn->req.handler = write_done;
 	}
 
-	conn->req.type = IV_OPENSSL_REQ_WRITE;
-	conn->req.writebuf = conn->buf;
-	conn->req.num = ret;
-	conn->req.handler = write_done;
 	iv_openssl_request_submit(&conn->req);
 }
 
