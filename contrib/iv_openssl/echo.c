@@ -28,18 +28,16 @@ struct connection {
 	int				fd;
 	struct iv_openssl		ssl;
 
-	struct iv_openssl_request	req_rd;
+	struct iv_openssl_request	req;
 	uint8_t				buf[1024];
 	int				buflen;
-
-	struct iv_openssl_request	req_wr;
 };
 
 
+static void read_done(void *_conn, int ret);
+
 static void kill_connection(struct connection *conn)
 {
-	iv_openssl_request_cancel(&conn->req_rd);
-	iv_openssl_request_cancel(&conn->req_wr);
 	iv_openssl_unregister(&conn->ssl);
 	close(conn->fd);
 	free(conn);
@@ -49,12 +47,16 @@ static void write_done(void *_conn, int ret)
 {
 	struct connection *conn = _conn;
 
-	if (ret != conn->req_wr.num) {
+	if (ret != conn->req.num) {
 		kill_connection(conn);
 		return;
 	}
 
-	iv_openssl_request_submit(&conn->req_rd);
+	conn->req.type = IV_OPENSSL_REQ_READ;
+	conn->req.readbuf = conn->buf;
+	conn->req.num = sizeof(conn->buf);
+	conn->req.handler = read_done;
+	iv_openssl_request_submit(&conn->req);
 }
 
 static void read_done(void *_conn, int ret)
@@ -67,13 +69,11 @@ static void read_done(void *_conn, int ret)
 		return;
 	}
 
-	conn->req_wr.ssl = &conn->ssl;
-	conn->req_wr.type = IV_OPENSSL_REQ_WRITE;
-	conn->req_wr.writebuf = conn->buf;
-	conn->req_wr.num = ret;
-	conn->req_wr.cookie = conn;
-	conn->req_wr.handler = write_done;
-	iv_openssl_request_submit(&conn->req_wr);
+	conn->req.type = IV_OPENSSL_REQ_WRITE;
+	conn->req.writebuf = conn->buf;
+	conn->req.num = ret;
+	conn->req.handler = write_done;
+	iv_openssl_request_submit(&conn->req);
 }
 
 static void accept_done(void *_conn, int ret)
@@ -94,13 +94,11 @@ static void accept_done(void *_conn, int ret)
 			SSL_get_cipher_name(conn->ssl.ssl), bits);
 	}
 
-	conn->req_rd.ssl = &conn->ssl;
-	conn->req_rd.type = IV_OPENSSL_REQ_READ;
-	conn->req_rd.readbuf = conn->buf;
-	conn->req_rd.num = sizeof(conn->buf);
-	conn->req_rd.cookie = conn;
-	conn->req_rd.handler = read_done;
-	iv_openssl_request_submit(&conn->req_rd);
+	conn->req.type = IV_OPENSSL_REQ_READ;
+	conn->req.readbuf = conn->buf;
+	conn->req.num = sizeof(conn->buf);
+	conn->req.handler = read_done;
+	iv_openssl_request_submit(&conn->req);
 }
 
 
@@ -141,14 +139,12 @@ static void got_connection(void *_wt)
 	SSL_use_certificate_file(conn->ssl.ssl, "server.crt", SSL_FILETYPE_PEM);
 	SSL_use_PrivateKey_file(conn->ssl.ssl, "server.key", SSL_FILETYPE_PEM);
 
-	iv_openssl_request_init(&conn->req_rd);
-	conn->req_rd.ssl = &conn->ssl;
-	conn->req_rd.type = IV_OPENSSL_REQ_ACCEPT;
-	conn->req_rd.cookie = conn;
-	conn->req_rd.handler = accept_done;
-	iv_openssl_request_submit(&conn->req_rd);
-
-	iv_openssl_request_init(&conn->req_wr);
+	iv_openssl_request_init(&conn->req);
+	conn->req.ssl = &conn->ssl;
+	conn->req.type = IV_OPENSSL_REQ_ACCEPT;
+	conn->req.cookie = conn;
+	conn->req.handler = accept_done;
+	iv_openssl_request_submit(&conn->req);
 }
 
 
