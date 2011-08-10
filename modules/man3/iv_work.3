@@ -81,6 +81,15 @@ as its sole argument, in the thread that
 .B iv_work_pool_create
 was called in for this pool object.
 .PP
+As a special case, calling
+.B iv_work_pool_submit_work
+with a
+.B NULL
+work pool pointer will cause the work item to be processed in the local
+thread, from an
+.BR iv_task (3)
+callback.
+.PP
 If the
 .B ->thread_start
 function pointer specified in
