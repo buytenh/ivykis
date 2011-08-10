@@ -7,4 +7,4 @@ includedir=@includedir@
 Name: ivykis-modules
 Version: @VERSION@
 Description: event handling library modules
-Libs: -L${libdir} -livykis-modules -lrt
+Libs: -L${libdir} -livykis-modules -lrt -lpthread
