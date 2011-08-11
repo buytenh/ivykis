@@ -44,10 +44,7 @@ struct iv_work_item {
 	void			(*work)(void *cookie);
 	void			(*completion)(void *cookie);
 
-	union {
-		struct list_head	list;
-		struct iv_task		task;
-	};
+	struct list_head	list;
 };
 
 static inline void IV_WORK_POOL_INIT(struct iv_work_pool *this)

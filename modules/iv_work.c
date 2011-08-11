@@ -290,40 +290,73 @@ static int iv_work_start_thread(struct work_pool_priv *pool)
 	return 0;
 }
 
-static void iv_work_pool_handle_via_task(void *_work)
+static void
+iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 {
-	struct iv_work_item *work = _work;
+	struct work_pool_priv *pool = this->priv;
 
-	work->work(work->cookie);
-	work->completion(work->cookie);
+	pthread_mutex_lock(&pool->lock);
+
+	list_add_tail(&work->list, &pool->work_items);
+
+	if (!list_empty(&pool->idle_threads)) {
+		struct work_pool_thread *thr;
+
+		thr = container_of(pool->idle_threads.next,
+				   struct work_pool_thread, list);
+		thr->kicked = 1;
+		iv_event_post(&thr->kick);
+	} else if (pool->started_threads < this->max_threads) {
+		iv_work_start_thread(pool);
+	}
+
+	pthread_mutex_unlock(&pool->lock);
+}
+
+static __thread struct iv_work_thr_info {
+	int			inited;
+	struct iv_task		task;
+	struct list_head	work_items;
+} tinfo;
+
+static void iv_work_handle_local(void *_work)
+{
+	while (!list_empty(&tinfo.work_items)) {
+		struct iv_work_item *work;
+
+		work = container_of(tinfo.work_items.next,
+				    struct iv_work_item, list);
+
+		list_del(&work->list);
+
+		work->work(work->cookie);
+		work->completion(work->cookie);
+	}
+}
+
+static void iv_work_submit_local(struct iv_work_item *work)
+{
+	int was_empty;
+
+	if (!tinfo.inited) {
+		tinfo.inited = 1;
+		IV_TASK_INIT(&tinfo.task);
+		tinfo.task.handler = iv_work_handle_local;
+		INIT_LIST_HEAD(&tinfo.work_items);
+	}
+
+	was_empty = list_empty(&tinfo.work_items);
+
+	list_add_tail(&work->list, &tinfo.work_items);
+	if (was_empty)
+		iv_task_register(&tinfo.task);
 }
 
 void
 iv_work_pool_submit_work(struct iv_work_pool *this, struct iv_work_item *work)
 {
-	if (this != NULL) {
-		struct work_pool_priv *pool = this->priv;
-
-		pthread_mutex_lock(&pool->lock);
-
-		list_add_tail(&work->list, &pool->work_items);
-
-		if (!list_empty(&pool->idle_threads)) {
-			struct work_pool_thread *thr;
-
-			thr = container_of(pool->idle_threads.next,
-					   struct work_pool_thread, list);
-			thr->kicked = 1;
-			iv_event_post(&thr->kick);
-		} else if (pool->started_threads < this->max_threads) {
-			iv_work_start_thread(pool);
-		}
-
-		pthread_mutex_unlock(&pool->lock);
-	} else {
-		IV_TASK_INIT(&work->task);
-		work->task.cookie = work;
-		work->task.handler = iv_work_pool_handle_via_task;
-		iv_task_register(&work->task);
-	}
+	if (this != NULL)
+		iv_work_submit_pool(this, work);
+	else
+		iv_work_submit_local(work);
 }
