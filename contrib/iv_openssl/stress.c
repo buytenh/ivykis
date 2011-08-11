@@ -168,6 +168,7 @@ static void start_querier(struct querier *q)
 #define NUM	32
 
 static struct querier q[NUM];
+static int num_started;
 static int num_complete;
 static int got_err;
 
@@ -177,11 +178,15 @@ static void querier_done(void *_q, int err)
 
 	got_err |= err;
 	if (!got_err) {
+		num_complete++;
 		if (!(num_complete % 1000))
-			printf("%d done\n", num_complete);
+			printf("%d started, %d done\n",
+			       num_started, num_complete);
 
-		if (++num_complete < 10000)
+		if (num_started < 10000) {
+			num_started++;
 			start_querier(q);
+		}
 	}
 }
 
@@ -212,6 +217,8 @@ int main()
 		q[i].cookie = q + i;
 		q[i].handler = querier_done;
 		start_querier(q + i);
+
+		num_started++;
 	}
 
 	iv_main();
