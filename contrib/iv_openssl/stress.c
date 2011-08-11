@@ -171,6 +171,7 @@ static struct querier q[NUM];
 static int num_started;
 static int num_complete;
 static int got_err;
+static struct iv_timer progress;
 
 static void querier_done(void *_q, int err)
 {
@@ -179,14 +180,21 @@ static void querier_done(void *_q, int err)
 	got_err |= err;
 	if (!got_err) {
 		num_complete++;
-		if (!(num_complete % 1000))
-			printf("%d started, %d done\n",
-			       num_started, num_complete);
 
 		if (num_started < 10000) {
 			num_started++;
 			start_querier(q);
 		}
+	}
+}
+
+static void report_progress(void *dummy)
+{
+	printf("%d started, %d done\n", num_started, num_complete);
+
+	if (!got_err && num_complete < 10000) {
+		progress.expires.tv_sec++;
+		iv_timer_register(&progress);
 	}
 }
 
@@ -220,6 +228,13 @@ int main()
 
 		num_started++;
 	}
+
+	IV_TIMER_INIT(&progress);
+	progress.handler = report_progress;
+	iv_validate_now();
+	progress.expires = now;
+	progress.expires.tv_sec++;
+	iv_timer_register(&progress);
 
 	iv_main();
 
