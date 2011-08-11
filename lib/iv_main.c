@@ -255,12 +255,13 @@ void iv_main(void)
 		if (should_quit())
 			break;
 
-		if (!iv_get_soonest_timeout(&to)) {
+		if (!iv_pending_tasks() && !iv_get_soonest_timeout(&to)) {
 			msec = 1000 * to.tv_sec;
 			msec += (to.tv_nsec + 999999) / 1000000;
 		} else {
 			msec = 0;
 		}
+
 		method->poll(numfds, &active, msec);
 
 		iv_invalidate_now();

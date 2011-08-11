@@ -44,10 +44,19 @@ int iv_pending_tasks(void)
 
 void iv_run_tasks(void)
 {
-	while (!list_empty(&tasks)) {
+	struct list_head current_tasks;
+
+	if (list_empty(&tasks))
+		return;
+
+        current_tasks = tasks;
+        tasks.prev->next = &current_tasks;
+        tasks.next->prev = &current_tasks;
+	INIT_LIST_HEAD(&tasks);
+	while (!list_empty(&current_tasks)) {
 		struct iv_task_ *t;
 
-		t = list_entry(tasks.next, struct iv_task_, list);
+		t = list_entry(current_tasks.next, struct iv_task_, list);
 		list_del_init(&t->list);
 
 		t->handler(t->cookie);
