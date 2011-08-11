@@ -29,7 +29,8 @@ struct querier {
 	char				*request;
 	int				request_len;
 	void				*cookie;
-	void				(*handler)(void *cookie, int err);
+	int				(*handshake_done)(void *cookie);
+	void				(*conn_closed)(void *cookie, int err);
 
 	struct iv_fd			fd;
 	struct iv_openssl		ssl;
@@ -46,7 +47,7 @@ static void read_done(void *_q, int ret)
 	if (ret <= 0) {
 		iv_openssl_unregister(&q->ssl);
 		close(q->ssl.ifd.fd);
-		q->handler(q->cookie, !!(ret < 0));
+		q->conn_closed(q->cookie, !!(ret < 0));
 		return;
 	}
 
@@ -66,6 +67,19 @@ static void write_done(void *_q, int ret)
 	iv_openssl_request_submit(&q->req_wr);
 }
 
+static void handshake_done(void *_q, int ret)
+{
+	struct querier *q = _q;
+
+	if (q->handshake_done(q->cookie)) {
+		SSL_renegotiate(q->ssl.ssl);
+	} else {
+		q->req_wr.type = IV_OPENSSL_REQ_SHUTDOWN;
+		q->req_wr.handler = shutdown_done;
+	}
+	iv_openssl_request_submit(&q->req_wr);
+}
+
 static const char *cipher_name_prev;
 
 static void ssl_connect_done(void *_q, int ret)
@@ -77,7 +91,7 @@ static void ssl_connect_done(void *_q, int ret)
 	if (ret <= 0) {
 		iv_openssl_unregister(&q->ssl);
 		close(q->ssl.ifd.fd);
-		q->handler(q->cookie, 1);
+		q->conn_closed(q->cookie, 1);
 		return;
 	}
 
@@ -96,10 +110,20 @@ static void ssl_connect_done(void *_q, int ret)
 	q->req_rd.handler = read_done;
 	iv_openssl_request_submit(&q->req_rd);
 
-	q->req_wr.type = IV_OPENSSL_REQ_WRITE;
-	q->req_wr.writebuf = q->request;
-	q->req_wr.num = q->request_len;
-	q->req_wr.handler = write_done;
+	if (q->request_len) {
+		q->req_wr.type = IV_OPENSSL_REQ_WRITE;
+		q->req_wr.writebuf = q->request;
+		q->req_wr.num = q->request_len;
+		q->req_wr.handler = write_done;
+	} else if (q->handshake_done(q->cookie)) {
+		SSL_renegotiate(q->ssl.ssl);
+
+		q->req_wr.type = IV_OPENSSL_REQ_DO_HANDSHAKE;
+		q->req_wr.handler = handshake_done;
+	} else {
+		q->req_wr.type = IV_OPENSSL_REQ_SHUTDOWN;
+		q->req_wr.handler = shutdown_done;
+	}
 	iv_openssl_request_submit(&q->req_wr);
 }
 
@@ -121,7 +145,7 @@ static void connect_done(void *_q)
 			fprintf(stderr, "connect: %s\n", strerror(ret));
 			iv_fd_unregister(&q->fd);
 			close(q->fd.fd);
-			q->handler(q->cookie, 1);
+			q->conn_closed(q->cookie, 1);
 		}
 		return;
 	}
@@ -173,16 +197,30 @@ static int num_complete;
 static int got_err;
 static struct iv_timer progress;
 
-static void querier_done(void *_q, int err)
+static int querier_handshake_done(void *_q)
+{
+	num_complete++;
+
+	if (!got_err && num_started < 10000) {
+		num_started++;
+		return 1;
+	}
+
+	return 0;
+}
+
+static void querier_conn_closed(void *_q, int err)
 {
 	struct querier *q = _q;
 
 	got_err |= err;
 	if (!got_err) {
-		num_complete++;
+		if (q->request_len)
+			num_complete++;
 
 		if (num_started < 10000) {
-			num_started++;
+			if (q->request_len)
+				num_started++;
 			start_querier(q);
 		}
 	}
@@ -201,7 +239,7 @@ static void report_progress(void *dummy)
 
 static char *request = "GET / HTTP/1.0\r\n\r\n";
 
-int main()
+int main(int argc, char *argv[])
 {
 	SSL_CTX *ctx;
 	int i;
@@ -220,10 +258,16 @@ int main()
 		q[i].addr.sin_addr.s_addr = htonl(0x7f000001);
 		q[i].addr.sin_port = htons(12345);
 		q[i].ctx = ctx;
-		q[i].request = request;
-		q[i].request_len = strlen(request);
+		if (argc == 1) {
+			q[i].request = request;
+			q[i].request_len = strlen(request);
+		} else {
+			q[i].request = NULL;
+			q[i].request_len = 0;
+		}
 		q[i].cookie = q + i;
-		q[i].handler = querier_done;
+		q[i].handshake_done = querier_handshake_done;
+		q[i].conn_closed = querier_conn_closed;
 		start_querier(q + i);
 
 		num_started++;
