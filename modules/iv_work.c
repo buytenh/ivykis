@@ -63,16 +63,40 @@ static void __iv_work_thread_cleanup(struct work_pool_thread *thr, int timeout)
 	pool->started_threads--;
 }
 
+#define NSEC_PER_SEC 1e9
+
+/* this is copied from iv_timer.c verbatim, should probably be shared somehow */
+static inline int timespec_gt(struct timespec *a, struct timespec *b)
+{
+	return !!(a->tv_sec > b->tv_sec ||
+		 (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
+}
+
 static void iv_work_thread_got_event(void *_thr)
 {
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
+	struct timespec finish;
 
 	pthread_mutex_lock(&pool->lock);
 
 	thr->kicked = 0;
 
-	while (1) {
+	/* every once in a while we return to the mainloop in order to
+	 * process possibly registered tasks and other event
+	 * sources. Otherwise this loop can starve everything
+	 * else. The once in a while is once every 100msec. */
+
+	iv_validate_now();
+	finish = iv_now;
+	finish.tv_nsec += NSEC_PER_SEC / 10;
+	if (finish.tv_nsec > NSEC_PER_SEC) {
+		finish.tv_sec++;
+		finish.tv_nsec -= NSEC_PER_SEC;
+	}
+
+
+	while (timespec_gt(&finish, &iv_now)) {
 		struct iv_work_item *work;
 
 		if (list_empty(&pool->work_items))
@@ -100,6 +124,10 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_event_post(&pool->ev);
 	}
 
+	if (!list_empty(&pool->work_items)) {
+		thr->kicked = 1;
+		iv_event_post(&thr->kick);
+	}
 	if (pool->public == NULL) {
 		__iv_work_thread_cleanup(thr, 0);
 		if (!pool->started_threads)
