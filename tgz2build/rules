@@ -2,7 +2,7 @@
 
 STAMPDIR=tgz2build/stamps
 
-CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --enable-shared --includedir="$(ZBS_PREFIX)/include/ivykis" --disable-kqueue
+CONFIGURE_OPTS := --prefix $(ZBS_PREFIX) --enable-shared --includedir="$(ZBS_PREFIX)/include/ivykis" --disable-kqueue --disable-dev-poll
 
 LDFLAGS+=-L$(PWD)/lib -L$(PWD)/lib/.libs
 ifeq (,$(CC))
@@ -26,6 +26,12 @@ endif
 ifneq (,$(findstring linux-glibc2.3.2,$(ZBS_DIST)))
   CONFIGURE_OPTS+= --disable-epoll
   # syslog-ng needs a C99 standtard compliant C compiler. GCC 2.95 is not compliant so we have to use a home built GCC 3.3 for this.
+endif
+
+ifneq (,$(findstring tru64,$(ZBS_DIST)))
+  # need to use the gcc version 4.0.2 because the gcc-4.2 generated wrong binary which did not started thread correctly
+  CC=gcc
+  CPP=cpp
 endif
 
 all: binary
