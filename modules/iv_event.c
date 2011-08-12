@@ -41,11 +41,23 @@ TLS_BLOCK_END;
 
 static void iv_event_run_pending_events(void *_dummy)
 {
+	struct list_head current_pending_events;
+
 	pthr_mutex_lock(&tinfo.list_mutex);
-	while (!list_empty(&tinfo.pending_events)) {
+
+	if (list_empty(&tinfo.pending_events)) {
+		pthr_mutex_unlock(&tinfo.list_mutex);
+		return;
+	}
+
+	current_pending_events = tinfo.pending_events;
+        tinfo.pending_events.prev->next = &current_pending_events;
+        tinfo.pending_events.next->prev = &current_pending_events;
+	INIT_LIST_HEAD(&tinfo.pending_events);
+	while (!list_empty(&current_pending_events)) {
 		struct iv_event *ie;
 
-		ie = container_of(tinfo.pending_events.next,
+		ie = container_of(current_pending_events.next,
 				  struct iv_event, list);
 
 		list_del_init(&ie->list);
