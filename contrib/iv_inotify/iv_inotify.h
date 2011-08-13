@@ -34,7 +34,6 @@ struct iv_inotify {
 	/* No public members.  */
 
 	struct iv_fd		fd;
-	size_t			num_watches;
 	struct iv_avl_tree	watches;
 	void			**term;
 };

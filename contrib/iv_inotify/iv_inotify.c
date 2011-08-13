@@ -49,13 +49,6 @@ static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 	return NULL;
 }
 
-static void
-__iv_inotify_cleanup_watch(struct iv_inotify *this, struct iv_inotify_watch *w)
-{
-	iv_avl_tree_delete(&this->watches, &w->an);
-	this->num_watches--;
-}
-
 static void iv_inotify_got_event(void *_this)
 {
 	struct iv_inotify *this = (struct iv_inotify *)_this;
@@ -88,7 +81,7 @@ static void iv_inotify_got_event(void *_this)
 		w = __find_watch(this, event->wd);
 		if (w != NULL) {
 			if (event->mask & IN_IGNORED || w->mask & IN_ONESHOT)
-				__iv_inotify_cleanup_watch(this, w);
+				iv_avl_tree_delete(&this->watches, &w->an);
 			w->handler(w->cookie, event);
 		}
 
@@ -134,7 +127,6 @@ int iv_inotify_register(struct iv_inotify *this)
 	iv_fd_register(&this->fd);
 
 	INIT_IV_AVL_TREE(&this->watches, __iv_inotify_watch_compare);
-	this->num_watches = 0;
 
 	return 0;
 }
@@ -156,8 +148,6 @@ int iv_inotify_watch_register(struct iv_inotify_watch *w)
 	if (w->wd == -1)
 		return -1;
 
-	inotify->num_watches++;
-
 	return iv_avl_tree_insert(&inotify->watches, &w->an);
 }
 
@@ -166,6 +156,5 @@ void iv_inotify_watch_unregister(struct iv_inotify_watch *w)
 	struct iv_inotify *inotify = w->inotify;
 
 	inotify_rm_watch(inotify->fd.fd, w->wd);
-
-	__iv_inotify_cleanup_watch(inotify, w);
+	iv_avl_tree_delete(&inotify->watches, &w->an);
 }
