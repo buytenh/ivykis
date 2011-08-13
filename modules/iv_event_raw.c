@@ -73,7 +73,8 @@ static void iv_event_raw_got_event(void *_this)
 
 	if (ret <= 0) {
 		if (ret == 0 || errno != EAGAIN) {
-			perror("read");
+			if (ret < 0)
+				perror("read");
 			abort();
 		}
 		return;
