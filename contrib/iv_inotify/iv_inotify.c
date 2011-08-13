@@ -28,9 +28,6 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 
-static struct iv_inotify	__default_instance;
-static int			__default_initialized = 0;
-
 static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 {
 	struct iv_avl_node *an;
@@ -57,11 +54,6 @@ __iv_inotify_cleanup_watch(struct iv_inotify *this, struct iv_inotify_watch *w)
 {
 	iv_avl_tree_delete(&this->watches, &w->an);
 	this->num_watches--;
-
-	if (this == &__default_instance && this->num_watches == 0) {
-		iv_inotify_unregister(this);
-		__default_initialized = 0;
-	}
 }
 
 static void iv_inotify_got_event(void *_this)
@@ -160,17 +152,6 @@ int iv_inotify_watch_register(struct iv_inotify_watch *w)
 {
 	struct iv_inotify *inotify = w->inotify;
 
-	if (inotify == NULL) {
-		inotify = &__default_instance;
-
-		if (__default_initialized == 0) {
-			if (iv_inotify_register(inotify) == -1)
-				return -1;
-			else
-				__default_initialized = 1;
-		}
-	}
-
 	w->wd = inotify_add_watch(inotify->fd.fd, w->pathname, w->mask);
 	if (w->wd == -1)
 		return -1;
@@ -183,9 +164,6 @@ int iv_inotify_watch_register(struct iv_inotify_watch *w)
 void iv_inotify_watch_unregister(struct iv_inotify_watch *w)
 {
 	struct iv_inotify *inotify = w->inotify;
-
-	if (inotify == NULL)
-		inotify = &__default_instance;
 
 	inotify_rm_watch(inotify->fd.fd, w->wd);
 
