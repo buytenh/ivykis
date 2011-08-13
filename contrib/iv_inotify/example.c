@@ -1,21 +1,19 @@
 /*
  * iv_inotify, an ivykis inotify component.
- *
+ * Copyright (C) 2008, 2009 Ronald Huizer
  * Dedicated to Kanna Ishihara.
  *
- * Copyright (C) 2008, 2009 Ronald Huizer
- *
- * This library is free software; you can redistribute it and/or modify
+ * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version
  * 2.1 as published by the Free Software Foundation.
  *
- * This library is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License version 2.1 for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License version 2.1 along with this library; if not, write to the
+ * License version 2.1 along with this program; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
@@ -23,13 +21,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
-#include "iv_inotify.h"
+#include <iv_inotify.h>
 
-int print_event(int mask)
+static void print_event(int mask)
 {
-	int ret = 0, ret2;
+	int ret = 0;
 
-	ret2 = printf("0x%.8x: ", mask);
 	if (mask & IN_ACCESS) {
 		mask &= ~IN_ACCESS;
 		ret += printf("%sIN_ACCESS", ret ? " | " : "");
@@ -96,15 +93,13 @@ int print_event(int mask)
 	}
 	if (mask != 0)
 		ret += printf("%s0x%.8x", ret ? " | " : "", mask);
-
-	return ret + ret2;
 }
 
-void test_handler(struct inotify_event *event, void *cookie)
+static void test_handler(void *_w, struct inotify_event *event)
 {
-	struct iv_inotify_watch *watch = (struct iv_inotify_watch *)cookie;
+	struct iv_inotify_watch *w = _w;
 
-	printf("%s", watch->pathname);
+	printf("%s", w->pathname);
 	if (event->len != 0)
 		printf("/%s", event->name);
 	printf(": ");
@@ -112,43 +107,42 @@ void test_handler(struct inotify_event *event, void *cookie)
 	printf("\n");
 }
 
-void *xmalloc(size_t size)
-{
-	void *ret;
-
-	if ((ret = malloc(size)) == NULL) {
-		perror("malloc()");
-		exit(EXIT_FAILURE);
-	}
-
-	return ret;
-}
-
 int main(int argc, char **argv)
 {
-	unsigned int i;
 	struct iv_inotify inotify;
-	struct iv_inotify_watch *watch;
+	int i;
 
-	if (argc <= 1) {
-		fprintf(stderr, "Use as: %s <filename> [filename] ...\n",
-			argv[0] != NULL ? argv[0] : "");
-		exit(EXIT_FAILURE);
+	if (argc < 2) {
+		fprintf(stderr, "Usage: %s FILE...\n", argv[0]);
+		return 1;
 	}
 
 	iv_init();
-	iv_inotify_init(&inotify);
+
+	IV_INOTIFY_INIT(&inotify);
+	iv_inotify_register(&inotify);
 
 	for (i = 1; i < argc; i++) {
-		watch = (struct iv_inotify_watch *)xmalloc(sizeof(*watch));
-		watch->pathname = argv[i];
-		watch->mask = IN_ALL_EVENTS;
-		watch->handler = test_handler;
-		watch->cookie = watch;
-		iv_inotify_add_watch(&inotify, watch);
+		struct iv_inotify_watch *w;
+
+		w = malloc(sizeof(*w));
+		if (w == NULL) {
+			perror("malloc");
+			return 1;
+		}
+
+		IV_INOTIFY_WATCH_INIT(w);
+		w->inotify = &inotify;
+		w->pathname = argv[i];
+		w->mask = IN_ALL_EVENTS;
+		w->cookie = w;
+		w->handler = test_handler;
+		iv_inotify_watch_register(w);
 	}
 
 	iv_main();
 
-	exit(EXIT_SUCCESS);
+	iv_deinit();
+
+	return 0;
 }

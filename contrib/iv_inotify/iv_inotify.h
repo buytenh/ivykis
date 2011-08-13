@@ -1,9 +1,7 @@
 /*
  * iv_inotify, an ivykis inotify component.
- *
- * Dedicated to Kanna Ishihara.
- *
  * Copyright (C) 2008, 2009 Ronald Huizer
+ * Dedicated to Kanna Ishihara.
  *
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version
@@ -23,41 +21,52 @@
 #ifndef __IV_INOTIFY_H
 #define __IV_INOTIFY_H
 
+#include <inttypes.h>
+#include <iv.h>
+#include <iv_avl.h>
+#include <sys/inotify.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <inttypes.h>
-#include <sys/inotify.h>
-#include <iv.h>
-#include <iv_avl.h>
+struct iv_inotify {
+	/* No public members.  */
+
+	struct iv_fd		fd;
+	size_t			num_watches;
+	struct iv_avl_tree	watches;
+};
+
+static inline void IV_INOTIFY_INIT(struct iv_inotify *this)
+{
+}
+
+int iv_inotify_register(struct iv_inotify *);
+void iv_inotify_unregister(struct iv_inotify *);
+
 
 struct iv_inotify_watch {
+	struct iv_inotify	*inotify;
 	const char		*pathname;
 	uint32_t		mask;
-	void			(*handler)(struct inotify_event *, void *);
 	void			*cookie;
+	void			(*handler)(void *, struct inotify_event *);
 
-	/* Read-only members */
 	int			wd;
-
-	/* Private members: internal use only */
-	struct iv_avl_node	avl_node;
+	struct iv_avl_node	an;
 };
 
-struct iv_inotify {
-	struct iv_fd		fd;
-	size_t			watches;
-	struct iv_avl_tree	avl_tree;
-};
+static inline void IV_INOTIFY_WATCH_INIT(struct iv_inotify_watch *this)
+{
+}
 
-int iv_inotify_init(struct iv_inotify *);
-void iv_inotify_destroy(struct iv_inotify *);
-int iv_inotify_add_watch(struct iv_inotify *, struct iv_inotify_watch *);
-int iv_inotify_rm_watch(struct iv_inotify *, struct iv_inotify_watch *);
+int iv_inotify_watch_register(struct iv_inotify_watch *);
+void iv_inotify_watch_unregister(struct iv_inotify_watch *);
 
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif
