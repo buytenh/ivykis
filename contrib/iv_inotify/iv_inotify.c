@@ -18,6 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <iv.h>
@@ -27,25 +28,10 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 
-#ifndef NAME_MAX
-#define NAME_MAX	255
-#endif
-
 static struct iv_inotify	__default_instance;
 static int			__default_initialized = 0;
 static struct iv_inotify	*__dispatched_instance = NULL;
 static int			__dispatched_instance_destroyed = 0;
-
-static ssize_t read_no_eintr(int fd, void *buf, size_t count)
-{
-	ssize_t ret;
-
-	do {
-		ret = read(fd, buf, count);
-	} while (ret == -1 && errno == EINTR);
-
-	return ret;
-}
 
 static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 {
@@ -80,84 +66,50 @@ __iv_inotify_cleanup_watch(struct iv_inotify *this, struct iv_inotify_watch *w)
 	}
 }
 
-static void
-iv_inotify_dispatch_loop(struct iv_inotify *this,
-			 uint8_t *event_queue, size_t event_queue_size)
+static void iv_inotify_got_event(void *_this)
 {
-	uint8_t *event_queue_ptr = event_queue;
+	struct iv_inotify *this = (struct iv_inotify *)_this;
+	uint8_t event_queue[65536];
+	ssize_t ret;
+	void *curr;
+	void *end;
+
+	do {
+		ret = read(this->fd.fd, event_queue, sizeof(event_queue));
+	} while (ret == -1 && errno == EINTR);
+
+	if (ret <= 0) {
+		if (ret == 0 || errno != EAGAIN) {
+			if (ret < 0)
+				perror("read");
+			abort();
+		}
+		return;
+	}
 
 	__dispatched_instance = this;
 
-	while (event_queue_ptr < event_queue + event_queue_size) {
+	curr = event_queue;
+	end = event_queue + ret;
+	while (curr < end) {
+		struct inotify_event *event = curr;
 		struct iv_inotify_watch *w;
-		struct inotify_event *event =
-			(struct inotify_event *)event_queue_ptr;
 
 		w = __find_watch(this, event->wd);
-		if (w == NULL) {
-			event_queue_ptr +=
-				event->len + sizeof(struct inotify_event);
-			continue;
+		if (w != NULL) {
+			if (event->mask & IN_IGNORED || w->mask & IN_ONESHOT)
+				__iv_inotify_cleanup_watch(this, w);
+			w->handler(w->cookie, event);
+
+			if (__dispatched_instance_destroyed == 1)
+				break;
 		}
 
-		if (event->mask & IN_IGNORED || w->mask & IN_ONESHOT)
-			__iv_inotify_cleanup_watch(this, w);
-
-		w->handler(w->cookie, event);
-
-		if (__dispatched_instance_destroyed == 1)
-			break;
-
-		event_queue_ptr += event->len + sizeof(struct inotify_event);
+		curr += event->len + sizeof(struct inotify_event);
 	}
 
 	__dispatched_instance = NULL;
 	__dispatched_instance_destroyed = 0;
-}
-
-static void iv_inotify_got_event_fallback(struct iv_inotify *ip)
-{
-	ssize_t ret;
-	int event_queue_size;
-	uint8_t *event_queue, *event_queue_ptr;
-
-	if (ioctl(ip->fd.fd, FIONREAD, &event_queue_size) == -1)
-		abort();
-
-	event_queue = event_queue_ptr = (uint8_t *)malloc(event_queue_size);
-	if (event_queue == NULL)
-		return;
-
-	ret = read_no_eintr(ip->fd.fd, event_queue, event_queue_size);
-	if (ret == -1) {
-		if(errno == EAGAIN) {
-			free(event_queue);
-			return;
-		}
-		abort();
-	}
-
-	iv_inotify_dispatch_loop(ip, event_queue, ret);
-	free(event_queue);
-}
-
-static void iv_inotify_got_event(void *cookie)
-{
-	ssize_t ret;
-	struct iv_inotify *ip = (struct iv_inotify *)cookie;
-	uint8_t event_queue[(sizeof(struct inotify_event) + NAME_MAX + 1) * 16];
-
-	ret = read_no_eintr(ip->fd.fd, event_queue, sizeof(event_queue));
-	if (ret == -1) {
-		if (errno == EAGAIN)
-			return;
-		abort();
-	}
-
-	if ((ret == -1 && errno == EINVAL) || ret == 0)
-		iv_inotify_got_event_fallback(ip);
-	else
-		iv_inotify_dispatch_loop(ip, event_queue, ret);
 }
 
 static int
