@@ -30,8 +30,6 @@
 
 static struct iv_inotify	__default_instance;
 static int			__default_initialized = 0;
-static struct iv_inotify	*__dispatched_instance = NULL;
-static int			__dispatched_instance_destroyed = 0;
 
 static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 {
@@ -87,7 +85,7 @@ static void iv_inotify_got_event(void *_this)
 		return;
 	}
 
-	__dispatched_instance = this;
+	this->term = (void **)&this;
 
 	curr = event_queue;
 	end = event_queue + ret;
@@ -100,16 +98,16 @@ static void iv_inotify_got_event(void *_this)
 			if (event->mask & IN_IGNORED || w->mask & IN_ONESHOT)
 				__iv_inotify_cleanup_watch(this, w);
 			w->handler(w->cookie, event);
-
-			if (__dispatched_instance_destroyed == 1)
-				break;
 		}
 
 		curr += event->len + sizeof(struct inotify_event);
+
+		if (this == NULL)
+			break;
 	}
 
-	__dispatched_instance = NULL;
-	__dispatched_instance_destroyed = 0;
+	if (this != NULL)
+		this->term = NULL;
 }
 
 static int
@@ -154,8 +152,8 @@ void iv_inotify_unregister(struct iv_inotify *this)
 	iv_fd_unregister(&this->fd);
 	close(this->fd.fd);
 
-	if (this == __dispatched_instance)
-		__dispatched_instance_destroyed = 1;
+	if (this->term != NULL)
+		*this->term = NULL;
 }
 
 int iv_inotify_watch_register(struct iv_inotify_watch *w)

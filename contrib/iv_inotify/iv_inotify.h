@@ -36,6 +36,7 @@ struct iv_inotify {
 	struct iv_fd		fd;
 	size_t			num_watches;
 	struct iv_avl_tree	watches;
+	void			**term;
 };
 
 static inline void IV_INOTIFY_INIT(struct iv_inotify *this)
