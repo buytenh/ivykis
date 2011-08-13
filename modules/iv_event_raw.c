@@ -107,7 +107,7 @@ int iv_event_raw_register(struct iv_event_raw *this)
 	if (eventfd_unavailable) {
 		if (pipe(fd) < 0) {
 			perror("pipe");
-			abort();
+			return -1;
 		}
 	}
 
