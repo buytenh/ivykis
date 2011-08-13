@@ -25,74 +25,72 @@
 
 static void print_event(int mask)
 {
-	int ret = 0;
-
 	if (mask & IN_ACCESS) {
 		mask &= ~IN_ACCESS;
-		ret += printf("%sIN_ACCESS", ret ? " | " : "");
+		printf(" IN_ACCESS");
 	}
 	if (mask & IN_ATTRIB) {
 		mask &= ~IN_ATTRIB;
-		ret += printf("%sIN_ATTRIB", ret ? " | " : "");
+		printf(" IN_ATTRIB");
 	}
 	if (mask & IN_CLOSE_WRITE) {
 		mask &= ~IN_CLOSE_WRITE;
-		ret += printf("%sIN_CLOSE_WRITE", ret ? " | " : "");
+		printf(" IN_CLOSE_WRITE");
 	}
 	if (mask & IN_CLOSE_NOWRITE) {
 		mask &= ~IN_CLOSE_NOWRITE;
-		ret += printf("%sIN_CLOSE_NOWRITE", ret ? " | " : "");
+		printf(" IN_CLOSE_NOWRITE");
 	}
 	if (mask & IN_CREATE) {
 		mask &= ~IN_CREATE;
-		ret += printf("%sIN_CREATE", ret ? " | " : "");
+		printf(" IN_CREATE");
 	}
 	if (mask & IN_DELETE) {
 		mask &= ~IN_DELETE;
-		ret += printf("%sIN_DELETE", ret ? " | " : "");
+		printf(" IN_DELETE");
 	}
 	if (mask & IN_DELETE_SELF) {
 		mask &= ~IN_DELETE_SELF;
-		ret += printf("%sIN_DELETE_SELF", ret ? " | " : "");
+		printf(" IN_DELETE_SELF");
 	}
 	if (mask & IN_MODIFY) {
 		mask &= ~IN_MODIFY;
-		ret += printf("%sIN_MODIFY", ret ? " | " : "");
+		printf(" IN_MODIFY");
 	}
 	if (mask & IN_MOVE_SELF) {
 		mask &= ~IN_MOVE_SELF;
-		ret += printf("%sIN_MOVE_SELF", ret ? " | " : "");
+		printf(" IN_MOVE_SELF");
 	}
 	if (mask & IN_MOVED_FROM) {
 		mask &= ~IN_MOVED_FROM;
-		ret += printf("%sIN_MOVED_FROM", ret ? " | " : "");
+		printf(" IN_MOVED_FROM");
 	}
 	if (mask & IN_MOVED_TO) {
 		mask &= ~IN_MOVED_TO;
-		ret += printf("%sIN_MOVED_TO", ret ? " | " : "");
+		printf(" IN_MOVED_TO");
 	}
 	if (mask & IN_OPEN) {
 		mask &= ~IN_OPEN;
-		ret += printf("%sIN_OPEN", ret ? " | " : "");
+		printf(" IN_OPEN");
 	}
 	if (mask & IN_IGNORED) {
 		mask &= ~IN_IGNORED;
-		ret += printf("%sIN_IGNORED", ret ? " | " : "");
+		printf(" IN_IGNORED");
 	}
 	if (mask & IN_ISDIR) {
 		mask &= ~IN_ISDIR;
-		ret += printf("%sIN_ISDIR", ret ? " | " : "");
+		printf(" IN_ISDIR");
 	}
 	if (mask & IN_Q_OVERFLOW) {
 		mask &= ~IN_Q_OVERFLOW;
-		ret += printf("%sIN_Q_OVERFLOW", ret ? " | " : "");
+		printf(" IN_Q_OVERFLOW");
 	}
 	if (mask & IN_UNMOUNT) {
 		mask &= ~IN_UNMOUNT;
-		ret += printf("%sIN_UNMOUNT", ret ? " | " : "");
+		printf(" IN_UNMOUNT");
 	}
 	if (mask != 0)
-		ret += printf("%s0x%.8x", ret ? " | " : "", mask);
+		printf(" 0x%.8x", mask);
 }
 
 static void test_handler(void *_w, struct inotify_event *event)
@@ -102,7 +100,7 @@ static void test_handler(void *_w, struct inotify_event *event)
 	printf("%s", w->pathname);
 	if (event->len != 0)
 		printf("/%s", event->name);
-	printf(": ");
+	printf(":");
 	print_event(event->mask);
 	printf("\n");
 }
