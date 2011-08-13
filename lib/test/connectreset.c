@@ -57,8 +57,8 @@ static void got_connection(void *_dummy)
 
 	addrlen = sizeof(addr);
 	ret = accept(server_socket.fd, (struct sockaddr *)&addr, &addrlen);
-	if (ret <= 0) {
-		if (ret == 0 || errno != EAGAIN) {
+	if (ret < 0) {
+		if (errno != EAGAIN) {
 			perror("accept");
 			abort();
 		}

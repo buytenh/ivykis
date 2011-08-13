@@ -124,8 +124,8 @@ static void got_connection(void *_wt)
 
 	addrlen = sizeof(addr);
 	fd = accept(wt->sock.fd, (struct sockaddr *)&addr, &addrlen);
-	if (fd <= 0) {
-		if (fd < 0 && errno == EAGAIN)
+	if (fd < 0) {
+		if (errno == EAGAIN)
 			return;
 		perror("accept");
 		exit(-1);
