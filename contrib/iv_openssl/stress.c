@@ -189,9 +189,10 @@ static void start_querier(struct querier *q)
 }
 
 
-#define NUM	32
+#define NUM		10000
+#define PARALLEL	32
 
-static struct querier q[NUM];
+static struct querier q[PARALLEL];
 static int num_started;
 static int num_complete;
 static int got_err;
@@ -201,7 +202,7 @@ static int querier_handshake_done(void *_q)
 {
 	num_complete++;
 
-	if (!got_err && num_started < 10000) {
+	if (!got_err && num_started < NUM) {
 		num_started++;
 		return 1;
 	}
@@ -218,7 +219,7 @@ static void querier_conn_closed(void *_q, int err)
 		if (q->request_len)
 			num_complete++;
 
-		if (num_started < 10000) {
+		if (num_started < NUM) {
 			if (q->request_len)
 				num_started++;
 			start_querier(q);
@@ -230,7 +231,7 @@ static void report_progress(void *dummy)
 {
 	printf("%d started, %d done\n", num_started, num_complete);
 
-	if (!got_err && num_complete < 10000) {
+	if (!got_err && num_complete < NUM) {
 		progress.expires.tv_sec++;
 		iv_timer_register(&progress);
 	}
@@ -253,7 +254,7 @@ int main(int argc, char *argv[])
 
 	iv_init();
 
-	for (i = 0; i < NUM; i++) {
+	for (i = 0; i < PARALLEL; i++) {
 		q[i].addr.sin_family = AF_INET;
 		q[i].addr.sin_addr.s_addr = htonl(0x7f000001);
 		q[i].addr.sin_port = htons(12345);
