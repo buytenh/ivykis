@@ -5,8 +5,15 @@ AM_CFLAGS		= -Wall
 LDADD			= ../../lib/libivykis.a			\
 			  ../libivykis-modules.a
 
+if HAVE_INOTIFY
+INOTIFY_PROGS = iv_inotify_test
+else
+INOTIFY_PROGS =
+endif
+
 noinst_PROGRAMS		= iv_event_raw_test		\
 			  iv_event_test			\
+			  $(INOTIFY_PROGS)		\
 			  iv_popen_test			\
 			  iv_signal_child_test		\
 			  iv_signal_test		\

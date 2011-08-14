@@ -1,19 +1,19 @@
 /*
- * iv_inotify, an ivykis inotify component.
+ * ivykis, an event handling library
  * Copyright (C) 2008, 2009 Ronald Huizer
  * Dedicated to Kanna Ishihara.
  *
- * This program is free software; you can redistribute it and/or modify
+ * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version
  * 2.1 as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License version 2.1 for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License version 2.1 along with this program; if not, write to the
+ * License version 2.1 along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */

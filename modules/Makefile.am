@@ -8,8 +8,17 @@ AM_CFLAGS		= -Wall
 
 lib_LIBRARIES		= libivykis-modules.a
 
+if HAVE_INOTIFY
+INOTIFY_SRC = iv_inotify.c
+INOTIFY_INCLUDE = include/iv_inotify.h
+else
+INOTIFY_SRC =
+INOTIFY_INCLUDE =
+endif
+
 libivykis_modules_a_SOURCES	= iv_event.c			\
 				  iv_event_raw.c		\
+				  $(INOTIFY_SRC)		\
 				  iv_popen.c			\
 				  iv_signal.c			\
 				  iv_thread.c			\
@@ -18,6 +27,7 @@ libivykis_modules_a_SOURCES	= iv_event.c			\
 
 include_HEADERS		= include/iv_event.h		\
 			  include/iv_event_raw.h	\
+			  $(INOTIFY_INCLUDE)		\
 			  include/iv_popen.h		\
 			  include/iv_signal.h		\
 			  include/iv_thread.h		\

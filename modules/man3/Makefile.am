@@ -8,6 +8,13 @@ man3_MANS	= iv_event.3				\
 		  iv_event_raw_unregister.3		\
 		  iv_event_register.3			\
 		  iv_event_unregister.3			\
+		  iv_inotify.3				\
+		  IV_INOTIFY_INIT.3			\
+		  iv_inotify_register.3			\
+		  iv_inotify_unregister.3		\
+		  IV_INOTIFY_WATCH_INIT.3		\
+		  iv_inotify_watch_register.3		\
+		  iv_inotify_watch_unregister.3		\
 		  iv_popen.3				\
 		  iv_popen_request_close.3		\
 		  IV_POPEN_REQUEST_INIT.3		\

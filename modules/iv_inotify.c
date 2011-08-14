@@ -1,5 +1,5 @@
 /*
- * iv_inotify, an ivykis inotify component.
+ * ivykis, an event handling library
  * Copyright (C) 2008 - 2011 Ronald Huizer
  * Dedicated to Kanna Ishihara.
  *

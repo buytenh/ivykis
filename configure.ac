@@ -32,6 +32,7 @@ AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
 	AC_MSG_ERROR(some required library functions not available.))
 AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_FUNCS([epoll_create])
+AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([wait4])
 
@@ -45,11 +46,11 @@ AC_COMPILE_IFELSE([static __thread int p = 0;],
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
+AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
-		 contrib/iv_inotify/Makefile	\
 		 contrib/iv_openssl/Makefile	\
 		 contrib/kojines/Makefile	\
 		 contrib/splice/Makefile	\

@@ -3,11 +3,6 @@ This directory holds ivykis example programs and contributed ivykis
 modules.
 
 
-iv_inotify/
-	Example ivykis wrapper around Linux's inotify(7) file system
-	event monitoring API.
-
-
 iv_openssl/
 	Example module that wraps openssl's I/O functions, so that one
 	can write ivykis SSL-enabled client and server apps.
