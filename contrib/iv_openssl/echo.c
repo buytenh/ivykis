@@ -114,6 +114,23 @@ struct worker_thread {
 	struct iv_fd sock;
 };
 
+static DH *read_dhparams(char *file)
+{
+	FILE *fp;
+
+	fp = fopen(file, "r");
+	if (fp != NULL) {
+		DH *dh;
+
+		dh = PEM_read_DHparams(fp, NULL, NULL, NULL);
+		fclose(fp);
+
+		return dh;
+	}
+
+	return NULL;
+}
+
 static void got_connection(void *_wt)
 {
 	struct worker_thread *wt = _wt;
@@ -145,6 +162,7 @@ static void got_connection(void *_wt)
 
 	SSL_use_certificate_file(conn->ssl.ssl, "server.crt", SSL_FILETYPE_PEM);
 	SSL_use_PrivateKey_file(conn->ssl.ssl, "server.key", SSL_FILETYPE_PEM);
+	SSL_set_tmp_dh(conn->ssl.ssl, read_dhparams("server.dhparam"));
 
 	iv_openssl_request_init(&conn->req);
 	conn->req.ssl = &conn->ssl;
