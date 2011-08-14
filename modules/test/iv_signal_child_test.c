@@ -35,7 +35,6 @@ static void got_sigterm(void *_x)
 int main()
 {
 	char *argv[3];
-	int f;
 	struct iv_popen_request popen_req;
 
 	iv_init();
@@ -52,7 +51,7 @@ int main()
 	argv[2] = NULL;
 	popen_req.argv = argv;
 	popen_req.type = "r";
-	f = iv_popen_request_submit(&popen_req);
+	iv_popen_request_submit(&popen_req);
 
 	iv_popen_request_close(&popen_req);
 
