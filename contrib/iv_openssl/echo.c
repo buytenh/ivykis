@@ -163,6 +163,7 @@ static void got_connection(void *_wt)
 	SSL_use_certificate_file(conn->ssl.ssl, "server.crt", SSL_FILETYPE_PEM);
 	SSL_use_PrivateKey_file(conn->ssl.ssl, "server.key", SSL_FILETYPE_PEM);
 	SSL_set_tmp_dh(conn->ssl.ssl, read_dhparams("server.dhparam"));
+	SSL_set_options(conn->ssl.ssl, SSL_OP_SINGLE_DH_USE);
 
 	iv_openssl_request_init(&conn->req);
 	conn->req.ssl = &conn->ssl;
