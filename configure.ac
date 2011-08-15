@@ -20,6 +20,20 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 	AC_MSG_ERROR(some required header files not installed.))
 AC_CHECK_HEADERS([sys/devpoll.h sys/select.h])
 
+# Check which header file defines 'struct timespec'.
+for hdr in sys/time.h sys/timers.h time.h pthread.h
+do
+	AC_CHECK_MEMBER(struct timespec.tv_sec,
+			[ac_cv_timespec_hdr=$hdr; break],
+			[unset ac_cv_member_struct_timespec_tv_sec],
+			[#include <$hdr>])
+done
+if test x$ac_cv_timespec_hdr = x
+then
+	AC_MSG_ERROR(Can't find definition of struct timespec.)
+fi
+AC_SUBST(ac_cv_timespec_hdr)
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
@@ -56,6 +70,7 @@ AC_CONFIG_FILES([Makefile			\
 		 contrib/splice/Makefile	\
 		 ivykis.spec			\
 		 lib/Makefile			\
+		 lib/include/iv.h		\
 		 lib/man3/Makefile		\
 		 lib/test/Makefile		\
 		 misc/Makefile			\
