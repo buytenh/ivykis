@@ -38,7 +38,7 @@ AC_CHECK_FUNCS([wait4])
 
 # Check for __thread.
 AC_MSG_CHECKING([for __thread])
-AC_COMPILE_IFELSE([static __thread int p = 0;],
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
 	[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler supports __thread.)
 	 AC_MSG_RESULT([yes])],
 	[AC_MSG_RESULT([no])])
