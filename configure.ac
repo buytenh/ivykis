@@ -81,6 +81,7 @@ AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
+		 contrib/iv_getaddrinfo/Makefile	\
 		 contrib/iv_openssl/Makefile	\
 		 contrib/kojines/Makefile	\
 		 contrib/splice/Makefile	\
