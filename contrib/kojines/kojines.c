@@ -469,7 +469,6 @@ static void got_kojine(void *_ki)
 	IV_FD_INIT(&k->server_fd);
 	k->server_fd.fd = server;
 	k->server_fd.cookie = (void *)k;
-	k->server_fd.handler_in = got_server_connect;
 	k->server_fd.handler_out = got_server_connect;
 	iv_fd_register(&k->server_fd);
 	k->orig_dst = orig_dst;

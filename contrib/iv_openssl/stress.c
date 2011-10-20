@@ -179,7 +179,6 @@ static void start_querier(struct querier *q)
 	IV_FD_INIT(&q->fd);
 	q->fd.fd = fd;
 	q->fd.cookie = (void *)q;
-	q->fd.handler_in = connect_done;
 	q->fd.handler_out = connect_done;
 	iv_fd_register(&q->fd);
 

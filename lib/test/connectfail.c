@@ -24,32 +24,36 @@
 #include <netinet/in.h>
 #include <string.h>
 
-static struct sockaddr_in addr;
 static struct iv_fd ifd;
 
-static void connected(void *_dummy)
+static void connect_done(void *_dummy)
 {
+	socklen_t len;
 	int ret;
 
-	ret = connect(ifd.fd, (struct sockaddr *)&addr, sizeof(addr));
-	if (ret == -1) {
-		if (errno == EALREADY || errno == EINPROGRESS)
-			return;
-		fprintf(stderr, "blah: %s\n", strerror(errno));
+	len = sizeof(ret);
+	if (getsockopt(ifd.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
+		fprintf(stderr, "connect_done: error %d while "
+				"getsockopt(SO_ERROR)\n", errno);
+		abort();
 	}
 
-	iv_fd_set_handler_in(&ifd, NULL);
+	if (ret == EINPROGRESS)
+		return;
+
+	if (ret)
+		fprintf(stderr, "blah: %s\n", strerror(ret));
+
+	iv_fd_set_handler_out(&ifd, NULL);
 }
 
 int main()
 {
 	int fd;
+	struct sockaddr_in addr;
+	int ret;
 
 	iv_init();
-
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(0x7f000001);
-	addr.sin_port = htons(6667);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -59,12 +63,16 @@ int main()
 
 	IV_FD_INIT(&ifd);
 	ifd.fd = fd;
-	ifd.cookie = NULL;
-	ifd.handler_in = connected;
-	ifd.handler_out = NULL;
+	ifd.handler_out = connect_done;
 	iv_fd_register(&ifd);
 
-	connected(NULL);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(0x7f000001);
+	addr.sin_port = htons(6667);
+
+	ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+	if (ret == 0 || errno != EINPROGRESS)
+		connect_done(NULL);
 
 	iv_main();
 

@@ -25,24 +25,30 @@
 #include <string.h>
 
 struct connector {
-	struct iv_fd fd;
 	struct sockaddr_in addr;
+	struct iv_fd fd;
 };
 
-static void create_connector(struct connector *conn, struct sockaddr_in *addr);
+static void create_connector(struct connector *conn);
 
-static void connected(void *c)
+static void connect_done(void *c)
 {
 	struct connector *conn = (struct connector *)c;
+	socklen_t len;
 	int ret;
 
-	ret = connect(conn->fd.fd, (struct sockaddr *)&conn->addr,
-		      sizeof(conn->addr));
-	if (ret == -1) {
-		if (errno == EALREADY || errno == EINPROGRESS)
-			return;
-		fprintf(stderr, "blah: %s\n", strerror(errno));
+	len = sizeof(ret);
+	if (getsockopt(conn->fd.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
+		fprintf(stderr, "connect_done: error %d while "
+				"getsockopt(SO_ERROR)\n", errno);
+		abort();
 	}
+
+	if (ret == EINPROGRESS)
+		return;
+
+	if (ret)
+		fprintf(stderr, "blah: %s\n", strerror(ret));
 
 #if 0
 	fprintf(stderr, ".");
@@ -50,12 +56,13 @@ static void connected(void *c)
 
 	iv_fd_unregister(&conn->fd);
 	close(conn->fd.fd);
-	create_connector(conn, &conn->addr);
+	create_connector(conn);
 }
 
-static void create_connector(struct connector *conn, struct sockaddr_in *addr)
+static void create_connector(struct connector *conn)
 {
 	int fd;
+	int ret;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -66,15 +73,12 @@ static void create_connector(struct connector *conn, struct sockaddr_in *addr)
 	IV_FD_INIT(&conn->fd);
 	conn->fd.fd = fd;
 	conn->fd.cookie = (void *)conn;
-	conn->fd.handler_in = connected;
-	conn->fd.handler_out = NULL;
+	conn->fd.handler_out = connect_done;
 	iv_fd_register(&conn->fd);
 
-	conn->addr.sin_family = addr->sin_family;
-	conn->addr.sin_addr = addr->sin_addr;
-	conn->addr.sin_port = addr->sin_port;
-
-	connected((void *)conn);
+	ret = connect(fd, (struct sockaddr *)&conn->addr, sizeof(conn->addr));
+	if (ret == 0 || errno != EINPROGRESS)
+		connect_done((void *)conn);
 }
 
 int main()
@@ -89,8 +93,11 @@ int main()
 	iv_init();
 
 	for (i = 0; i < sizeof(c) / sizeof(c[0]); i++) {
-		addr.sin_port = htons(20000 + i);
-		create_connector(&c[i], &addr);
+		struct connector *conn = c + i;
+
+		conn->addr = addr;
+		conn->addr.sin_port = htons(20000 + i);
+		create_connector(conn);
 	}
 
 	iv_main();
