@@ -275,7 +275,7 @@ static void got_server_connect_reply(void *_k)
 	int ret;
 
 	ptr = k->su_buf + k->su_buf_length;
-	space = sizeof(k->su_buf) - k->su_buf_length;
+	space = 10 - k->su_buf_length;
 	if (!space) {
 		kojine_kill(k, 0);
 		return;
@@ -289,11 +289,8 @@ static void got_server_connect_reply(void *_k)
 	}
 
 	k->su_buf_length += ret;
-	if (k->su_buf_length != 10) {
-		if (k->su_buf_length > 10)
-			kojine_kill(k, 0);
+	if (k->su_buf_length < 10)
 		return;
-	}
 
 	if (memcmp(k->su_buf, "\x05\x00", 2)) {
 		kojine_kill(k, 0);
