@@ -36,8 +36,13 @@ static __thread struct iv_event_thr_info {
 
 static void iv_event_run_pending_events(void *_dummy)
 {
+	struct list_head last;
+
 	pthread_mutex_lock(&tinfo.list_mutex);
-	while (!list_empty(&tinfo.pending_events)) {
+
+	list_add_tail(&last, &tinfo.pending_events);
+
+	while (tinfo.pending_events.next != &last) {
 		struct iv_event *ie;
 
 		ie = container_of(tinfo.pending_events.next,
@@ -53,6 +58,9 @@ static void iv_event_run_pending_events(void *_dummy)
 
 		pthread_mutex_lock(&tinfo.list_mutex);
 	}
+
+	list_del(&last);
+
 	pthread_mutex_unlock(&tinfo.list_mutex);
 }
 
