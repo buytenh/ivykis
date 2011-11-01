@@ -23,6 +23,7 @@
 #include <iv.h>
 #include <iv_list.h>
 #include <iv_thread.h>
+#include <iv_tls.h>
 #include <iv_work.h>
 #include <pthread.h>
 
@@ -313,18 +314,43 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 	pthread_mutex_unlock(&pool->lock);
 }
 
-static __thread struct iv_work_thr_info {
-	int			inited;
+struct iv_work_thr_info {
 	struct iv_task		task;
 	struct list_head	work_items;
-} tinfo;
+};
 
-static void iv_work_handle_local(void *_work)
+static void iv_work_handle_local(void *_tinfo);
+
+static void iv_work_tls_init_thread(void *_tinfo)
 {
-	while (!list_empty(&tinfo.work_items)) {
+	struct iv_work_thr_info *tinfo = _tinfo;
+
+	IV_TASK_INIT(&tinfo->task);
+	tinfo->task.cookie = tinfo;
+	tinfo->task.handler = iv_work_handle_local;
+
+	INIT_LIST_HEAD(&tinfo->work_items);
+}
+
+static struct iv_tls_user iv_work_tls_user = {
+	.sizeof_state	= sizeof(struct iv_work_thr_info),
+	.init_thread	= iv_work_tls_init_thread,
+};
+
+static void iv_work_tls_init(void) __attribute__((constructor));
+static void iv_work_tls_init(void)
+{
+	iv_tls_user_register(&iv_work_tls_user);
+}
+
+static void iv_work_handle_local(void *_tinfo)
+{
+	struct iv_work_thr_info *tinfo = _tinfo;
+
+	while (!list_empty(&tinfo->work_items)) {
 		struct iv_work_item *work;
 
-		work = container_of(tinfo.work_items.next,
+		work = container_of(tinfo->work_items.next,
 				    struct iv_work_item, list);
 
 		list_del(&work->list);
@@ -336,20 +362,14 @@ static void iv_work_handle_local(void *_work)
 
 static void iv_work_submit_local(struct iv_work_item *work)
 {
+	struct iv_work_thr_info *tinfo = iv_tls_user_ptr(&iv_work_tls_user);
 	int was_empty;
 
-	if (!tinfo.inited) {
-		tinfo.inited = 1;
-		IV_TASK_INIT(&tinfo.task);
-		tinfo.task.handler = iv_work_handle_local;
-		INIT_LIST_HEAD(&tinfo.work_items);
-	}
+	was_empty = list_empty(&tinfo->work_items);
 
-	was_empty = list_empty(&tinfo.work_items);
-
-	list_add_tail(&work->list, &tinfo.work_items);
+	list_add_tail(&work->list, &tinfo->work_items);
 	if (was_empty)
-		iv_task_register(&tinfo.task);
+		iv_task_register(&tinfo->task);
 }
 
 void
