@@ -23,63 +23,93 @@
 #include <iv.h>
 #include <iv_event.h>
 #include <iv_event_raw.h>
+#include <iv_tls.h>
 #include <pthread.h>
 #include <signal.h>
 
-static __thread struct iv_event_thr_info {
+struct iv_event_thr_info {
 	int			event_count;
 	struct iv_event_raw	ier;
 	pthread_mutex_t		list_mutex;
 	struct list_head	pending_events;
-} tinfo;
+};
 
-static void iv_event_run_pending_events(void *_dummy)
+static void iv_event_run_pending_events(void *_tinfo)
 {
+	struct iv_event_thr_info *tinfo = _tinfo;
 	struct list_head last;
 
-	pthread_mutex_lock(&tinfo.list_mutex);
+	pthread_mutex_lock(&tinfo->list_mutex);
 
-	list_add_tail(&last, &tinfo.pending_events);
+	list_add_tail(&last, &tinfo->pending_events);
 
-	while (tinfo.pending_events.next != &last) {
+	while (tinfo->pending_events.next != &last) {
 		struct iv_event *ie;
 
-		ie = container_of(tinfo.pending_events.next,
+		ie = container_of(tinfo->pending_events.next,
 				  struct iv_event, list);
 
 		list_del_init(&ie->list);
 
-		pthread_mutex_unlock(&tinfo.list_mutex);
+		pthread_mutex_unlock(&tinfo->list_mutex);
 
 		ie->handler(ie->cookie);
-		if (!tinfo.event_count)
-			return;
 
-		pthread_mutex_lock(&tinfo.list_mutex);
+		pthread_mutex_lock(&tinfo->list_mutex);
 	}
 
 	list_del(&last);
 
-	pthread_mutex_unlock(&tinfo.list_mutex);
+	pthread_mutex_unlock(&tinfo->list_mutex);
+}
+
+static void iv_event_tls_init_thread(void *_tinfo)
+{
+	struct iv_event_thr_info *tinfo = _tinfo;
+
+	tinfo->event_count = 0;
+
+	IV_EVENT_RAW_INIT(&tinfo->ier);
+	tinfo->ier.cookie = tinfo;
+	tinfo->ier.handler = iv_event_run_pending_events;
+
+	pthread_mutex_init(&tinfo->list_mutex, NULL);
+
+	INIT_LIST_HEAD(&tinfo->pending_events);
+}
+
+static void iv_event_tls_deinit_thread(void *_tinfo)
+{
+	struct iv_event_thr_info *tinfo = _tinfo;
+
+	pthread_mutex_destroy(&tinfo->list_mutex);
+}
+
+static struct iv_tls_user iv_event_tls_user = {
+	.sizeof_state	= sizeof(struct iv_event_thr_info),
+	.init_thread	= iv_event_tls_init_thread,
+	.deinit_thread	= iv_event_tls_deinit_thread,
+};
+
+static void iv_event_tls_init(void) __attribute__((constructor));
+static void iv_event_tls_init(void)
+{
+	iv_tls_user_register(&iv_event_tls_user);
 }
 
 int iv_event_register(struct iv_event *this)
 {
-	if (!tinfo.event_count++) {
+	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
+
+	if (!tinfo->event_count++) {
 		int ret;
 
-		IV_EVENT_RAW_INIT(&tinfo.ier);
-		tinfo.ier.handler = iv_event_run_pending_events;
-
-		ret = iv_event_raw_register(&tinfo.ier);
+		ret = iv_event_raw_register(&tinfo->ier);
 		if (ret)
 			return ret;
-
-		pthread_mutex_init(&tinfo.list_mutex, NULL);
-		INIT_LIST_HEAD(&tinfo.pending_events);
 	}
 
-	this->tinfo = &tinfo;
+	this->tinfo = tinfo;
 	INIT_LIST_HEAD(&this->list);
 
 	return 0;
@@ -87,26 +117,26 @@ int iv_event_register(struct iv_event *this)
 
 void iv_event_unregister(struct iv_event *this)
 {
+	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
+
 	if (!list_empty(&this->list)) {
-		pthread_mutex_lock(&tinfo.list_mutex);
+		pthread_mutex_lock(&tinfo->list_mutex);
 		list_del(&this->list);
-		pthread_mutex_unlock(&tinfo.list_mutex);
+		pthread_mutex_unlock(&tinfo->list_mutex);
 	}
 
-	if (!--tinfo.event_count) {
-		pthread_mutex_destroy(&tinfo.list_mutex);
-		iv_event_raw_unregister(&tinfo.ier);
-	}
+	if (!--tinfo->event_count)
+		iv_event_raw_unregister(&tinfo->ier);
 }
 
 void iv_event_post(struct iv_event *this)
 {
-	struct iv_event_thr_info *t = this->tinfo;
+	struct iv_event_thr_info *tinfo = this->tinfo;
 
-	pthread_mutex_lock(&t->list_mutex);
+	pthread_mutex_lock(&tinfo->list_mutex);
 	if (list_empty(&this->list)) {
-		list_add_tail(&this->list, &t->pending_events);
-		iv_event_raw_post(&t->ier);
+		list_add_tail(&this->list, &tinfo->pending_events);
+		iv_event_raw_post(&tinfo->ier);
 	}
-	pthread_mutex_unlock(&t->list_mutex);
+	pthread_mutex_unlock(&tinfo->list_mutex);
 }
