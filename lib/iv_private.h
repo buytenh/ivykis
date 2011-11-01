@@ -121,6 +121,9 @@ struct iv_state {
 	int			num_timers;
 	struct ratnode		*timer_root;
 
+	/* iv_tls.c  */
+	void			*tls_ptr;
+
 	/* poll methods  */
 	union {
 		struct {
@@ -200,3 +203,7 @@ int iv_pending_timers(struct iv_state *st);
 int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to);
 void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
+
+/* iv_tls.c */
+void iv_tls_thread_init(struct iv_state *st);
+void iv_tls_thread_deinit(struct iv_state *st);

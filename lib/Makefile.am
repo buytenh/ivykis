@@ -32,11 +32,13 @@ libivykis_a_SOURCES	= iv_avl.c			\
 			  iv_method_poll.c		\
 			  iv_method_select.c		\
 			  iv_task.c			\
-			  iv_timer.c
+			  iv_timer.c			\
+			  iv_tls.c
 
 include_HEADERS		= include/iv.h			\
 			  include/iv_avl.h		\
 			  include/iv_compat.h		\
-			  include/iv_list.h
+			  include/iv_list.h		\
+			  include/iv_tls.h
 
 noinst_HEADERS		= iv_private.h
