@@ -46,7 +46,7 @@ static void got_server_data(void *_k);
 static void got_server_write_space(void *_k);
 
 
-static void kojine_kill(struct kojine *k, int timeout)
+static void kojine_kill(struct kojine *k)
 {
 	list_del(&k->list);
 
@@ -55,7 +55,7 @@ static void kojine_kill(struct kojine *k, int timeout)
 	iv_fd_unregister(&k->server_fd);
 	close(k->server_fd.fd);
 
-	if (k->state < KOJINE_STATE_ESTABLISHED && !timeout)
+	if (iv_timer_registered(&k->connect_timeout))
 		iv_timer_unregister(&k->connect_timeout);
 
 	free(k);
@@ -79,7 +79,7 @@ static void got_client_data(void *_k)
 	ret = read(k->client_fd.fd, ptr, space);
 	if (ret < 0) {
 		if (errno != EAGAIN)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
@@ -112,7 +112,7 @@ static void got_client_write_space(void *_k)
 		ret = write(k->client_fd.fd, k->su_buf, k->su_buf_length);
 		if (ret <= 0) {
 			if (ret == 0 || errno != EAGAIN)
-				kojine_kill(k, 0);
+				kojine_kill(k);
 			return;
 		}
 
@@ -131,7 +131,7 @@ static void got_client_write_space(void *_k)
 			k->su_saw_fin = 2;
 			shutdown(k->client_fd.fd, SHUT_WR);
 			if (k->us_saw_fin == 2)
-				kojine_kill(k, 0);
+				kojine_kill(k);
 			break;
 		case 2:
 			fprintf(stderr, "got_client_write_space: already "
@@ -159,7 +159,7 @@ static void got_client_error(void *_k)
 		abort();
 	}
 
-	kojine_kill(k, 0);
+	kojine_kill(k);
 }
 
 
@@ -180,7 +180,7 @@ static void got_server_data(void *_k)
 	ret = read(k->server_fd.fd, ptr, space);
 	if (ret < 0) {
 		if (errno != EAGAIN)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
@@ -213,7 +213,7 @@ static void got_server_write_space(void *_k)
 		ret = write(k->server_fd.fd, k->us_buf, k->us_buf_length);
 		if (ret <= 0) {
 			if (ret == 0 || errno != EAGAIN)
-				kojine_kill(k, 0);
+				kojine_kill(k);
 			return;
 		}
 
@@ -232,7 +232,7 @@ static void got_server_write_space(void *_k)
 			k->us_saw_fin = 2;
 			shutdown(k->server_fd.fd, SHUT_WR);
 			if (k->su_saw_fin == 2)
-				kojine_kill(k, 0);
+				kojine_kill(k);
 			break;
 		case 2:
 			fprintf(stderr, "got_server_write_space: already "
@@ -260,7 +260,7 @@ static void got_server_error(void *_k)
 		abort();
 	}
 
-	kojine_kill(k, 0);
+	kojine_kill(k);
 }
 
 
@@ -277,14 +277,14 @@ static void got_server_connect_reply(void *_k)
 	ptr = k->su_buf + k->su_buf_length;
 	space = 10 - k->su_buf_length;
 	if (!space) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
 	ret = read(k->server_fd.fd, ptr, space);
 	if (ret <= 0) {
 		if (ret == 0 || errno != EAGAIN)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
@@ -293,7 +293,7 @@ static void got_server_connect_reply(void *_k)
 		return;
 
 	if (memcmp(k->su_buf, "\x05\x00", 2)) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
@@ -322,26 +322,26 @@ static void got_server_auth_reply(void *_k)
 	ptr = k->su_buf + k->su_buf_length;
 	space = sizeof(k->su_buf) - k->su_buf_length;
 	if (!space) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
 	ret = read(k->server_fd.fd, ptr, space);
 	if (ret <= 0) {
 		if (ret == 0 || errno != EAGAIN)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
 	k->su_buf_length += ret;
 	if (k->su_buf_length != 2) {
 		if (k->su_buf_length > 2)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
 	if (memcmp(k->su_buf, "\x05\x00", 2)) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
@@ -356,7 +356,7 @@ static void got_server_auth_reply(void *_k)
 	k->us_buf[8] = (ntohs(k->orig_dst.sin_port) >> 8) & 0xff;
 	k->us_buf[9] = ntohs(k->orig_dst.sin_port) & 0xff;
 	if (write(k->server_fd.fd, k->us_buf, 10) != 10) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
@@ -384,7 +384,7 @@ static void got_server_connect(void *_k)
 
 	if (ret) {
 		if (ret != EINPROGRESS)
-			kojine_kill(k, 0);
+			kojine_kill(k);
 		return;
 	}
 
@@ -394,7 +394,7 @@ static void got_server_connect(void *_k)
 	 *   no authentication (0x00).
 	 */
 	if (write(k->server_fd.fd, "\x05\x01\x00", 3) != 3) {
-		kojine_kill(k, 0);
+		kojine_kill(k);
 		return;
 	}
 
@@ -409,7 +409,7 @@ static void got_server_connect(void *_k)
 static void server_connect_timeout(void *_k)
 {
 	struct kojine *k = (struct kojine *)_k;
-	kojine_kill(k, 1);
+	kojine_kill(k);
 }
 
 static void got_kojine(void *_ki)
@@ -535,6 +535,6 @@ void kojines_instance_unregister(struct kojines_instance *ki)
 		struct kojine *k;
 
 		k = list_entry(lh, struct kojine, list);
-		kojine_kill(k, 0);
+		kojine_kill(k);
 	}
 }
