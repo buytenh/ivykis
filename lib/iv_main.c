@@ -310,13 +310,13 @@ void iv_main(void)
 		struct timespec to;
 		int msec;
 
-		iv_run_timers(st);
 		iv_run_tasks(st);
+		iv_run_timers(st);
 
 		if (should_quit(st))
 			break;
 
-		if (!iv_get_soonest_timeout(st, &to)) {
+		if (!iv_pending_tasks(st) && !iv_get_soonest_timeout(st, &to)) {
 			msec = 1000 * to.tv_sec;
 			msec += (to.tv_nsec + 999999) / 1000000;
 		} else {
