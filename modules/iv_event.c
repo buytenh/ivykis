@@ -31,7 +31,6 @@ static __thread struct iv_event_thr_info {
 	struct iv_event_raw	ier;
 	pthread_mutex_t		list_mutex;
 	struct list_head	pending_events;
-	int			dead;
 } tinfo;
 
 static void iv_event_run_pending_events(void *_dummy)
@@ -53,7 +52,7 @@ static void iv_event_run_pending_events(void *_dummy)
 		pthread_mutex_unlock(&tinfo.list_mutex);
 
 		ie->handler(ie->cookie);
-		if (tinfo.dead)
+		if (!tinfo.event_count)
 			return;
 
 		pthread_mutex_lock(&tinfo.list_mutex);
@@ -78,7 +77,6 @@ int iv_event_register(struct iv_event *this)
 
 		pthread_mutex_init(&tinfo.list_mutex, NULL);
 		INIT_LIST_HEAD(&tinfo.pending_events);
-		tinfo.dead = 0;
 	}
 
 	this->tinfo = &tinfo;
@@ -96,7 +94,6 @@ void iv_event_unregister(struct iv_event *this)
 	}
 
 	if (!--tinfo.event_count) {
-		tinfo.dead = 1;
 		pthread_mutex_destroy(&tinfo.list_mutex);
 		iv_event_raw_unregister(&tinfo.ier);
 	}
