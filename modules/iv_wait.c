@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <iv_signal.h>
+#include <iv_tls.h>
 #include <iv_wait.h>
 #include <pthread.h>
 #include "config.h"
@@ -189,20 +190,39 @@ static void iv_wait_completion(void *_this)
 		this->term = NULL;
 }
 
-static __thread struct iv_wait_thr_info {
+struct iv_wait_thr_info {
 	int			wait_count;
 	struct iv_signal	sigchld_interest;
-} tinfo;
+};
 
-static void __iv_wait_interest_register(struct iv_wait_interest *this)
+static void iv_wait_tls_init_thread(void *_tinfo)
 {
-	if (!tinfo.wait_count++) {
-		IV_SIGNAL_INIT(&tinfo.sigchld_interest);
-		tinfo.sigchld_interest.signum = SIGCHLD;
-		tinfo.sigchld_interest.exclusive = 1;
-		tinfo.sigchld_interest.handler = iv_wait_got_sigchld;
-		iv_signal_register(&tinfo.sigchld_interest);
-	}
+	struct iv_wait_thr_info *tinfo = _tinfo;
+
+	tinfo->wait_count = 0;
+
+	IV_SIGNAL_INIT(&tinfo->sigchld_interest);
+	tinfo->sigchld_interest.signum = SIGCHLD;
+	tinfo->sigchld_interest.exclusive = 1;
+	tinfo->sigchld_interest.handler = iv_wait_got_sigchld;
+}
+
+static struct iv_tls_user iv_wait_tls_user = {
+	.sizeof_state	= sizeof(struct iv_wait_thr_info),
+	.init_thread	= iv_wait_tls_init_thread,
+};
+
+static void iv_wait_tls_init(void) __attribute__((constructor));
+static void iv_wait_tls_init(void)
+{
+	iv_tls_user_register(&iv_wait_tls_user);
+}
+
+static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
+					struct iv_wait_interest *this)
+{
+	if (!tinfo->wait_count++)
+		iv_signal_register(&tinfo->sigchld_interest);
 
 	IV_EVENT_INIT(&this->ev);
 	this->ev.handler = iv_wait_completion;
@@ -218,14 +238,17 @@ static void __iv_wait_interest_register(struct iv_wait_interest *this)
 
 void iv_wait_interest_register(struct iv_wait_interest *this)
 {
-	__iv_wait_interest_register(this);
+	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
+
+	__iv_wait_interest_register(tinfo, this);
 
 	pthread_mutex_lock(&iv_wait_lock);
 	iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
 	pthread_mutex_unlock(&iv_wait_lock);
 }
 
-static void __iv_wait_interest_unregister(struct iv_wait_interest *this)
+static void __iv_wait_interest_unregister(struct iv_wait_thr_info *tinfo,
+					  struct iv_wait_interest *this)
 {
 	iv_event_unregister(&this->ev);
 
@@ -240,23 +263,24 @@ static void __iv_wait_interest_unregister(struct iv_wait_interest *this)
 	if (this->term != NULL)
 		*this->term = NULL;
 
-	if (!--tinfo.wait_count)
-		iv_signal_unregister(&tinfo.sigchld_interest);
+	if (!--tinfo->wait_count)
+		iv_signal_unregister(&tinfo->sigchld_interest);
 }
 
 int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 				    void (*fn)(void *cookie), void *cookie)
 {
+	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 	pid_t pid;
 
-	__iv_wait_interest_register(this);
+	__iv_wait_interest_register(tinfo, this);
 
 	pthread_mutex_lock(&iv_wait_lock);
 
 	pid = fork();
 	if (pid < 0) {
 		pthread_mutex_unlock(&iv_wait_lock);
-		__iv_wait_interest_unregister(this);
+		__iv_wait_interest_unregister(tinfo, this);
 		return pid;
 	}
 
@@ -275,12 +299,14 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 
 void iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
+	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
+
 	pthread_mutex_lock(&iv_wait_lock);
 	if (!this->dead)
 		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
 	pthread_mutex_unlock(&iv_wait_lock);
 
-	__iv_wait_interest_unregister(this);
+	__iv_wait_interest_unregister(tinfo, this);
 }
 
 int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
