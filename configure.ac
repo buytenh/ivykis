@@ -46,6 +46,7 @@ AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
 	AC_MSG_ERROR(some required library functions not available.))
 AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_FUNCS([epoll_create])
+AC_CHECK_FUNCS([epoll_create1])
 AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([wait4])

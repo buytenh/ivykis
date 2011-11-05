@@ -28,17 +28,30 @@
 
 static int iv_epoll_init(struct iv_state *st, int maxfd)
 {
+	int fd;
 	int flags;
 
-	st->epoll.epoll_fd = epoll_create(maxfd);
-	if (st->epoll.epoll_fd < 0)
+#ifdef HAVE_EPOLL_CREATE1
+	fd = epoll_create1(EPOLL_CLOEXEC);
+	if (fd >= 0) {
+		st->epoll.epoll_fd = fd;
+		return 0;
+	} else if (errno != ENOSYS) {
+		return -1;
+	}
+#endif
+
+	fd = epoll_create(maxfd);
+	if (fd < 0)
 		return -1;
 
-	flags = fcntl(st->epoll.epoll_fd, F_GETFD);
+	flags = fcntl(fd, F_GETFD);
 	if (!(flags & FD_CLOEXEC)) {
 		flags |= FD_CLOEXEC;
-		fcntl(st->epoll.epoll_fd, F_SETFD, flags);
+		fcntl(fd, F_SETFD, flags);
 	}
+
+	st->epoll.epoll_fd = fd;
 
 	return 0;
 }
