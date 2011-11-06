@@ -189,6 +189,8 @@ static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&fds, &fd->avl_node);
+
+	flush_upload_queue();
 }
 
 static int bits_to_poll_mask(int bits)
