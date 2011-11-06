@@ -239,9 +239,9 @@ static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	wanted = 0;
 	if (fd->registered) {
 		if (fd->handler_in != NULL)
-			wanted |= MASKIN | MASKERR;
+			wanted |= MASKIN;
 		if (fd->handler_out != NULL)
-			wanted |= MASKOUT | MASKERR;
+			wanted |= MASKOUT;
 		if (fd->handler_err != NULL)
 			wanted |= MASKERR;
 	}

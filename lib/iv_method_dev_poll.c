@@ -155,6 +155,7 @@ iv_dev_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
+		int revents;
 
 		fd = find_fd(batch[i].fd);
 		if (fd == NULL) {
@@ -163,13 +164,15 @@ iv_dev_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 			abort();
 		}
 
-		if (batch[i].revents & (POLLIN | POLLERR | POLLHUP))
+		revents = batch[i].revents;
+
+		if (revents & (POLLIN | POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKIN);
 
-		if (batch[i].revents & (POLLOUT | POLLERR))
+		if (revents & (POLLOUT | POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKOUT);
 
-		if (batch[i].revents & POLLERR)
+		if (revents & (POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
@@ -199,11 +202,9 @@ static int bits_to_poll_mask(int bits)
 
 	mask = 0;
 	if (bits & MASKIN)
-		mask |= POLLIN | POLLRDNORM | POLLRDBAND | POLLPRI;
+		mask |= POLLIN;
 	if (bits & MASKOUT)
-		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-	if (bits)
-		mask |= POLLERR | POLLHUP;
+		mask |= POLLOUT;
 
 	return mask;
 }

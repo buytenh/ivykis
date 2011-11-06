@@ -26,19 +26,6 @@
 #include <sys/poll.h>
 #include "iv_private.h"
 
-#ifndef POLLMSG
-#define POLLMSG		0
-#endif
-
-#ifndef POLLRDHUP
-#define POLLRDHUP	0
-#endif
-
-#define SET_IN		(POLLIN | POLLPRI | POLLHUP | POLLRDNORM | \
-			 POLLRDBAND | POLLMSG | POLLRDHUP)
-#define SET_OUT		(POLLOUT | POLLWRNORM | POLLWRBAND)
-#define SET_ERR		(POLLERR)
-
 static int iv_poll_init(struct iv_state *st, int maxfd)
 {
 	st->poll.pfds = malloc(maxfd * sizeof(struct pollfd));
@@ -81,13 +68,19 @@ iv_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 	}
 
 	for (i = 0; i < st->poll.num_registered_fds; i++) {
-		struct iv_fd_ *fd = st->poll.fds[i];
+		struct iv_fd_ *fd;
+		int revents;
 
-		if (st->poll.pfds[i].revents & (SET_IN | SET_ERR))
+		fd = st->poll.fds[i];
+		revents = st->poll.pfds[i].revents;
+
+		if (revents & (POLLIN | POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKIN);
-		if (st->poll.pfds[i].revents & (SET_OUT | SET_ERR))
+
+		if (revents & (POLLOUT | POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKOUT);
-		if (st->poll.pfds[i].revents & SET_ERR)
+
+		if (revents & (POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
 }
@@ -103,11 +96,11 @@ static int bits_to_poll_mask(int bits)
 
 	mask = 0;
 	if (bits & MASKIN)
-		mask |= SET_IN;
+		mask |= POLLIN | POLLHUP;
 	if (bits & MASKOUT)
-		mask |= SET_OUT;
-	if (bits)
-		mask |= SET_ERR;
+		mask |= POLLOUT | POLLHUP;
+	if (bits & MASKERR)
+		mask |= POLLHUP;
 
 	return mask;
 }

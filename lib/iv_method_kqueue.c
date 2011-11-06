@@ -55,8 +55,6 @@ static int iv_kqueue_init(struct iv_state *st, int maxfd)
 		return -1;
 	}
 
-	fprintf(stderr, "warning: using kqueue(2), POLLERR delivery broken\n");
-
 	upload_entries = 0;
 
 	return 0;

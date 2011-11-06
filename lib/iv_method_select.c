@@ -79,7 +79,7 @@ static int iv_select_init(struct iv_state *st, int maxfd)
 	if (fdsets == NULL)
 		return -1;
 
-	fprintf(stderr, "warning: using select(2), POLLERR delivery broken\n");
+	memset(fdsets, 0, 2 * setsize);
 
 	st->select.readfds_master = (fd_set *)fdsets;
 	st->select.writefds_master = (fd_set *)(fdsets + setsize);
@@ -87,30 +87,28 @@ static int iv_select_init(struct iv_state *st, int maxfd)
 	st->select.writefds = (fd_set *)(fdsets + 3 * setsize);
 
 	st->select.fd_max = 0;
-	memset(st->select.readfds_master, 0, 2 * setsize);
 
 	return 0;
 }
 
-static void iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
+static void
+iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 {
+	int bytes;
 	struct timeval to;
 	int ret;
 	int i;
 
-	/*
-	 * @@@ This is ugly and dependent on clock tick granularity.
-	 */
-	if (msec)
-		msec += (1000/100) - 1;
+	bytes = ((st->select.fd_max + 1) + 7) / 8;
 
-	memcpy(st->select.readfds, st->select.readfds_master, (st->select.fd_max / 8) + 1);
-	memcpy(st->select.writefds, st->select.writefds_master, (st->select.fd_max / 8) + 1);
+	memcpy(st->select.readfds, st->select.readfds_master, bytes);
+	memcpy(st->select.writefds, st->select.writefds_master, bytes);
 
 	to.tv_sec = msec / 1000;
 	to.tv_usec = 1000 * (msec % 1000);
 
-	ret = select(st->select.fd_max + 1, st->select.readfds, st->select.writefds, NULL, &to);
+	ret = select(st->select.fd_max + 1, st->select.readfds,
+		     st->select.writefds, NULL, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -131,8 +129,8 @@ static void iv_select_poll(struct iv_state *st, struct list_head *active, int ms
 
 			fd = find_fd(st, i);
 			if (fd == NULL) {
-				syslog(LOG_CRIT, "iv_select_poll: just puked "
-						 "on myself... eeeeeeeeeeew");
+				syslog(LOG_CRIT, "iv_select_poll: can't "
+						 "find fd");
 				abort();
 			}
 
@@ -168,10 +166,14 @@ static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 		struct iv_avl_node *an;
 
 		an = iv_avl_tree_max(&st->select.fds);
-		if (an != NULL)
-			st->select.fd_max = container_of(an, struct iv_fd_, avl_node)->fd;
-		else
+		if (an != NULL) {
+			struct iv_fd_ *fd;
+
+			fd = container_of(an, struct iv_fd_, avl_node);
+			st->select.fd_max = fd->fd;
+		} else {
 			st->select.fd_max = 0;
+		}
 	}
 }
 
