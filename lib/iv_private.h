@@ -127,6 +127,13 @@ struct iv_state {
 	/* poll methods  */
 	union {
 		struct {
+			struct iv_avl_tree	fds;
+			int			poll_fd;
+			struct pollfd		*upload_queue;
+			int			upload_entries;
+		} dev_poll;
+
+		struct {
 			int			epoll_fd;
 		} epoll;
 
