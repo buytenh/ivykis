@@ -31,47 +31,12 @@
 #include <sys/time.h>
 #include "iv_private.h"
 
-static struct iv_fd_ *find_fd(struct iv_state *st, int fd)
-{
-	struct iv_avl_node *an;
-
-	an = st->select.fds.root;
-	while (an != NULL) {
-		struct iv_fd_ *p;
-
-		p = container_of(an, struct iv_fd_, avl_node);
-		if (fd == p->fd)
-			return p;
-
-		if (fd < p->fd)
-			an = an->left;
-		else
-			an = an->right;
-	}
-
-	return NULL;
-}
-
-static int fd_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
-{
-	struct iv_fd_ *a = container_of(_a, struct iv_fd_, avl_node);
-	struct iv_fd_ *b = container_of(_b, struct iv_fd_, avl_node);
-
-	if (a->fd < b->fd)
-		return -1;
-	if (a->fd > b->fd)
-		return 1;
-	return 0;
-}
-
-
-/* interface ****************************************************************/
 static int iv_select_init(struct iv_state *st, int maxfd)
 {
 	int setsize;
 	unsigned char *fdsets;
 
-	INIT_IV_AVL_TREE(&st->select.fds, fd_compare);
+	INIT_IV_AVL_TREE(&st->select.fds, iv_fd_avl_compare);
 
 	setsize = (maxfd + 7) / 8;
 
@@ -127,7 +92,7 @@ iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
 		if (pollin || pollout) {
 			struct iv_fd_ *fd;
 
-			fd = find_fd(st, i);
+			fd = iv_fd_avl_find(&st->select.fds, i);
 			if (fd == NULL) {
 				syslog(LOG_CRIT, "iv_select_poll: can't "
 						 "find fd");

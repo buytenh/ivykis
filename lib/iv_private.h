@@ -184,6 +184,8 @@ extern struct iv_poll_method iv_method_select;
 
 
 /* iv_main.c */
+struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
+int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
 void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands);
 
 /* iv_task.c */

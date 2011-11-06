@@ -344,6 +344,43 @@ void iv_deinit(void)
 }
 
 
+/* file descriptor avl tree handling ****************************************/
+struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
+{
+	struct iv_avl_node *an;
+
+	an = root->root;
+	while (an != NULL) {
+		struct iv_fd_ *p;
+
+		p = container_of(an, struct iv_fd_, avl_node);
+		if (fd == p->fd)
+			return p;
+
+		if (fd < p->fd)
+			an = an->left;
+		else
+			an = an->right;
+	}
+
+	return NULL;
+}
+
+int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+{
+	struct iv_fd_ *a = container_of(_a, struct iv_fd_, avl_node);
+	struct iv_fd_ *b = container_of(_b, struct iv_fd_, avl_node);
+
+	if (a->fd < b->fd)
+		return -1;
+
+	if (a->fd > b->fd)
+		return 1;
+
+	return 0;
+}
+
+
 /* file descriptor handling *************************************************/
 void IV_FD_INIT(struct iv_fd *_fd)
 {
