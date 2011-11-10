@@ -141,28 +141,6 @@ static void got_client_write_space(void *_k)
 	}
 }
 
-static void got_client_error(void *_k)
-{
-	struct kojine *k = (struct kojine *)_k;
-	socklen_t len;
-	int ret;
-
-	len = sizeof(ret);
-	if (getsockopt(k->client_fd.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
-		fprintf(stderr, "got_client_error: error %d while "
-				"getsockopt(SO_ERROR)\n", errno);
-		abort();
-	}
-
-	if (ret == 0) {
-		fprintf(stderr, "got_client_error: no error?!\n");
-		abort();
-	}
-
-	kojine_kill(k);
-}
-
-
 static void got_server_data(void *_k)
 {
 	struct kojine *k = (struct kojine *)_k;
@@ -242,27 +220,6 @@ static void got_server_write_space(void *_k)
 	}
 }
 
-static void got_server_error(void *_k)
-{
-	struct kojine *k = (struct kojine *)_k;
-	socklen_t len;
-	int ret;
-
-	len = sizeof(ret);
-	if (getsockopt(k->server_fd.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
-		fprintf(stderr, "got_server_error: error %d while "
-				"getsockopt(SO_ERROR)\n", errno);
-		abort();
-	}
-
-	if (ret == 0) {
-		fprintf(stderr, "got_server_error: no error?!\n");
-		abort();
-	}
-
-	kojine_kill(k);
-}
-
 
 /*
  * KOJINE_STATE_SENT_CONNECT.
@@ -299,9 +256,7 @@ static void got_server_connect_reply(void *_k)
 
 	k->state = KOJINE_STATE_ESTABLISHED;
 	iv_fd_set_handler_in(&k->client_fd, got_client_data);
-	iv_fd_set_handler_err(&k->client_fd, got_client_error);
 	iv_fd_set_handler_in(&k->server_fd, got_server_data);
-	iv_fd_set_handler_err(&k->server_fd, got_server_error);
 	iv_timer_unregister(&k->connect_timeout);
 	k->us_buf_length = 0;
 	k->us_saw_fin = 0;

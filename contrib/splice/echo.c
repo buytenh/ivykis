@@ -51,7 +51,6 @@ static void conn_kill(struct connection *conn)
 
 static void conn_pollin(void *_conn);
 static void conn_pollout(void *_conn);
-static void conn_pollerr(void *_conn);
 
 static void conn_pollin(void *_conn)
 {
@@ -127,27 +126,6 @@ static void conn_pollout(void *_conn)
 	}
 }
 
-static void conn_pollerr(void *_conn)
-{
-	struct connection *conn = (struct connection *)_conn;
-	socklen_t len;
-	int ret;
-
-	len = sizeof(ret);
-	if (getsockopt(conn->sock.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
-		fprintf(stderr, "pollerr: error %d while "
-				"getsockopt(SO_ERROR)\n", errno);
-		abort();
-	}
-
-	if (ret == 0) {
-		fprintf(stderr, "pollerr: no error?!\n");
-		abort();
-	}
-
-	conn_kill(conn);
-}
-
 
 static struct iv_fd listening_socket;
 
@@ -178,7 +156,6 @@ static void got_connection(void *_dummy)
 	conn->sock.fd = ret;
 	conn->sock.cookie = (void *)conn;
 	conn->sock.handler_in = conn_pollin;
-	conn->sock.handler_err = conn_pollerr;
 	iv_fd_register(&conn->sock);
 
 	conn->pipe_bytes = 0;
