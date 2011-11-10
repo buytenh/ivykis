@@ -144,6 +144,10 @@ struct iv_state {
 		} poll;
 
 		struct {
+			int			port_fd;
+		} port;
+
+		struct {
 			struct iv_avl_tree	fds;
 			int			setsize;
 			int			fd_max;
@@ -190,6 +194,7 @@ extern struct iv_poll_method iv_method_dev_poll;
 extern struct iv_poll_method iv_method_epoll;
 extern struct iv_poll_method iv_method_kqueue;
 extern struct iv_poll_method iv_method_poll;
+extern struct iv_poll_method iv_method_port;
 extern struct iv_poll_method iv_method_select;
 
 

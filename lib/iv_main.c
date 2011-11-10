@@ -110,6 +110,9 @@ static void iv_init_first_thread(struct iv_state *st)
 	if (exclude != NULL && getuid() != euid)
 		exclude = NULL;
 
+#ifdef HAVE_PORT_CREATE
+	consider_poll_method(st, exclude, &iv_method_port);
+#endif
 #ifdef HAVE_SYS_DEVPOLL_H
 	consider_poll_method(st, exclude, &iv_method_dev_poll);
 #endif
