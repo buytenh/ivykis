@@ -30,7 +30,7 @@ static void handler(void *cookie, int status, struct rusage *rusage)
 {
 	struct iv_wait_interest *this = cookie;
 
-	printf("wait4: status of pid %d is %.4x: ", this->pid, status);
+	printf("wait4: status of pid %d is %.4x: ", (int)this->pid, status);
 
 	if (WIFSTOPPED(status))
 		printf("stopped by signal %d\n", WSTOPSIG(status));

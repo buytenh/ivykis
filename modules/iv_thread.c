@@ -185,12 +185,12 @@ void iv_thread_list_children(void)
 	struct list_head *lh;
 
 	fprintf(stderr, "tid\tname\n");
-	fprintf(stderr, "%d\tself\n", gettid());
+	fprintf(stderr, "%d\tself\n", (int)gettid());
 
 	list_for_each (lh, &child_threads) {
 		struct iv_thread *thr;
 
 		thr = list_entry(lh, struct iv_thread, list);
-		fprintf(stderr, "%d\t%s\n", thr->tid, thr->name);
+		fprintf(stderr, "%d\t%s\n", (int)thr->tid, thr->name);
 	}
 }
