@@ -12,6 +12,7 @@ AC_PROG_RANLIB
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
 	AC_MSG_ERROR(pthreads support is required to build ivykis.))
+AC_SEARCH_LIBS([socket], [socket])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
