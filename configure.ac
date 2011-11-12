@@ -57,6 +57,21 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
 	 AC_MSG_RESULT([yes])],
 	[AC_MSG_RESULT([no])])
 
+# Check for -pthreads.
+ac_save_CFLAGS=$CFLAGS
+AC_CACHE_CHECK(whether $CC accepts -pthreads, ac_cv_prog_cc_pthreads,
+	[ac_cv_prog_cc_pthreads=no
+	 CFLAGS="-pthreads"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
+		[ac_cv_prog_cc_pthreads=yes], [])
+	])
+if test $ac_cv_prog_cc_pthreads = yes
+then
+	CFLAGS="$ac_save_CFLAGS -pthreads"
+else
+	CFLAGS=$ac_save_CFLAGS
+fi
+
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
