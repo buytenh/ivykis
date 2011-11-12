@@ -10,7 +10,7 @@ AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
-	AC_MSG_ERROR(pthreads support is required to build ivykis modules.))
+	AC_MSG_ERROR(pthreads support is required to build ivykis.))
 AC_CHECK_LIB([rt], [clock_gettime])
 
 # Checks for header files.
