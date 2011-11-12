@@ -86,8 +86,8 @@ iv_port_poll(struct iv_state *st, struct list_head *active, int msec)
 	int revents;
 	struct iv_fd_ *fd;
 
-        to.tv_sec = msec / 1000;
-        to.tv_nsec = 1000000 * (msec % 1000);
+	to.tv_sec = msec / 1000;
+	to.tv_nsec = 1000000 * (msec % 1000);
 
 	ret = port_get(st->port.port_fd, &pe, &to);
 	if (ret < 0) {
