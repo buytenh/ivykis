@@ -10,6 +10,7 @@ AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([clock_gettime], [rt])
+AC_SEARCH_LIBS([inet_ntop], [nsl])
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
 	AC_MSG_ERROR(pthreads support is required to build ivykis.))
 AC_SEARCH_LIBS([socket], [socket])
