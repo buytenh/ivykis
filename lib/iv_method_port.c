@@ -25,6 +25,8 @@
 #include <syslog.h>
 #include "iv_private.h"
 
+#define PORTEV_NUM	1024
+
 static int iv_port_init(struct iv_state *st, int maxfd)
 {
 	int fd;
@@ -34,6 +36,8 @@ static int iv_port_init(struct iv_state *st, int maxfd)
 		return -1;
 
 	st->port.port_fd = fd;
+
+	INIT_LIST_HEAD(&st->port.notify);
 
 	return 0;
 }
@@ -64,31 +68,55 @@ static void iv_port_associate(struct iv_state *st, struct iv_fd_ *fd)
 	}
 }
 
-static void iv_port_deassociate(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_port_dissociate(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
 	ret = port_dissociate(st->port.port_fd, PORT_SOURCE_FD, fd->fd);
 	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_port_associate: got error %d[%s]", errno,
+		syslog(LOG_CRIT, "iv_port_dissociate: got error %d[%s]", errno,
 		       strerror(errno));
 		abort();
+	}
+}
+
+static void iv_port_flush_pending(struct iv_state *st)
+{
+	while (!list_empty(&st->port.notify)) {
+		struct list_head *lh;
+		struct iv_fd_ *fd;
+
+		lh = st->port.notify.next;
+		list_del_init(lh);
+
+		fd = list_entry(lh, struct iv_fd_, list_notify);
+
+		if (fd->wanted_bands)
+			iv_port_associate(st, fd);
+		else
+			iv_port_dissociate(st, fd);
+
+		fd->registered_bands = fd->wanted_bands;
 	}
 }
 
 static void
 iv_port_poll(struct iv_state *st, struct list_head *active, int msec)
 {
-	port_event_t pe;
 	struct timespec to;
+	int nget;
+	port_event_t pe[PORTEV_NUM];
 	int ret;
-	int revents;
-	struct iv_fd_ *fd;
+	int i;
+
+	iv_port_flush_pending(st);
 
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
-	ret = port_get(st->port.port_fd, &pe, &to);
+poll_more:
+	nget = 1;
+	ret = port_getn(st->port.port_fd, pe, PORTEV_NUM, &nget, &to);
 	if (ret < 0) {
 		if (errno == EINTR || errno == ETIME)
 			return;
@@ -98,32 +126,38 @@ iv_port_poll(struct iv_state *st, struct list_head *active, int msec)
 		abort();
 	}
 
-	revents = pe.portev_events;
-	fd = pe.portev_user;
+	for (i = 0; i < nget; i++) {
+		int revents = pe[i].portev_events;
+		struct iv_fd_ *fd = pe[i].portev_user;
 
-	if (revents & (POLLIN | POLLERR | POLLHUP))
-		iv_fd_make_ready(active, fd, MASKIN);
+		if (revents & (POLLIN | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKIN);
 
-	if (revents & (POLLOUT | POLLERR | POLLHUP))
-		iv_fd_make_ready(active, fd, MASKOUT);
+		if (revents & (POLLOUT | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKOUT);
 
-	if (revents & (POLLERR | POLLHUP))
-		iv_fd_make_ready(active, fd, MASKERR);
+		if (revents & (POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKERR);
 
-	iv_port_associate(st, fd, fd->registered_bands);
+		fd->registered_bands = 0;
+		list_del_init(&fd->list_notify);
+
+		if (fd->wanted_bands)
+			list_add_tail(&fd->list_notify, &st->port.notify);
+	}
+
+	if (nget == PORTEV_NUM) {
+		to.tv_sec = 0;
+		to.tv_nsec = 0;
+		goto poll_more;
+	}
 }
 
 static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (fd->registered_bands != fd->wanted_bands) {
-		if (fd->registered_bands)
-			iv_port_deassociate(st, fd);
-
-		if (fd->wanted_bands)
-			iv_port_associate(st, fd);
-
-		fd->registered_bands = fd->wanted_bands;
-	}
+	list_del_init(&fd->list_notify);
+	if (fd->registered_bands != fd->wanted_bands)
+		list_add_tail(&fd->list_notify, &st->port.notify);
 }
 
 static void iv_port_deinit(struct iv_state *st)

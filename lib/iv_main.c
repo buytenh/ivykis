@@ -438,6 +438,7 @@ void iv_fd_register(struct iv_fd *_fd)
 	INIT_LIST_HEAD(&fd->list_active);
 	fd->ready_bands = 0;
 	fd->registered_bands = 0;
+	INIT_LIST_HEAD(&fd->list_notify);
 
 	st->numfds++;
 

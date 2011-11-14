@@ -69,6 +69,12 @@ struct iv_fd_ {
 	unsigned		registered_bands:3;
 
 	/*
+	 * ->list_notify is used by poll methods that defer updating
+	 * kernel registrations to ->poll() time.
+         */
+	struct list_head	list_notify;
+
+	/*
 	 * This is for state internal to some of the poll methods:
 	 * ->avl_node is used by poll methods that maintain an
 	 * internal fd tree, and ->index is used by iv_method_poll
@@ -151,6 +157,7 @@ struct iv_state {
 
 		struct {
 			int			port_fd;
+			struct list_head	notify;
 		} port;
 
 		struct {
