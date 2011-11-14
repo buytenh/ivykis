@@ -29,57 +29,96 @@
 #include <sys/poll.h>
 #include "iv_private.h"
 
-#define UPLOAD_QUEUE_SIZE	(1024)
+#define UPLOAD_BATCH		1024
 
 static int iv_dev_poll_init(struct iv_state *st, int maxfd)
 {
 	int poll_fd;
-	struct pollfd *upload_queue;
 
 	poll_fd = open("/dev/poll", O_RDWR);
 	if (poll_fd < 0)
 		return -1;
 
-	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
-	if (upload_queue == NULL) {
-		close(poll_fd);
-		return -1;
-	}
-
 	INIT_IV_AVL_TREE(&st->dev_poll.fds, iv_fd_avl_compare);
 	st->dev_poll.poll_fd = poll_fd;
-	st->dev_poll.upload_queue = upload_queue;
-	st->dev_poll.upload_entries = 0;
+	INIT_LIST_HEAD(&st->dev_poll.notify);
 
 	return 0;
 }
 
-static void flush_upload_queue(struct iv_state *st)
+static void xwrite(int fd, const void *buf, size_t count)
 {
-	unsigned char *base;
-	int left;
-
-	base = (unsigned char *)st->dev_poll.upload_queue;
-	left = st->dev_poll.upload_entries * sizeof(struct pollfd);
-
-	while (left) {
+	while (count) {
 		int ret;
 
 		do {
-			ret = write(st->dev_poll.poll_fd, base, left);
+			ret = write(fd, buf, count);
 		} while (ret < 0 && errno == EINTR);
 
 		if (ret < 0) {
-			syslog(LOG_CRIT, "flush_upload_queue: got error %d[%s]",
-			       errno, strerror(errno));
+			syslog(LOG_CRIT, "iv_dev_poll_flush_pending: got "
+			       "error %d[%s]", errno, strerror(errno));
 			abort();
 		}
 
-		base += ret;
-		left -= ret;
+		buf += ret;
+		count -= ret;
+	}
+}
+
+static int bits_to_poll_mask(int bits)
+{
+	int mask;
+
+	mask = 0;
+	if (bits & MASKIN)
+		mask |= POLLIN;
+	if (bits & MASKOUT)
+		mask |= POLLOUT;
+
+	return mask;
+}
+
+static void iv_dev_poll_flush_pending(struct iv_state *st)
+{
+	int poll_fd;
+	struct pollfd pfd[UPLOAD_BATCH];
+	int num;
+
+	poll_fd = st->dev_poll.poll_fd;
+	num = 0;
+
+	while (!list_empty(&st->dev_poll.notify)) {
+		struct list_head *lh;
+		struct iv_fd_ *fd;
+
+		if (num > UPLOAD_BATCH - 2) {
+			xwrite(poll_fd, pfd, num * sizeof(pfd[0]));
+			num = 0;
+		}
+
+		lh = st->dev_poll.notify.next;
+		list_del_init(lh);
+
+		fd = list_entry(lh, struct iv_fd_, list_notify);
+
+		if (fd->registered_bands & ~fd->wanted_bands) {
+			pfd[num].fd = fd->fd;
+			pfd[num].events = POLLREMOVE;
+			num++;
+		}
+
+		if (fd->wanted_bands) {
+			pfd[num].fd = fd->fd;
+			pfd[num].events = bits_to_poll_mask(fd->wanted_bands);
+			num++;
+		}
+
+		fd->registered_bands = fd->wanted_bands;
 	}
 
-	st->dev_poll.upload_entries = 0;
+	if (num)
+		xwrite(poll_fd, pfd, num * sizeof(pfd[0]));
 }
 
 static void
@@ -99,8 +138,7 @@ iv_dev_poll_poll(struct iv_state *st, struct list_head *active, int msec)
 		msec += (1000/100) - 1;
 #endif
 
-	if (st->dev_poll.upload_entries)
-		flush_upload_queue(st);
+	iv_dev_poll_flush_pending(st);
 
 	dvp.dp_fds = batch;
 	dvp.dp_nfds = st->numfds;
@@ -156,54 +194,18 @@ static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&st->dev_poll.fds, &fd->avl_node);
 
-	flush_upload_queue(st);
-}
-
-static int bits_to_poll_mask(int bits)
-{
-	int mask;
-
-	mask = 0;
-	if (bits & MASKIN)
-		mask |= POLLIN;
-	if (bits & MASKOUT)
-		mask |= POLLOUT;
-
-	return mask;
+	iv_dev_poll_flush_pending(st);
 }
 
 static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	struct pollfd *upload_queue;
-	int upload_entries;
-
-	if (st->dev_poll.upload_entries > UPLOAD_QUEUE_SIZE - 2)
-		flush_upload_queue(st);
-
-	upload_queue = st->dev_poll.upload_queue;
-	upload_entries = st->dev_poll.upload_entries;
-
-	if (fd->registered_bands & ~fd->wanted_bands) {
-		upload_queue[upload_entries].fd = fd->fd;
-		upload_queue[upload_entries].events = POLLREMOVE;
-		upload_entries++;
-	}
-
-	if (fd->wanted_bands) {
-		upload_queue[upload_entries].fd = fd->fd;
-		upload_queue[upload_entries].events =
-			bits_to_poll_mask(fd->wanted_bands);
-		upload_entries++;
-	}
-
-	st->dev_poll.upload_entries = upload_entries;
-
-	fd->registered_bands = fd->wanted_bands;
+	list_del_init(&fd->list_notify);
+	if (fd->registered_bands != fd->wanted_bands)
+		list_add_tail(&fd->list_notify, &st->dev_poll.notify);
 }
 
 static void iv_dev_poll_deinit(struct iv_state *st)
 {
-	free(st->dev_poll.upload_queue);
 	close(st->dev_poll.poll_fd);
 }
 

@@ -141,8 +141,7 @@ struct iv_state {
 		struct {
 			struct iv_avl_tree	fds;
 			int			poll_fd;
-			struct pollfd		*upload_queue;
-			int			upload_entries;
+			struct list_head	notify;
 		} dev_poll;
 
 		struct {
