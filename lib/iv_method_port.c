@@ -51,13 +51,12 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void
-iv_port_associate(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_port_associate(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
 	ret = port_associate(st->port.port_fd, PORT_SOURCE_FD,
-			     fd->fd, bits_to_poll_mask(wanted), fd);
+			     fd->fd, bits_to_poll_mask(fd->wanted_bands), fd);
 	if (ret < 0) {
 		syslog(LOG_CRIT, "iv_port_associate: got error %d[%s]", errno,
 		       strerror(errno));
@@ -114,17 +113,16 @@ iv_port_poll(struct iv_state *st, struct list_head *active, int msec)
 	iv_port_associate(st, fd, fd->registered_bands);
 }
 
-static void
-iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (fd->registered_bands != wanted) {
+	if (fd->registered_bands != fd->wanted_bands) {
 		if (fd->registered_bands)
 			iv_port_deassociate(st, fd);
 
-		if (wanted)
-			iv_port_associate(st, fd, wanted);
+		if (fd->wanted_bands)
+			iv_port_associate(st, fd);
 
-		fd->registered_bands = wanted;
+		fd->registered_bands = fd->wanted_bands;
 	}
 }
 

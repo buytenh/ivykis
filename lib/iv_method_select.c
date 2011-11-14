@@ -142,19 +142,19 @@ static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 	}
 }
 
-static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (wanted & MASKIN)
+	if (fd->wanted_bands & MASKIN)
 		FD_SET(fd->fd, st->select.readfds_master);
 	else
 		FD_CLR(fd->fd, st->select.readfds_master);
 
-	if (wanted & MASKOUT)
+	if (fd->wanted_bands & MASKOUT)
 		FD_SET(fd->fd, st->select.writefds_master);
 	else
 		FD_CLR(fd->fd, st->select.writefds_master);
 
-	fd->registered_bands = wanted;
+	fd->registered_bands = fd->wanted_bands;
 }
 
 static void iv_select_deinit(struct iv_state *st)

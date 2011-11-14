@@ -104,25 +104,24 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void
-iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct epoll_event event;
 	int op;
 	int ret;
 
-	if (fd->registered_bands == wanted)
+	if (fd->registered_bands == fd->wanted_bands)
 		return;
 
-	if (!fd->registered_bands && wanted)
+	if (!fd->registered_bands && fd->wanted_bands)
 		op = EPOLL_CTL_ADD;
-	else if (fd->registered_bands && !wanted)
+	else if (fd->registered_bands && !fd->wanted_bands)
 		op = EPOLL_CTL_DEL;
 	else
 		op = EPOLL_CTL_MOD;
 
 	event.data.ptr = fd;
-	event.events = bits_to_poll_mask(wanted);
+	event.events = bits_to_poll_mask(fd->wanted_bands);
 	do {
 		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
 	} while (ret < 0 && errno == EINTR);
@@ -133,7 +132,7 @@ iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 		abort();
 	}
 
-	fd->registered_bands = wanted;
+	fd->registered_bands = fd->wanted_bands;
 }
 
 static void iv_epoll_deinit(struct iv_state *st)

@@ -172,8 +172,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void
-iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct pollfd *upload_queue;
 	int upload_entries;
@@ -184,21 +183,22 @@ iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 	upload_queue = st->dev_poll.upload_queue;
 	upload_entries = st->dev_poll.upload_entries;
 
-	if (fd->registered_bands & ~wanted) {
+	if (fd->registered_bands & ~fd->wanted_bands) {
 		upload_queue[upload_entries].fd = fd->fd;
 		upload_queue[upload_entries].events = POLLREMOVE;
 		upload_entries++;
 	}
 
-	if (wanted) {
+	if (fd->wanted_bands) {
 		upload_queue[upload_entries].fd = fd->fd;
-		upload_queue[upload_entries].events = bits_to_poll_mask(wanted);
+		upload_queue[upload_entries].events =
+			bits_to_poll_mask(fd->wanted_bands);
 		upload_entries++;
 	}
 
 	st->dev_poll.upload_entries = upload_entries;
 
-	fd->registered_bands = wanted;
+	fd->registered_bands = fd->wanted_bands;
 }
 
 static void iv_dev_poll_deinit(struct iv_state *st)

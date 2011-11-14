@@ -55,6 +55,12 @@ struct iv_fd_ {
 	unsigned		registered:1;
 
 	/*
+	 * ->wanted_bands is set by the ivykis core to indicate
+	 * which bands currenty have handlers registered for them.
+	 */
+	unsigned		wanted_bands:3;
+
+	/*
 	 * ->registered_bands is maintained by the poll method to
 	 * indicate which bands are currently registered with the
 	 * kernel, so that the ivykis core knows when to call
@@ -185,8 +191,7 @@ struct iv_poll_method {
 			struct list_head *active, int msec);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
-	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd,
-			     int wanted_bands);
+	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*deinit)(struct iv_state *st);
 };
 

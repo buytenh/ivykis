@@ -250,7 +250,9 @@ static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 			wanted |= MASKERR;
 	}
 
-	method->notify_fd(st, fd, wanted);
+	fd->wanted_bands = wanted;
+
+	method->notify_fd(st, fd);
 }
 
 static void iv_run_active_list(struct iv_state *st, struct list_head *active)

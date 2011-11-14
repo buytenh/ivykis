@@ -145,9 +145,12 @@ static void queue(u_int ident, short filter, u_short flags,
 	upload_entries++;
 }
 
-static void
-iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
+	int wanted;
+
+	wanted = fd->wanted_bands;
+
 	if ((fd->registered_bands & MASKIN) && !(wanted & MASKIN)) {
 		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
 		fd->registered_bands &= ~MASKIN;

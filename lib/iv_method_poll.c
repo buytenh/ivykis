@@ -105,18 +105,18 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void
-iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
+static void iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (fd->registered_bands == wanted)
+	if (fd->registered_bands == fd->wanted_bands)
 		return;
 
-	if (fd->index == -1 && wanted) {
+	if (fd->index == -1 && fd->wanted_bands) {
 		fd->index = st->poll.num_registered_fds++;
 		st->poll.pfds[fd->index].fd = fd->fd;
-		st->poll.pfds[fd->index].events = bits_to_poll_mask(wanted);
+		st->poll.pfds[fd->index].events =
+			bits_to_poll_mask(fd->wanted_bands);
 		st->poll.fds[fd->index] = fd;
-	} else if (fd->index != -1 && !wanted) {
+	} else if (fd->index != -1 && !fd->wanted_bands) {
 		if (fd->index != st->poll.num_registered_fds - 1) {
 			struct iv_fd_ *last;
 
@@ -131,10 +131,11 @@ iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd, int wanted)
 
 		fd->index = -1;
 	} else {
-		st->poll.pfds[fd->index].events = bits_to_poll_mask(wanted);
+		st->poll.pfds[fd->index].events =
+			bits_to_poll_mask(fd->wanted_bands);
 	}
 
-	fd->registered_bands = wanted;
+	fd->registered_bands = fd->wanted_bands;
 }
 
 static void iv_poll_deinit(struct iv_state *st)
