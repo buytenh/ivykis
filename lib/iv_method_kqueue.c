@@ -195,7 +195,8 @@ static void iv_kqueue_upload_all(struct iv_state *st)
 
 static void iv_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	iv_kqueue_upload_all(st);
+	if (!list_empty(&fd->list_notify))
+		iv_kqueue_upload_all(st);
 }
 
 static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)

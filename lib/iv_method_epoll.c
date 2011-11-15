@@ -71,43 +71,44 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
+static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
+{
+	int op;
+	struct epoll_event event;
+	int ret;
+
+	if (!fd->registered_bands && fd->wanted_bands)
+		op = EPOLL_CTL_ADD;
+	else if (fd->registered_bands && !fd->wanted_bands)
+		op = EPOLL_CTL_DEL;
+	else
+		op = EPOLL_CTL_MOD;
+
+	event.data.ptr = fd;
+	event.events = bits_to_poll_mask(fd->wanted_bands);
+	do {
+		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		syslog(LOG_CRIT, "iv_epoll_flush_one: got "
+		       "error %d[%s]", errno, strerror(errno));
+		abort();
+	}
+
+	fd->registered_bands = fd->wanted_bands;
+	list_del_init(&fd->list_notify);
+}
+
 static void iv_epoll_flush_pending(struct iv_state *st)
 {
-	int epoll_fd
-
-	epoll_fd = st->epoll.epoll_fd;
 	while (!list_empty(&st->epoll.notify)) {
-		struct list_head *lh;
 		struct iv_fd_ *fd;
-		int op;
-		struct epoll_event event;
-		int ret;
 
-		lh = st->epoll.notify.next;
-		list_del_init(lh);
+		fd = list_entry(st->epoll.notify.next,
+				struct iv_fd_, list_notify);
 
-		fd = list_entry(lh, struct iv_fd_, list_notify);
-
-		if (!fd->registered_bands && fd->wanted_bands)
-			op = EPOLL_CTL_ADD;
-		else if (fd->registered_bands && !fd->wanted_bands)
-			op = EPOLL_CTL_DEL;
-		else
-			op = EPOLL_CTL_MOD;
-
-		event.data.ptr = fd;
-		event.events = bits_to_poll_mask(fd->wanted_bands);
-		do {
-			ret = epoll_ctl(epoll_fd, op, fd->fd, &event);
-		} while (ret < 0 && errno == EINTR);
-
-		if (ret < 0) {
-			syslog(LOG_CRIT, "iv_epoll_notify_fd: got "
-			       "error %d[%s]", errno, strerror(errno));
-			abort();
-		}
-
-		fd->registered_bands = fd->wanted_bands;
+		iv_epoll_flush_one(st, fd);
 	}
 }
 
@@ -150,7 +151,8 @@ iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 
 static void iv_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	iv_epoll_flush_pending(st);
+	if (!list_empty(&fd->list_notify))
+		iv_epoll_flush_one(st, fd);
 }
 
 static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)

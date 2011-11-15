@@ -194,7 +194,8 @@ static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&st->dev_poll.fds, &fd->avl_node);
 
-	iv_dev_poll_flush_pending(st);
+	if (!list_empty(&fd->list_notify))
+		iv_dev_poll_flush_pending(st);
 }
 
 static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
