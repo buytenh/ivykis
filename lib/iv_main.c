@@ -259,37 +259,23 @@ static void iv_run_active_list(struct iv_state *st, struct list_head *active)
 {
 	while (!list_empty(active)) {
 		struct iv_fd_ *fd;
-		int notify;
 
 		fd = list_entry(active->next, struct iv_fd_, list_active);
 		list_del_init(&fd->list_active);
 
 		st->handled_fd = fd;
-		notify = 0;
 
-		if (fd->ready_bands & MASKERR) {
+		if (fd->ready_bands & MASKERR)
 			if (fd->handler_err != NULL)
 				fd->handler_err(fd->cookie);
-			else
-				notify = 1;
-		}
 
-		if (st->handled_fd != NULL && fd->ready_bands & MASKIN) {
+		if (st->handled_fd != NULL && fd->ready_bands & MASKIN)
 			if (fd->handler_in != NULL)
 				fd->handler_in(fd->cookie);
-			else
-				notify = 1;
-		}
 
-		if (st->handled_fd != NULL && fd->ready_bands & MASKOUT) {
+		if (st->handled_fd != NULL && fd->ready_bands & MASKOUT)
 			if (fd->handler_out != NULL)
 				fd->handler_out(fd->cookie);
-			else
-				notify = 1;
-		}
-
-		if (st->handled_fd != NULL && notify)
-			notify_fd(st, fd);
 	}
 }
 
@@ -491,7 +477,6 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int notify;
 
 	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_in: called with fd "
@@ -499,26 +484,22 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 		abort();
 	}
 
-	notify = 0;
 	if (handler_in != NULL && !(fd->registered_bands & MASKIN)) {
 		if (fd->handler_in != NULL) {
 			syslog(LOG_CRIT, "iv_fd_set_handler_in: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}
-		notify = 1;
 	}
 
 	fd->handler_in = handler_in;
-	if (notify)
-		notify_fd(st, fd);
+	notify_fd(st, fd);
 }
 
 void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int notify;
 
 	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_out: called with fd "
@@ -526,26 +507,22 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 		abort();
 	}
 
-	notify = 0;
 	if (handler_out != NULL && !(fd->registered_bands & MASKOUT)) {
 		if (fd->handler_out != NULL) {
 			syslog(LOG_CRIT, "iv_fd_set_handler_out: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}
-		notify = 1;
 	}
 
 	fd->handler_out = handler_out;
-	if (notify)
-		notify_fd(st, fd);
+	notify_fd(st, fd);
 }
 
 void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int notify;
 
 	if (!fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_set_handler_err: called with fd "
@@ -553,17 +530,14 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 		abort();
 	}
 
-	notify = 0;
 	if (handler_err != NULL && !(fd->registered_bands & MASKERR)) {
 		if (fd->handler_err != NULL) {
 			syslog(LOG_CRIT, "iv_fd_set_handler_err: old handler "
 					 "is NULL, yet not registered");
 			abort();
 		}
-		notify = 1;
 	}
 
 	fd->handler_err = handler_err;
-	if (notify)
-		notify_fd(st, fd);
+	notify_fd(st, fd);
 }
