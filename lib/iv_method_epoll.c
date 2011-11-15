@@ -31,6 +31,8 @@ static int iv_epoll_init(struct iv_state *st, int maxfd)
 	int fd;
 	int flags;
 
+	INIT_LIST_HEAD(&st->epoll.notify);
+
 #ifdef HAVE_EPOLL_CREATE1
 	fd = epoll_create1(EPOLL_CLOEXEC);
 	if (fd >= 0) {
@@ -56,12 +58,67 @@ static int iv_epoll_init(struct iv_state *st, int maxfd)
 	return 0;
 }
 
+static int bits_to_poll_mask(int bits)
+{
+	int mask;
+
+	mask = 0;
+	if (bits & MASKIN)
+		mask |= EPOLLIN;
+	if (bits & MASKOUT)
+		mask |= EPOLLOUT;
+
+	return mask;
+}
+
+static void iv_epoll_flush_pending(struct iv_state *st)
+{
+	int epoll_fd
+
+	epoll_fd = st->epoll.epoll_fd;
+	while (!list_empty(&st->epoll.notify)) {
+		struct list_head *lh;
+		struct iv_fd_ *fd;
+		int op;
+		struct epoll_event event;
+		int ret;
+
+		lh = st->epoll.notify.next;
+		list_del_init(lh);
+
+		fd = list_entry(lh, struct iv_fd_, list_notify);
+
+		if (!fd->registered_bands && fd->wanted_bands)
+			op = EPOLL_CTL_ADD;
+		else if (fd->registered_bands && !fd->wanted_bands)
+			op = EPOLL_CTL_DEL;
+		else
+			op = EPOLL_CTL_MOD;
+
+		event.data.ptr = fd;
+		event.events = bits_to_poll_mask(fd->wanted_bands);
+		do {
+			ret = epoll_ctl(epoll_fd, op, fd->fd, &event);
+		} while (ret < 0 && errno == EINTR);
+
+		if (ret < 0) {
+			syslog(LOG_CRIT, "iv_epoll_notify_fd: got "
+			       "error %d[%s]", errno, strerror(errno));
+			abort();
+		}
+
+		fd->registered_bands = fd->wanted_bands;
+	}
+}
+
 static void
 iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
 	int i;
+
+	iv_epoll_flush_pending(st);
 
 	ret = epoll_wait(st->epoll.epoll_fd, batch, st->numfds ? : 1, msec);
 	if (ret < 0) {
@@ -91,48 +148,16 @@ iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 	}
 }
 
-static int bits_to_poll_mask(int bits)
+static void iv_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	int mask;
-
-	mask = 0;
-	if (bits & MASKIN)
-		mask |= EPOLLIN;
-	if (bits & MASKOUT)
-		mask |= EPOLLOUT;
-
-	return mask;
+	iv_epoll_flush_pending(st);
 }
 
 static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	struct epoll_event event;
-	int op;
-	int ret;
-
-	if (fd->registered_bands == fd->wanted_bands)
-		return;
-
-	if (!fd->registered_bands && fd->wanted_bands)
-		op = EPOLL_CTL_ADD;
-	else if (fd->registered_bands && !fd->wanted_bands)
-		op = EPOLL_CTL_DEL;
-	else
-		op = EPOLL_CTL_MOD;
-
-	event.data.ptr = fd;
-	event.events = bits_to_poll_mask(fd->wanted_bands);
-	do {
-		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
-	} while (ret < 0 && errno == EINTR);
-
-	if (ret < 0) {
-		syslog(LOG_CRIT, "iv_epoll_notify_fd: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
-	}
-
-	fd->registered_bands = fd->wanted_bands;
+	list_del_init(&fd->list_notify);
+	if (fd->registered_bands != fd->wanted_bands)
+		list_add_tail(&fd->list_notify, &st->epoll.notify);
 }
 
 static void iv_epoll_deinit(struct iv_state *st)
@@ -145,6 +170,7 @@ struct iv_poll_method iv_method_epoll = {
 	.name		= "epoll",
 	.init		= iv_epoll_init,
 	.poll		= iv_epoll_poll,
+	.unregister_fd	= iv_epoll_unregister_fd,
 	.notify_fd	= iv_epoll_notify_fd,
 	.deinit		= iv_epoll_deinit,
 };

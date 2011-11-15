@@ -146,6 +146,7 @@ struct iv_state {
 
 		struct {
 			int			epoll_fd;
+			struct list_head	notify;
 		} epoll;
 
 		struct {
