@@ -53,7 +53,6 @@ static void handler(void *_h)
 
 		len = snprintf(buf, 128, "this is port %d\n", h->port);
 		write(ret, buf, len);
-		shutdown(ret, 2);
 		close(ret);
 
 		if (!(++conns % 10000))
