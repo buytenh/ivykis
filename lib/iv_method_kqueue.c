@@ -30,14 +30,11 @@
 
 #define UPLOAD_QUEUE_SIZE	(1024)
 
-static __thread int		kqueue_fd;
-static __thread struct kevent	*upload_queue;
-static __thread int		upload_entries;
-
-
 static int iv_kqueue_init(struct iv_state *st, int maxfd)
 {
+	int kqueue_fd;
 	int flags;
+	struct kevent *upload_queue;
 
 	kqueue_fd = kqueue();
 	if (kqueue_fd < 0)
@@ -55,7 +52,9 @@ static int iv_kqueue_init(struct iv_state *st, int maxfd)
 		return -1;
 	}
 
-	upload_entries = 0;
+	st->kqueue.kqueue_fd = kqueue_fd;
+	st->kqueue.upload_queue = upload_queue;
+	st->kqueue.upload_entries = 0;
 
 	return 0;
 }
@@ -81,8 +80,8 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
-	ret = kevent(kqueue_fd, upload_queue, upload_entries,
-		     batch, st->numfds ? : 1, &to);
+	ret = kevent(st->kqueue.kqueue_fd, st->kqueue.upload_queue,
+		     st->kqueue.upload_entries, batch, st->numfds ? : 1, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -92,12 +91,12 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 		abort();
 	}
 
-	upload_entries = 0;
+	st->kqueue.upload_entries = 0;
 
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
 
-		fd = batch[i].udata;
+		fd = (void *)batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
 			iv_fd_make_ready(active, fd, MASKIN);
 		} else if (batch[i].filter == EVFILT_WRITE) {
@@ -110,14 +109,14 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 	}
 }
 
-static void flush_upload_queue(void)
+static void flush_upload_queue(struct iv_state *st)
 {
 	struct timespec to = { 0, 0 };
 	int ret;
 
 	do {
-		ret = kevent(kqueue_fd, upload_queue,
-			     upload_entries, NULL, 0, &to);
+		ret = kevent(st->kqueue.kqueue_fd, st->kqueue.upload_queue,
+			     st->kqueue.upload_entries, NULL, 0, &to);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -126,23 +125,23 @@ static void flush_upload_queue(void)
 		abort();
 	}
 
-	upload_entries = 0;
+	st->kqueue.upload_entries = 0;
 }
 
 static void iv_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	flush_upload_queue();
+	flush_upload_queue(st);
 }
 
-static void queue(u_int ident, short filter, u_short flags,
-		  u_int fflags, int data, void *udata)
+static void queue(struct iv_state *st, u_int ident, short filter,
+		  u_short flags, u_int fflags, int data, void *udata)
 {
-	if (upload_entries == UPLOAD_QUEUE_SIZE)
-		flush_upload_queue();
+	if (st->kqueue.upload_entries == UPLOAD_QUEUE_SIZE)
+		flush_upload_queue(st);
 
-	EV_SET(&upload_queue[upload_entries], ident, filter, flags,
-	       fflags, data, udata);
-	upload_entries++;
+	EV_SET(&st->kqueue.upload_queue[st->kqueue.upload_entries],
+	       ident, filter, flags, fflags, data, (intptr_t)udata);
+	st->kqueue.upload_entries++;
 }
 
 static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
@@ -152,19 +151,19 @@ static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	wanted = fd->wanted_bands;
 
 	if ((fd->registered_bands & MASKIN) && !(wanted & MASKIN)) {
-		queue(fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
+		queue(st, fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
 		fd->registered_bands &= ~MASKIN;
 	} else if ((wanted & MASKIN) && !(fd->registered_bands & MASKIN)) {
-		queue(fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
+		queue(st, fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
 		      0, 0, (void *)fd);
 		fd->registered_bands |= MASKIN;
 	}
 
 	if ((fd->registered_bands & MASKOUT) && !(wanted & MASKOUT)) {
-		queue(fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
+		queue(st, fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
 		fd->registered_bands &= ~MASKOUT;
 	} else if ((wanted & MASKOUT) && !(fd->registered_bands & MASKOUT)) {
-		queue(fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
+		queue(st, fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
 		      0, 0, (void *)fd);
 		fd->registered_bands |= MASKOUT;
 	}
@@ -172,8 +171,8 @@ static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_kqueue_deinit(struct iv_state *st)
 {
-	free(upload_queue);
-	close(kqueue_fd);
+	free(st->kqueue.upload_queue);
+	close(st->kqueue.kqueue_fd);
 }
 
 

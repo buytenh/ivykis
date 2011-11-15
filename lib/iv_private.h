@@ -150,6 +150,12 @@ struct iv_state {
 		} epoll;
 
 		struct {
+			int		kqueue_fd;
+			struct kevent	*upload_queue;
+			int		upload_entries;
+		} kqueue;
+
+		struct {
 			struct pollfd		*pfds;
 			struct iv_fd_		**fds;
 			int			num_registered_fds;
