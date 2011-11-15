@@ -150,9 +150,8 @@ struct iv_state {
 		} epoll;
 
 		struct {
-			int		kqueue_fd;
-			struct kevent	*upload_queue;
-			int		upload_entries;
+			int			kqueue_fd;
+			struct list_head	notify;
 		} kqueue;
 
 		struct {

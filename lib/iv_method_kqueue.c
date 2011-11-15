@@ -28,13 +28,12 @@
 #include <sys/time.h>
 #include "iv_private.h"
 
-#define UPLOAD_QUEUE_SIZE	(1024)
+#define UPLOAD_BATCH	1024
 
 static int iv_kqueue_init(struct iv_state *st, int maxfd)
 {
 	int kqueue_fd;
 	int flags;
-	struct kevent *upload_queue;
 
 	kqueue_fd = kqueue();
 	if (kqueue_fd < 0)
@@ -46,26 +45,93 @@ static int iv_kqueue_init(struct iv_state *st, int maxfd)
 		fcntl(kqueue_fd, F_SETFD, flags);
 	}
 
-	upload_queue = malloc(UPLOAD_QUEUE_SIZE * sizeof(*upload_queue));
-	if (upload_queue == NULL) {
-		close(kqueue_fd);
-		return -1;
-	}
-
 	st->kqueue.kqueue_fd = kqueue_fd;
-	st->kqueue.upload_queue = upload_queue;
-	st->kqueue.upload_entries = 0;
+	INIT_LIST_HEAD(&st->kqueue.notify);
 
 	return 0;
 }
 
 static void
+iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
+{
+	int num;
+	int wanted;
+	int regd;
+
+	num = *_num;
+	wanted = fd->wanted_bands;
+	regd = fd->registered_bands;
+
+	if (!(wanted & MASKIN) && (regd & MASKIN)) {
+		EV_SET(&kev[num], fd->fd, EVFILT_READ, EV_DELETE,
+		       0, 0, (intptr_t)fd);
+		num++;
+	} else if ((wanted & MASKIN) && !(regd & MASKIN)) {
+		EV_SET(&kev[num], fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
+		       0, 0, (intptr_t)fd);
+		num++;
+	}
+
+	if (!(wanted & MASKOUT) && (regd & MASKOUT)) {
+		EV_SET(&kev[num], fd->fd, EVFILT_WRITE, EV_DELETE,
+		       0, 0, (intptr_t)fd);
+		num++;
+	} else if ((wanted & MASKOUT) && !(regd & MASKOUT)) {
+		EV_SET(&kev[num], fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
+		       0, 0, (intptr_t)fd);
+		num++;
+	}
+
+	fd->registered_bands = fd->wanted_bands;
+
+	*_num = num;
+}
+
+static void
+iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
+{
+	struct timespec to = { 0, 0 };
+
+	*num = 0;
+
+	while (!list_empty(&st->kqueue.notify)) {
+		struct list_head *lh;
+		struct iv_fd_ *fd;
+
+		if (*num > size - 2) {
+			int ret;
+
+			ret = kevent(st->kqueue.kqueue_fd, kev, *num,
+				     NULL, 0, &to);
+			if (ret < 0) {
+				syslog(LOG_CRIT, "iv_kqueue_upload: got error "
+				       "%d[%s]", errno, strerror(errno));
+				abort();
+			}
+
+			*num = 0;
+		}
+
+		lh = st->kqueue.notify.next;
+		list_del_init(lh);
+
+		fd = list_entry(lh, struct iv_fd_, list_notify);
+
+		iv_kqueue_queue_one(kev, num, fd);
+	}
+}
+
+static void
 iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 {
+	struct kevent kev[UPLOAD_BATCH];
+	int num;
 	struct timespec to;
 	struct kevent batch[st->numfds ? : 1];
 	int ret;
 	int i;
+
+	iv_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
 	/*
 	 * Valgrind 3.5.0 as supplied with FreeBSD 8.1-RELEASE ports
@@ -80,8 +146,8 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 	to.tv_sec = msec / 1000;
 	to.tv_nsec = 1000000 * (msec % 1000);
 
-	ret = kevent(st->kqueue.kqueue_fd, st->kqueue.upload_queue,
-		     st->kqueue.upload_entries, batch, st->numfds ? : 1, &to);
+	ret = kevent(st->kqueue.kqueue_fd, kev, num,
+		     batch, st->numfds ? : 1, &to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -90,8 +156,6 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 		       errno, strerror(errno));
 		abort();
 	}
-
-	st->kqueue.upload_entries = 0;
 
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
@@ -109,69 +173,40 @@ iv_kqueue_poll(struct iv_state *st, struct list_head *active, int msec)
 	}
 }
 
-static void flush_upload_queue(struct iv_state *st)
+static void iv_kqueue_upload_all(struct iv_state *st)
 {
-	struct timespec to = { 0, 0 };
-	int ret;
+	struct kevent kev[UPLOAD_BATCH];
+	int num;
 
-	do {
-		ret = kevent(st->kqueue.kqueue_fd, st->kqueue.upload_queue,
-			     st->kqueue.upload_entries, NULL, 0, &to);
-	} while (ret < 0 && errno == EINTR);
+	iv_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
-	if (ret < 0) {
-		syslog(LOG_CRIT, "flush_upload_queue: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+	if (num) {
+		struct timespec to = { 0, 0 };
+		int ret;
+
+		ret = kevent(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
+		if (ret < 0) {
+			syslog(LOG_CRIT, "iv_kqueue_upload_all: got error "
+			       "%d[%s]", errno, strerror(errno));
+			abort();
+		}
 	}
-
-	st->kqueue.upload_entries = 0;
 }
 
 static void iv_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	flush_upload_queue(st);
-}
-
-static void queue(struct iv_state *st, u_int ident, short filter,
-		  u_short flags, u_int fflags, int data, void *udata)
-{
-	if (st->kqueue.upload_entries == UPLOAD_QUEUE_SIZE)
-		flush_upload_queue(st);
-
-	EV_SET(&st->kqueue.upload_queue[st->kqueue.upload_entries],
-	       ident, filter, flags, fflags, data, (intptr_t)udata);
-	st->kqueue.upload_entries++;
+	iv_kqueue_upload_all(st);
 }
 
 static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	int wanted;
-
-	wanted = fd->wanted_bands;
-
-	if ((fd->registered_bands & MASKIN) && !(wanted & MASKIN)) {
-		queue(st, fd->fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)fd);
-		fd->registered_bands &= ~MASKIN;
-	} else if ((wanted & MASKIN) && !(fd->registered_bands & MASKIN)) {
-		queue(st, fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
-		      0, 0, (void *)fd);
-		fd->registered_bands |= MASKIN;
-	}
-
-	if ((fd->registered_bands & MASKOUT) && !(wanted & MASKOUT)) {
-		queue(st, fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)fd);
-		fd->registered_bands &= ~MASKOUT;
-	} else if ((wanted & MASKOUT) && !(fd->registered_bands & MASKOUT)) {
-		queue(st, fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
-		      0, 0, (void *)fd);
-		fd->registered_bands |= MASKOUT;
-	}
+	list_del_init(&fd->list_notify);
+	if (fd->registered_bands != fd->wanted_bands)
+		list_add_tail(&fd->list_notify, &st->kqueue.notify);
 }
 
 static void iv_kqueue_deinit(struct iv_state *st)
 {
-	free(st->kqueue.upload_queue);
 	close(st->kqueue.kqueue_fd);
 }
 
