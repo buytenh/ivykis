@@ -18,6 +18,7 @@ endif
 
 libivykis_modules_a_SOURCES	= iv_event.c			\
 				  iv_event_raw.c		\
+				  iv_fd_pump.c			\
 				  $(INOTIFY_SRC)		\
 				  iv_popen.c			\
 				  iv_signal.c			\
@@ -27,6 +28,7 @@ libivykis_modules_a_SOURCES	= iv_event.c			\
 
 include_HEADERS		= include/iv_event.h		\
 			  include/iv_event_raw.h	\
+			  include/iv_fd_pump.h		\
 			  $(INOTIFY_INCLUDE)		\
 			  include/iv_popen.h		\
 			  include/iv_signal.h		\
