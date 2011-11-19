@@ -152,7 +152,7 @@ static void iv_destroy_state(struct iv_state *st)
 #else
 #include <pthread.h>
 
-static pthread_key_t iv_state_key;
+pthread_key_t iv_state_key;
 
 static void iv_state_destructor(void *data)
 {
@@ -176,11 +176,6 @@ static struct iv_state *iv_allocate_state(void)
 	pthread_setspecific(iv_state_key, st);
 
 	return st;
-}
-
-struct iv_state *iv_get_state(void)
-{
-	return pthread_getspecific(iv_state_key);
 }
 
 static void iv_destroy_state(struct iv_state *st)
