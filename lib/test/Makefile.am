@@ -11,6 +11,7 @@ noinst_PROGRAMS		= avl				\
 			  null				\
 			  server			\
 			  server_thread			\
+			  struct_sizes			\
 			  timer				\
 			  timer_rat
 
@@ -20,6 +21,7 @@ connectfail_SOURCES	= connectfail.c
 connectreset_SOURCES	= connectreset.c
 null_SOURCES		= null.c
 server_SOURCES		= server.c
+struct_sizes_SOURCES	= struct_sizes.c
 timer_SOURCES		= timer.c
 timer_rat_SOURCES	= timer_rat.c
 
