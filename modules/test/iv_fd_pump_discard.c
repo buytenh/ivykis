@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2011 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,58 +20,49 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <iv.h>
+#include <iv_fd_pump.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <signal.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
 
 struct connection {
 	struct iv_fd sock;
+	struct iv_fd_pump pump;
 };
 
-
 static int devnull;
-static int pfd[2];
 
-static void conn_kill(struct connection *conn)
+
+static void __conn_kill(struct connection *conn)
 {
 	iv_fd_unregister(&conn->sock);
 	close(conn->sock.fd);
+
 	free(conn);
 }
 
-static void conn_pollin(void *_conn)
+static void conn_kill(struct connection *conn)
+{
+	iv_fd_pump_destroy(&conn->pump);
+
+	__conn_kill(conn);
+}
+
+static void conn_pump(void *_conn)
 {
 	struct connection *conn = (struct connection *)_conn;
-	int ret;
 
-	ret = splice(conn->sock.fd, NULL, pfd[1], NULL,
-		     1048576, SPLICE_F_NONBLOCK);
-	if (ret <= 0) {
-		if (ret == 0 || (errno != EAGAIN && errno != EINTR))
-			conn_kill(conn);
-		return;
-	}
+	if (iv_fd_pump_pump(&conn->pump) <= 0)
+		conn_kill(conn);
+}
 
-	while (ret) {
-		int ret2;
+static void conn_set_bands(void *_conn, int pollin, int pollout)
+{
+	struct connection *conn = (struct connection *)_conn;
 
-		ret2 = splice(pfd[0], NULL, devnull, NULL, ret, 0);
-		if (ret2 <= 0) {
-			if (ret2 < 0)
-				perror("splice");
-			abort();
-		}
-
-		ret -= ret2;
-	}
+	iv_fd_set_handler_in(&conn->sock, pollin ? conn_pump : NULL);
+	if (pollout)
+		printf("conn_set_bands: pollout is set?!\n");
 }
 
 
@@ -98,8 +89,15 @@ static void got_connection(void *_dummy)
 	IV_FD_INIT(&conn->sock);
 	conn->sock.fd = ret;
 	conn->sock.cookie = (void *)conn;
-	conn->sock.handler_in = conn_pollin;
 	iv_fd_register(&conn->sock);
+
+	IV_FD_PUMP_INIT(&conn->pump);
+	conn->pump.from_fd = ret;
+	conn->pump.to_fd = devnull;
+	conn->pump.cookie = conn;
+	conn->pump.set_bands = conn_set_bands;
+	if (iv_fd_pump_init(&conn->pump))
+		__conn_kill(conn);
 }
 
 static int open_listening_socket(void)
@@ -137,11 +135,6 @@ int main()
 	devnull = open("/dev/null", O_WRONLY);
 	if (devnull < 0) {
 		perror("open /dev/null");
-		return 1;
-	}
-
-	if (pipe(pfd) < 0) {
-		perror("pipe");
 		return 1;
 	}
 
