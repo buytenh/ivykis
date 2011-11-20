@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2011 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,110 +20,45 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <iv.h>
+#include <iv_fd_pump.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <signal.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
 
 struct connection {
 	struct iv_fd sock;
-	int pfd[2];
-	int pipe_bytes;
-	int saw_fin;
+	struct iv_fd_pump pump;
 };
 
 
-static void conn_kill(struct connection *conn)
+static void __conn_kill(struct connection *conn)
 {
 	iv_fd_unregister(&conn->sock);
 	close(conn->sock.fd);
-	close(conn->pfd[0]);
-	close(conn->pfd[1]);
+
 	free(conn);
 }
 
-static void conn_pollin(void *_conn);
-static void conn_pollout(void *_conn);
-
-static void conn_pollin(void *_conn)
+static void conn_kill(struct connection *conn)
 {
-	struct connection *conn = (struct connection *)_conn;
-	int ret;
+	iv_fd_pump_destroy(&conn->pump);
 
-	while (1) {
-		ret = splice(conn->sock.fd, NULL, conn->pfd[1], NULL,
-			     1048576, SPLICE_F_NONBLOCK);
-		if (ret <= 0)
-			break;
-
-		if (conn->pipe_bytes == 0)
-			iv_fd_set_handler_out(&conn->sock, conn_pollout);
-		conn->pipe_bytes += ret;
-	}
-
-	if (ret == 0) {
-		conn->saw_fin = 1;
-		iv_fd_set_handler_in(&conn->sock, NULL);
-		if (conn->pipe_bytes == 0) {
-			shutdown(conn->sock.fd, SHUT_WR);
-			conn_kill(conn);
-		}
-		return;
-	}
-
-	if (errno == EAGAIN && conn->pipe_bytes > 0) {
-		int bytes_sock = 1;
-
-		ioctl(conn->sock.fd, FIONREAD, &bytes_sock);
-		if (bytes_sock > 0)
-			iv_fd_set_handler_in(&conn->sock, NULL);
-	} else if (errno != EAGAIN) {
-		conn_kill(conn);
-	}
+	__conn_kill(conn);
 }
 
-static void conn_pollout(void *_conn)
+static void conn_pump(void *_conn)
 {
 	struct connection *conn = (struct connection *)_conn;
-	int ret;
 
-	if (!conn->pipe_bytes) {
-		fprintf(stderr, "conn_pollout: no pipe bytes!\n");
-		abort();
-	}
-
-	do {
-		ret = splice(conn->pfd[0], NULL, conn->sock.fd, NULL,
-			     conn->pipe_bytes, 0);
-		if (ret <= 0)
-			break;
-
-		conn->pipe_bytes -= ret;
-		if (!conn->saw_fin)
-			iv_fd_set_handler_in(&conn->sock, conn_pollin);
-	} while (conn->pipe_bytes);
-
-	if (ret == 0) {
-		fprintf(stderr, "pollout: splice returned zero!\n");
-		abort();
-	}
-
-	if (errno == EAGAIN && conn->pipe_bytes == 0) {
-		iv_fd_set_handler_out(&conn->sock, NULL);
-		if (conn->saw_fin) {
-			shutdown(conn->sock.fd, SHUT_WR);
-			conn_kill(conn);
-		}
-	} else if (errno != EAGAIN) {
+	if (iv_fd_pump_pump(&conn->pump) <= 0)
 		conn_kill(conn);
-	}
+}
+
+static void conn_set_bands(void *_conn, int pollin, int pollout)
+{
+	struct connection *conn = (struct connection *)_conn;
+
+	iv_fd_set_handler_in(&conn->sock, pollin ? conn_pump : NULL);
+	iv_fd_set_handler_out(&conn->sock, pollout ? conn_pump : NULL);
 }
 
 
@@ -147,19 +82,18 @@ static void got_connection(void *_dummy)
 		abort();
 	}
 
-	if (pipe(conn->pfd) < 0) {
-		fprintf(stderr, "pipe squeeze\n");
-		abort();
-	}
-
 	IV_FD_INIT(&conn->sock);
 	conn->sock.fd = ret;
 	conn->sock.cookie = (void *)conn;
-	conn->sock.handler_in = conn_pollin;
 	iv_fd_register(&conn->sock);
 
-	conn->pipe_bytes = 0;
-	conn->saw_fin = 0;
+	IV_FD_PUMP_INIT(&conn->pump);
+	conn->pump.from_fd = ret;
+	conn->pump.to_fd = ret;
+	conn->pump.cookie = conn;
+	conn->pump.set_bands = conn_set_bands;
+	if (iv_fd_pump_init(&conn->pump))
+		__conn_kill(conn);
 }
 
 static int open_listening_socket(void)

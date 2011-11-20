@@ -14,6 +14,7 @@ endif
 noinst_PROGRAMS		= iv_event_raw_test		\
 			  iv_event_test			\
 			  iv_fd_pump_discard		\
+			  iv_fd_pump_echo		\
 			  $(INOTIFY_PROGS)		\
 			  iv_popen_test			\
 			  iv_signal_child_test		\
@@ -25,6 +26,7 @@ noinst_PROGRAMS		= iv_event_raw_test		\
 iv_event_raw_test_SOURCES	= iv_event_raw_test.c
 iv_event_test_SOURCES		= iv_event_test.c
 iv_fd_pump_discard_SOURCES	= iv_fd_pump_discard.c
+iv_fd_pump_echo_SOURCES		= iv_fd_pump_echo.c
 iv_popen_test_SOURCES		= iv_popen_test.c
 iv_signal_child_test_SOURCES	= iv_signal_child_test.c
 iv_signal_test_SOURCES		= iv_signal_test.c

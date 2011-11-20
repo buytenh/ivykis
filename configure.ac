@@ -89,7 +89,6 @@ AC_CONFIG_FILES([Makefile			\
 		 contrib/iv_getaddrinfo/Makefile	\
 		 contrib/iv_openssl/Makefile	\
 		 contrib/kojines/Makefile	\
-		 contrib/splice/Makefile	\
 		 ivykis.spec			\
 		 lib/Makefile			\
 		 lib/include/iv.h		\
