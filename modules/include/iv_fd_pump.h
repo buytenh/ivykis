@@ -31,7 +31,10 @@ struct iv_fd_pump {
 	void		*cookie;
 	void		(*set_bands)(void *cookie, int pollin, int pollout);
 
-	unsigned char	*buf;
+	union {
+		unsigned char	*buf;
+		int	pfd[2];
+	};
 	int		bytes;
 	int		full;
 	int		saw_fin;

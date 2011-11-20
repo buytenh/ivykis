@@ -52,6 +52,7 @@ AC_CHECK_FUNCS([epoll_create1])
 AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([port_create])
+AC_CHECK_FUNCS([splice])
 AC_CHECK_FUNCS([wait4])
 
 # Check for __thread.
