@@ -3,6 +3,10 @@ This directory holds ivykis example programs and contributed ivykis
 modules.
 
 
+iv_getaddrinfo/
+	A nonblocking DNS stub resolver module.
+
+
 iv_openssl/
 	Example module that wraps openssl's I/O functions, so that one
 	can write ivykis SSL-enabled client and server apps.
