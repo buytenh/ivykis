@@ -1,8 +1,8 @@
-AM_CPPFLAGS		= -I$(top_srcdir)/lib/include -I$(top_srcdir)/modules/include
+AM_CPPFLAGS		= -I$(top_srcdir)/lib/include -I$(top_builddir)/lib/include -I$(top_srcdir)/modules/include
 
 AM_CFLAGS		= -Wall
 
-LDADD			= $(top_srcdir)/lib/libivykis.a $(top_srcdir)/modules/libivykis-modules.a
+LDADD			= $(top_builddir)/lib/libivykis.a $(top_builddir)/modules/libivykis-modules.a
 
 noinst_PROGRAMS		= kojines
 

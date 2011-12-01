@@ -1,9 +1,10 @@
 AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include	\
+			  -I$(top_builddir)/lib/include			\
 			  -I$(top_srcdir)/modules/include
 AM_CFLAGS		= -Wall
 
-LDADD			= ../../lib/libivykis.a			\
-			  ../libivykis-modules.a
+LDADD			= $(top_builddir)/lib/libivykis.a		\
+			  $(top_builddir)/modules/libivykis-modules.a
 
 if HAVE_INOTIFY
 INOTIFY_PROGS = iv_inotify_test
