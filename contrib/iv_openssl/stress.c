@@ -156,7 +156,9 @@ static void connect_done(void *_q)
 	q->ssl.fd = q->fd.fd;
 	iv_openssl_register(&q->ssl);
 
+#ifdef SSL_OP_NO_COMPRESSION
 	SSL_set_options(q->ssl.ssl, SSL_OP_NO_COMPRESSION);
+#endif
 
 	q->req_wr.ssl = &q->ssl;
 	q->req_wr.type = IV_OPENSSL_REQ_CONNECT;
