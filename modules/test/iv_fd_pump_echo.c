@@ -92,6 +92,7 @@ static void got_connection(void *_dummy)
 	conn->pump.to_fd = ret;
 	conn->pump.cookie = conn;
 	conn->pump.set_bands = conn_set_bands;
+	conn->pump.relay_eof = 1;
 	if (iv_fd_pump_init(&conn->pump))
 		__conn_kill(conn);
 }

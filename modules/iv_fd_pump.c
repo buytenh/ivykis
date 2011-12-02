@@ -123,7 +123,8 @@ static int iv_fd_pump_try_input(struct iv_fd_pump *ip)
 	if (ret == 0) {
 		ip->saw_fin = 1;
 		if (!ip->bytes) {
-			shutdown(ip->to_fd, SHUT_WR);
+			if (ip->relay_eof)
+				shutdown(ip->to_fd, SHUT_WR);
 			ip->saw_fin = 2;
 		}
 		return 0;
@@ -156,7 +157,8 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 		memmove(ip->buf, ip->buf + ret, ip->bytes);
 
 	if (!ip->bytes && ip->saw_fin == 1) {
-		shutdown(ip->to_fd, SHUT_WR);
+		if (ip->relay_eof)
+			shutdown(ip->to_fd, SHUT_WR);
 		ip->saw_fin = 2;
 	}
 
