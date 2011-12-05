@@ -33,7 +33,7 @@ static void handler(void *_t)
 
 #if 0
 	iv_validate_now();
-	t->expires = now;
+	t->expires = iv_now;
 	t->expires.tv_sec += 1;
 	iv_timer_register(t);
 #endif
@@ -49,7 +49,7 @@ int main()
 
 	for (i = 0; i < NUM; i++) {
 		IV_TIMER_INIT(tim + i);
-		tim[i].expires = now;
+		tim[i].expires = iv_now;
 		tim[i].expires.tv_sec += 1;
 		tim[i].expires.tv_nsec += i;
 		if (tim[i].expires.tv_nsec >= 1000000000) {

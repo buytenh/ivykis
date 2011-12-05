@@ -80,7 +80,7 @@ static void got_connection(void *_dummy)
 	c->tim.cookie = (void *)c;
 	c->tim.handler = timeout;
 	iv_validate_now();
-	c->tim.expires = now;
+	c->tim.expires = iv_now;
 	c->tim.expires.tv_sec += 1;
 	iv_timer_register(&c->tim);
 }

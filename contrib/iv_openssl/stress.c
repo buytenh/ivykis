@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
 	IV_TIMER_INIT(&progress);
 	progress.handler = report_progress;
 	iv_validate_now();
-	progress.expires = now;
+	progress.expires = iv_now;
 	progress.expires.tv_sec++;
 	iv_timer_register(&progress);
 

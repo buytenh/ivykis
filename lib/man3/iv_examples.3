@@ -256,7 +256,7 @@ static void connection_handler(void *_conn)
 
         iv_timer_unregister(&conn->disconnect_timeout);          //XXXX
         iv_validate_now();                                       //XXXX
-        conn->disconnect_timeout.expires = now;                  //XXXX
+        conn->disconnect_timeout.expires = iv_now;               //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
         iv_timer_register(&conn->disconnect_timeout);            //XXXX
 }
@@ -303,7 +303,7 @@ static void listening_socket_handler(void *_sock)
         iv_validate_now();                                       //XXXX
         conn->disconnect_timeout.cookie = (void *)conn;          //XXXX
         conn->disconnect_timeout.handler = disconnect_timeout_expired;//XXXX
-        conn->disconnect_timeout.expires = now;                  //XXXX
+        conn->disconnect_timeout.expires = iv_now;               //XXXX
         conn->disconnect_timeout.expires.tv_sec += CONNECTION_TIMEOUT;//XXXX
         iv_timer_register(&conn->disconnect_timeout);            //XXXX
 }
@@ -349,9 +349,9 @@ int main()
 }
 .fi
 .PP
-The global variable 'now' contains the current time-of-day.  However,
-it is updated lazily, and its contents might be stale at any given
-time.  Before using it,
+The global variable 'iv_now' contains the current time-of-day.
+However, it is updated lazily, and its contents might be stale at
+any given time.  Before using it,
 .BR iv_validate_now (3)
 must be called.
 .SH "SEE ALSO"

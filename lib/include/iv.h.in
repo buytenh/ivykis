@@ -49,7 +49,7 @@ struct timespec *__iv_now_location();
 void iv_validate_now(void);
 void iv_invalidate_now(void);
 
-#define now	(*__iv_now_location())
+#define iv_now		(*__iv_now_location())
 
 
 /*

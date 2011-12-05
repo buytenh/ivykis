@@ -93,7 +93,7 @@ static void iv_work_thread_got_event(void *_thr)
 
 		list_add(&thr->list, &pool->idle_threads);
 		iv_validate_now();
-		thr->idle_timer.expires = now;
+		thr->idle_timer.expires = iv_now;
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
 
@@ -118,7 +118,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 	pthread_mutex_lock(&pool->lock);
 	
 	if (thr->kicked) {
-		thr->idle_timer.expires = now;
+		thr->idle_timer.expires = iv_now;
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
 
@@ -151,7 +151,7 @@ static void iv_work_thread(void *_thr)
 
 	IV_TIMER_INIT(&thr->idle_timer);
 	iv_validate_now();
-	thr->idle_timer.expires = now;
+	thr->idle_timer.expires = iv_now;
 	thr->idle_timer.expires.tv_sec += 10;
 	thr->idle_timer.cookie = thr;
 	thr->idle_timer.handler = iv_work_thread_idle_timeout;

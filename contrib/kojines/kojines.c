@@ -308,7 +308,7 @@ static void got_kojine(void *_ki)
 	k->connect_timeout.cookie = (void *)k;
 	k->connect_timeout.handler = server_connect_timeout;
 	iv_validate_now();
-	k->connect_timeout.expires = now;
+	k->connect_timeout.expires = iv_now;
 	k->connect_timeout.expires.tv_sec += 120;
 	iv_timer_register(&k->connect_timeout);
 
