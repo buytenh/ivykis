@@ -44,7 +44,6 @@ libivykis_a_SOURCES	= iv_avl.c			\
 
 include_HEADERS		= include/iv.h			\
 			  include/iv_avl.h		\
-			  include/iv_compat.h		\
 			  include/iv_list.h		\
 			  include/iv_tls.h
 

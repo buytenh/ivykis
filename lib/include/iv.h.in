@@ -120,7 +120,5 @@ int iv_timer_registered(struct iv_timer *);
 }
 #endif
 
-#include <iv_compat.h>
-
 
 #endif
