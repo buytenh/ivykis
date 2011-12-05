@@ -25,38 +25,38 @@
 
 void iv_task_init(struct iv_state *st)
 {
-	INIT_LIST_HEAD(&st->tasks);
+	INIT_IV_LIST_HEAD(&st->tasks);
 }
 
 int iv_pending_tasks(struct iv_state *st)
 {
-	return !list_empty(&st->tasks);
+	return !iv_list_empty(&st->tasks);
 }
 
 void iv_run_tasks(struct iv_state *st)
 {
-	struct list_head last;
+	struct iv_list_head last;
 
-	if (list_empty(&st->tasks))
+	if (iv_list_empty(&st->tasks))
 		return;
 
-	list_add_tail(&last, &st->tasks);
+	iv_list_add_tail(&last, &st->tasks);
 	while (st->tasks.next != &last) {
 		struct iv_task_ *t;
 
-		t = list_entry(st->tasks.next, struct iv_task_, list);
-		list_del_init(&t->list);
+		t = iv_list_entry(st->tasks.next, struct iv_task_, list);
+		iv_list_del_init(&t->list);
 
 		t->handler(t->cookie);
 	}
-	list_del(&last);
+	iv_list_del(&last);
 }
 
 void IV_TASK_INIT(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	INIT_LIST_HEAD(&t->list);
+	INIT_IV_LIST_HEAD(&t->list);
 }
 
 void iv_task_register(struct iv_task *_t)
@@ -64,31 +64,31 @@ void iv_task_register(struct iv_task *_t)
 	struct iv_state *st = iv_get_state();
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	if (!list_empty(&t->list)) {
+	if (!iv_list_empty(&t->list)) {
 		syslog(LOG_CRIT, "iv_task_register: called with task still "
 				 "on a list");
 		abort();
 	}
 
-	list_add_tail(&t->list, &st->tasks);
+	iv_list_add_tail(&t->list, &st->tasks);
 }
 
 void iv_task_unregister(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	if (list_empty(&t->list)) {
+	if (iv_list_empty(&t->list)) {
 		syslog(LOG_CRIT, "iv_task_unregister: called with task not "
 				 "on a list");
 		abort();
 	}
 
-	list_del_init(&t->list);
+	iv_list_del_init(&t->list);
 }
 
 int iv_task_registered(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	return !list_empty(&t->list);
+	return !iv_list_empty(&t->list);
 }

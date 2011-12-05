@@ -31,7 +31,7 @@ static int iv_epoll_init(struct iv_state *st, int maxfd)
 	int fd;
 	int flags;
 
-	INIT_LIST_HEAD(&st->epoll.notify);
+	INIT_IV_LIST_HEAD(&st->epoll.notify);
 
 #ifdef HAVE_EPOLL_CREATE1
 	fd = epoll_create1(EPOLL_CLOEXEC);
@@ -97,23 +97,23 @@ static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 	}
 
 	fd->registered_bands = fd->wanted_bands;
-	list_del_init(&fd->list_notify);
+	iv_list_del_init(&fd->list_notify);
 }
 
 static void iv_epoll_flush_pending(struct iv_state *st)
 {
-	while (!list_empty(&st->epoll.notify)) {
+	while (!iv_list_empty(&st->epoll.notify)) {
 		struct iv_fd_ *fd;
 
-		fd = list_entry(st->epoll.notify.next,
-				struct iv_fd_, list_notify);
+		fd = iv_list_entry(st->epoll.notify.next,
+				   struct iv_fd_, list_notify);
 
 		iv_epoll_flush_one(st, fd);
 	}
 }
 
 static void
-iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
+iv_epoll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
@@ -151,15 +151,15 @@ iv_epoll_poll(struct iv_state *st, struct list_head *active, int msec)
 
 static void iv_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (!list_empty(&fd->list_notify))
+	if (!iv_list_empty(&fd->list_notify))
 		iv_epoll_flush_one(st, fd);
 }
 
 static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	list_del_init(&fd->list_notify);
+	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		list_add_tail(&fd->list_notify, &st->epoll.notify);
+		iv_list_add_tail(&fd->list_notify, &st->epoll.notify);
 }
 
 static void iv_epoll_deinit(struct iv_state *st)

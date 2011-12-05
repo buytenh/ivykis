@@ -16,7 +16,7 @@
 
 struct kojine
 {
-	struct list_head		list;
+	struct iv_list_head		list;
 
 	struct iv_fd			client_fd;
 	struct iv_fd			server_fd;
@@ -38,7 +38,7 @@ struct kojine
 
 static void __kojine_kill(struct kojine *k)
 {
-	list_del(&k->list);
+	iv_list_del(&k->list);
 
 	iv_fd_unregister(&k->client_fd);
 	close(k->client_fd.fd);
@@ -287,7 +287,7 @@ static void got_kojine(void *_ki)
 		return;
 	}
 
-	list_add_tail(&k->list, &ki->kojines);
+	iv_list_add_tail(&k->list, &ki->kojines);
 
 	IV_FD_INIT(&k->client_fd);
 	k->client_fd.fd = client;
@@ -353,23 +353,23 @@ int kojines_instance_register(struct kojines_instance *ki)
 	ki->listen_fd.handler_in = got_kojine;
 	iv_fd_register(&ki->listen_fd);
 
-	INIT_LIST_HEAD(&ki->kojines);
+	INIT_IV_LIST_HEAD(&ki->kojines);
 
 	return 1;
 }
 
 void kojines_instance_unregister(struct kojines_instance *ki)
 {
-	struct list_head *lh;
-	struct list_head *lh2;
+	struct iv_list_head *ilh;
+	struct iv_list_head *ilh2;
 
 	iv_fd_unregister(&ki->listen_fd);
 	close(ki->listen_fd.fd);
 
-	list_for_each_safe (lh, lh2, &ki->kojines) {
+	iv_list_for_each_safe (ilh, ilh2, &ki->kojines) {
 		struct kojine *k;
 
-		k = list_entry(lh, struct kojine, list);
+		k = iv_list_entry(ilh, struct kojine, list);
 		kojine_kill(k);
 	}
 }

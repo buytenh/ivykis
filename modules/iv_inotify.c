@@ -36,7 +36,7 @@ static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 	while (an != NULL) {
 		struct iv_inotify_watch *w;
 
-		w = container_of(an, struct iv_inotify_watch, an);
+		w = iv_container_of(an, struct iv_inotify_watch, an);
 		if (wd == w->wd)
 			return w;
 
@@ -99,9 +99,9 @@ static int
 __iv_inotify_watch_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
 	struct iv_inotify_watch *a =
-		container_of(_a, struct iv_inotify_watch, an);
+		iv_container_of(_a, struct iv_inotify_watch, an);
 	struct iv_inotify_watch *b =
-		container_of(_b, struct iv_inotify_watch, an);
+		iv_container_of(_b, struct iv_inotify_watch, an);
 
 	if (a->wd < b->wd)
 		return -1;

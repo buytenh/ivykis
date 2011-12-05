@@ -33,7 +33,7 @@ struct iv_tls_user {
 	void		(*init_thread)(void *st);
 	void		(*deinit_thread)(void *st);
 
-	struct list_head	list;
+	struct iv_list_head	list;
 	off_t			state_offset;
 };
 

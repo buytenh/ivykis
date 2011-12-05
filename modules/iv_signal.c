@@ -27,7 +27,7 @@
 #define MAX_SIGS	32
 
 static pthread_spinlock_t sig_interests_lock;
-static struct list_head sig_interests[MAX_SIGS];
+static struct iv_list_head sig_interests[MAX_SIGS];
 
 static void iv_signal_init(void) __attribute__((constructor));
 static void iv_signal_init(void)
@@ -37,22 +37,22 @@ static void iv_signal_init(void)
 	pthread_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
 
 	for (i = 0; i < MAX_SIGS; i++)
-		INIT_LIST_HEAD(&sig_interests[i]);
+		INIT_IV_LIST_HEAD(&sig_interests[i]);
 }
 
 static void iv_signal_handler(int signum)
 {
-	struct list_head *lh;
+	struct iv_list_head *ilh;
 
 	if (signum < 0 || signum >= MAX_SIGS)
 		return;
 
 	pthread_spin_lock(&sig_interests_lock);
 
-	list_for_each (lh, &sig_interests[signum]) {
+	iv_list_for_each (ilh, &sig_interests[signum]) {
 		struct iv_signal *is;
 
-		is = container_of(lh, struct iv_signal, list);
+		is = iv_container_of(ilh, struct iv_signal, list);
 
 		/*
 		 * Prevent signals delivered to child processes
@@ -107,7 +107,7 @@ int iv_signal_register(struct iv_signal *this)
 	pthread_sigmask(SIG_BLOCK, &mask, &mask);
 	pthread_spin_lock(&sig_interests_lock);
 
-	if (list_empty(&sig_interests[this->signum])) {
+	if (iv_list_empty(&sig_interests[this->signum])) {
 		struct sigaction sa;
 
 		sa.sa_handler = iv_signal_handler;
@@ -115,7 +115,7 @@ int iv_signal_register(struct iv_signal *this)
 		sa.sa_flags = SA_RESTART;
 		sigaction(this->signum, &sa, NULL);
 	}
-	list_add_tail(&this->list, &sig_interests[this->signum]);
+	iv_list_add_tail(&this->list, &sig_interests[this->signum]);
 
 	pthread_spin_unlock(&sig_interests_lock);
 	pthread_sigmask(SIG_SETMASK, &mask, NULL);
@@ -131,8 +131,8 @@ void iv_signal_unregister(struct iv_signal *this)
 	pthread_sigmask(SIG_BLOCK, &mask, &mask);
 	pthread_spin_lock(&sig_interests_lock);
 
-	list_del(&this->list);
-	if (list_empty(&sig_interests[this->signum])) {
+	iv_list_del(&this->list);
+	if (iv_list_empty(&sig_interests[this->signum])) {
 		struct sigaction sa;
 
 		sa.sa_handler = SIG_DFL;
@@ -142,8 +142,8 @@ void iv_signal_unregister(struct iv_signal *this)
 	} else if (this->exclusive && this->active) {
 		struct iv_signal *nxt;
 
-		nxt = container_of(sig_interests[this->signum].next,
-				   struct iv_signal, list);
+		nxt = iv_container_of(sig_interests[this->signum].next,
+				      struct iv_signal, list);
 		iv_event_raw_post(&nxt->ev);
 	}
 

@@ -31,25 +31,25 @@ struct iv_event_thr_info {
 	int			event_count;
 	struct iv_event_raw	ier;
 	pthread_mutex_t		list_mutex;
-	struct list_head	pending_events;
+	struct iv_list_head	pending_events;
 };
 
 static void iv_event_run_pending_events(void *_tinfo)
 {
 	struct iv_event_thr_info *tinfo = _tinfo;
-	struct list_head last;
+	struct iv_list_head last;
 
 	pthread_mutex_lock(&tinfo->list_mutex);
 
-	list_add_tail(&last, &tinfo->pending_events);
+	iv_list_add_tail(&last, &tinfo->pending_events);
 
 	while (tinfo->pending_events.next != &last) {
 		struct iv_event *ie;
 
-		ie = container_of(tinfo->pending_events.next,
+		ie = iv_container_of(tinfo->pending_events.next,
 				  struct iv_event, list);
 
-		list_del_init(&ie->list);
+		iv_list_del_init(&ie->list);
 
 		pthread_mutex_unlock(&tinfo->list_mutex);
 
@@ -58,7 +58,7 @@ static void iv_event_run_pending_events(void *_tinfo)
 		pthread_mutex_lock(&tinfo->list_mutex);
 	}
 
-	list_del(&last);
+	iv_list_del(&last);
 
 	pthread_mutex_unlock(&tinfo->list_mutex);
 }
@@ -75,7 +75,7 @@ static void iv_event_tls_init_thread(void *_tinfo)
 
 	pthread_mutex_init(&tinfo->list_mutex, NULL);
 
-	INIT_LIST_HEAD(&tinfo->pending_events);
+	INIT_IV_LIST_HEAD(&tinfo->pending_events);
 }
 
 static void iv_event_tls_deinit_thread(void *_tinfo)
@@ -110,7 +110,7 @@ int iv_event_register(struct iv_event *this)
 	}
 
 	this->tinfo = tinfo;
-	INIT_LIST_HEAD(&this->list);
+	INIT_IV_LIST_HEAD(&this->list);
 
 	return 0;
 }
@@ -119,9 +119,9 @@ void iv_event_unregister(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
 
-	if (!list_empty(&this->list)) {
+	if (!iv_list_empty(&this->list)) {
 		pthread_mutex_lock(&tinfo->list_mutex);
-		list_del(&this->list);
+		iv_list_del(&this->list);
 		pthread_mutex_unlock(&tinfo->list_mutex);
 	}
 
@@ -134,8 +134,8 @@ void iv_event_post(struct iv_event *this)
 	struct iv_event_thr_info *tinfo = this->tinfo;
 
 	pthread_mutex_lock(&tinfo->list_mutex);
-	if (list_empty(&this->list)) {
-		list_add_tail(&this->list, &tinfo->pending_events);
+	if (iv_list_empty(&this->list)) {
+		iv_list_add_tail(&this->list, &tinfo->pending_events);
 		iv_event_raw_post(&tinfo->ier);
 	}
 	pthread_mutex_unlock(&tinfo->list_mutex);

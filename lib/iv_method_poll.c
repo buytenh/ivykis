@@ -44,7 +44,7 @@ static int iv_poll_init(struct iv_state *st, int maxfd)
 }
 
 static void
-iv_poll_poll(struct iv_state *st, struct list_head *active, int msec)
+iv_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 {
 	int ret;
 	int i;

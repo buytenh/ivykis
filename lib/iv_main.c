@@ -250,13 +250,13 @@ static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	method->notify_fd(st, fd);
 }
 
-static void iv_run_active_list(struct iv_state *st, struct list_head *active)
+static void iv_run_active_list(struct iv_state *st, struct iv_list_head *active)
 {
-	while (!list_empty(active)) {
+	while (!iv_list_empty(active)) {
 		struct iv_fd_ *fd;
 
-		fd = list_entry(active->next, struct iv_fd_, list_active);
-		list_del_init(&fd->list_active);
+		fd = iv_list_entry(active->next, struct iv_fd_, list_active);
+		iv_list_del_init(&fd->list_active);
 
 		st->handled_fd = fd;
 
@@ -288,9 +288,9 @@ static int should_quit(struct iv_state *st)
 void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
-	struct list_head active;
+	struct iv_list_head active;
 
-	INIT_LIST_HEAD(&active);
+	INIT_IV_LIST_HEAD(&active);
 
 	st->quit = 0;
 	while (1) {
@@ -341,7 +341,7 @@ struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 	while (an != NULL) {
 		struct iv_fd_ *p;
 
-		p = container_of(an, struct iv_fd_, avl_node);
+		p = iv_container_of(an, struct iv_fd_, avl_node);
 		if (fd == p->fd)
 			return p;
 
@@ -356,8 +356,8 @@ struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
-	struct iv_fd_ *a = container_of(_a, struct iv_fd_, avl_node);
-	struct iv_fd_ *b = container_of(_b, struct iv_fd_, avl_node);
+	struct iv_fd_ *a = iv_container_of(_a, struct iv_fd_, avl_node);
+	struct iv_fd_ *b = iv_container_of(_b, struct iv_fd_, avl_node);
 
 	if (a->fd < b->fd)
 		return -1;
@@ -416,10 +416,10 @@ void iv_fd_register(struct iv_fd *_fd)
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));
 
 	fd->registered = 1;
-	INIT_LIST_HEAD(&fd->list_active);
+	INIT_IV_LIST_HEAD(&fd->list_active);
 	fd->ready_bands = 0;
 	fd->registered_bands = 0;
-	INIT_LIST_HEAD(&fd->list_notify);
+	INIT_IV_LIST_HEAD(&fd->list_notify);
 
 	st->numfds++;
 
@@ -440,7 +440,7 @@ void iv_fd_unregister(struct iv_fd *_fd)
 	}
 	fd->registered = 0;
 
-	list_del(&fd->list_active);
+	iv_list_del(&fd->list_active);
 
 	notify_fd(st, fd);
 	if (method->unregister_fd != NULL)
@@ -459,11 +459,11 @@ int iv_fd_registered(struct iv_fd *_fd)
 	return fd->registered;
 }
 
-void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands)
+void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)
 {
-	if (list_empty(&fd->list_active)) {
+	if (iv_list_empty(&fd->list_active)) {
 		fd->ready_bands = 0;
-		list_add_tail(&fd->list_active, active);
+		iv_list_add_tail(&fd->list_active, active);
 	}
 	fd->ready_bands |= bands;
 }

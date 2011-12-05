@@ -57,7 +57,7 @@ static int iv_select_init(struct iv_state *st, int maxfd)
 }
 
 static void
-iv_select_poll(struct iv_state *st, struct list_head *active, int msec)
+iv_select_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 {
 	int bytes;
 	struct timeval to;
@@ -134,7 +134,7 @@ static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 		if (an != NULL) {
 			struct iv_fd_ *fd;
 
-			fd = container_of(an, struct iv_fd_, avl_node);
+			fd = iv_container_of(an, struct iv_fd_, avl_node);
 			st->select.fd_max = fd->fd;
 		} else {
 			st->select.fd_max = 0;

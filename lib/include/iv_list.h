@@ -30,60 +30,62 @@
 extern "C" {
 #endif
 
-struct list_head {
-	struct list_head	*next;
-	struct list_head	*prev;
+struct iv_list_head {
+	struct iv_list_head	*next;
+	struct iv_list_head	*prev;
 };
 
-#define LIST_HEAD_INIT(name) { &(name), &(name) }
+#define IV_LIST_HEAD_INIT(name) { &(name), &(name) }
 
-#define INIT_LIST_HEAD(lh) do { \
-	(lh)->next = (lh); \
-	(lh)->prev = (lh); \
+#define INIT_IV_LIST_HEAD(ilh) do { \
+	(ilh)->next = (ilh); \
+	(ilh)->prev = (ilh); \
 } while (0)
 
-static inline void list_add(struct list_head *lh, struct list_head *head)
+static inline void
+iv_list_add(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	lh->next = head->next;
-	lh->prev = head;
-	head->next->prev = lh;
-	head->next = lh;
+	ilh->next = head->next;
+	ilh->prev = head;
+	head->next->prev = ilh;
+	head->next = ilh;
 }
 
-static inline void list_add_tail(struct list_head *lh, struct list_head *head)
+static inline void
+iv_list_add_tail(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	lh->next = head;
-	lh->prev = head->prev;
-	head->prev->next = lh;
-	head->prev = lh;
+	ilh->next = head;
+	ilh->prev = head->prev;
+	head->prev->next = ilh;
+	head->prev = ilh;
 }
 
-static inline void list_del(struct list_head *lh)
+static inline void iv_list_del(struct iv_list_head *ilh)
 {
-	lh->prev->next = lh->next;
-	lh->next->prev = lh->prev;
-	lh->prev = NULL;
-	lh->next = NULL;
+	ilh->prev->next = ilh->next;
+	ilh->next->prev = ilh->prev;
+	ilh->prev = NULL;
+	ilh->next = NULL;
 }
 
-static inline void list_del_init(struct list_head *lh)
+static inline void iv_list_del_init(struct iv_list_head *ilh)
 {
-	lh->prev->next = lh->next;
-	lh->next->prev = lh->prev;
-	INIT_LIST_HEAD(lh);
+	ilh->prev->next = ilh->next;
+	ilh->next->prev = ilh->prev;
+	INIT_IV_LIST_HEAD(ilh);
 }
 
-static inline int list_empty(struct list_head *head)
+static inline int iv_list_empty(struct iv_list_head *head)
 {
 	return head->next == head;
 }
 
-static inline void __list_splice(struct list_head *lh,
-				 struct list_head *prev,
-				 struct list_head *next)
+static inline void __iv_list_splice(struct iv_list_head *ilh,
+				    struct iv_list_head *prev,
+				    struct iv_list_head *next)
 {
-	struct list_head *first = lh->next;
-	struct list_head *last = lh->prev;
+	struct iv_list_head *first = ilh->next;
+	struct iv_list_head *last = ilh->prev;
 
 	first->prev = prev;
 	prev->next = first;
@@ -92,51 +94,51 @@ static inline void __list_splice(struct list_head *lh,
 	next->prev = last;
 }
 
-static inline void list_splice(struct list_head *lh,
-			       struct list_head *head)
+static inline void
+iv_list_splice(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	if (!list_empty(lh))
-		__list_splice(lh, head, head->next);
+	if (!iv_list_empty(ilh))
+		__iv_list_splice(ilh, head, head->next);
 }
 
-static inline void list_splice_init(struct list_head *lh,
-				    struct list_head *head)
+static inline void
+iv_list_splice_init(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	if (!list_empty(lh)) {
-		__list_splice(lh, head, head->next);
-		INIT_LIST_HEAD(lh);
+	if (!iv_list_empty(ilh)) {
+		__iv_list_splice(ilh, head, head->next);
+		INIT_IV_LIST_HEAD(ilh);
 	}
 }
 
-static inline void list_splice_tail(struct list_head *lh,
-				    struct list_head *head)
+static inline void
+iv_list_splice_tail(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	if (!list_empty(lh))
-		__list_splice(lh, head->prev, head);
+	if (!iv_list_empty(ilh))
+		__iv_list_splice(ilh, head->prev, head);
 }
 
-static inline void list_splice_tail_init(struct list_head *lh,
-					 struct list_head *head)
+static inline void
+iv_list_splice_tail_init(struct iv_list_head *ilh, struct iv_list_head *head)
 {
-	if (!list_empty(lh)) {
-		__list_splice(lh, head->prev, head);
-		INIT_LIST_HEAD(lh);
+	if (!iv_list_empty(ilh)) {
+		__iv_list_splice(ilh, head->prev, head);
+		INIT_IV_LIST_HEAD(ilh);
 	}
 }
 
-#define container_of(ptr, type, member) ({			\
+#define iv_container_of(ptr, type, member) ({			\
 	const typeof(((type *)0)->member) *__ptr = (ptr);	\
 	(type *)((char *)__ptr - (unsigned long)(&((type *)0)->member)); })
 
-#define list_entry(lh, type, member) \
-	container_of(lh, type, member)
+#define iv_list_entry(ilh, type, member) \
+	iv_container_of(ilh, type, member)
 
-#define list_for_each(lh, head) \
-	for (lh = (head)->next; lh != (head); lh = lh->next)
+#define iv_list_for_each(ilh, head) \
+	for (ilh = (head)->next; ilh != (head); ilh = ilh->next)
 
-#define list_for_each_safe(lh, lh2, head) \
-	for (lh = (head)->next, lh2 = lh->next; lh != (head); \
-		lh = lh2, lh2 = lh->next)
+#define iv_list_for_each_safe(ilh, ilh2, head) \
+	for (ilh = (head)->next, ilh2 = ilh->next; ilh != (head); \
+		ilh = ilh2, ilh2 = ilh->next)
 
 #ifdef __cplusplus
 }

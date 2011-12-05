@@ -37,7 +37,7 @@ static int iv_port_init(struct iv_state *st, int maxfd)
 
 	st->port.port_fd = fd;
 
-	INIT_LIST_HEAD(&st->port.notify);
+	INIT_IV_LIST_HEAD(&st->port.notify);
 
 	return 0;
 }
@@ -59,7 +59,7 @@ static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
-	list_del_init(&fd->list_notify);
+	iv_list_del_init(&fd->list_notify);
 
 	if (fd->wanted_bands)
 		ret = port_associate(st->port.port_fd, PORT_SOURCE_FD, fd->fd,
@@ -78,18 +78,18 @@ static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_port_upload(struct iv_state *st)
 {
-	while (!list_empty(&st->port.notify)) {
+	while (!iv_list_empty(&st->port.notify)) {
 		struct iv_fd_ *fd;
 
-		fd = list_entry(st->port.notify.next,
-				struct iv_fd_, list_notify);
+		fd = iv_list_entry(st->port.notify.next,
+				   struct iv_fd_, list_notify);
 
 		iv_port_upload_one(st, fd);
 	}
 }
 
 static void
-iv_port_poll(struct iv_state *st, struct list_head *active, int msec)
+iv_port_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 {
 	struct timespec to;
 	int nget;
@@ -128,10 +128,10 @@ poll_more:
 			iv_fd_make_ready(active, fd, MASKERR);
 
 		fd->registered_bands = 0;
-		list_del_init(&fd->list_notify);
+		iv_list_del_init(&fd->list_notify);
 
 		if (fd->wanted_bands)
-			list_add_tail(&fd->list_notify, &st->port.notify);
+			iv_list_add_tail(&fd->list_notify, &st->port.notify);
 	}
 
 	if (nget == PORTEV_NUM) {
@@ -143,15 +143,15 @@ poll_more:
 
 static void iv_port_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (!list_empty(&fd->list_notify))
+	if (!iv_list_empty(&fd->list_notify))
 		iv_port_upload_one(st, fd);
 }
 
 static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	list_del_init(&fd->list_notify);
+	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		list_add_tail(&fd->list_notify, &st->port.notify);
+		iv_list_add_tail(&fd->list_notify, &st->port.notify);
 }
 
 static void iv_port_deinit(struct iv_state *st)

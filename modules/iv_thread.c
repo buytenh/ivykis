@@ -61,7 +61,7 @@ static pid_t gettid(void)
 
 /* data structures and global data ******************************************/
 struct iv_thread {
-	struct list_head	list;
+	struct iv_list_head	list;
 	struct iv_event		dead;
 	char			*name;
 	pid_t			tid;
@@ -74,14 +74,14 @@ static int iv_thread_debug;
 
 /* tls **********************************************************************/
 struct iv_thread_thr_info {
-	struct list_head	child_threads;
+	struct iv_list_head	child_threads;
 };
 
 static void iv_thread_tls_init_thread(void *_tinfo)
 {
 	struct iv_thread_thr_info *tinfo = _tinfo;
 
-	INIT_LIST_HEAD(&tinfo->child_threads);
+	INIT_IV_LIST_HEAD(&tinfo->child_threads);
 }
 
 static struct iv_tls_user iv_thread_tls_user = {
@@ -135,7 +135,7 @@ static void iv_thread_died(void *_thr)
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] joined\n", thr->name);
 
-	list_del(&thr->list);
+	iv_list_del(&thr->list);
 	iv_event_unregister(&thr->dead);
 	free(thr->name);
 	free(thr);
@@ -177,7 +177,7 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 
 	pthread_attr_destroy(&attr);
 
-	list_add_tail(&thr->list, &tinfo->child_threads);
+	iv_list_add_tail(&thr->list, &tinfo->child_threads);
 
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] started\n", name);
@@ -205,15 +205,15 @@ void iv_thread_set_debug_state(int state)
 void iv_thread_list_children(void)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
-	struct list_head *lh;
+	struct iv_list_head *ilh;
 
 	fprintf(stderr, "tid\tname\n");
 	fprintf(stderr, "%d\tself\n", (int)gettid());
 
-	list_for_each (lh, &tinfo->child_threads) {
+	iv_list_for_each (ilh, &tinfo->child_threads) {
 		struct iv_thread *thr;
 
-		thr = list_entry(lh, struct iv_thread, list);
+		thr = iv_list_entry(ilh, struct iv_thread, list);
 		fprintf(stderr, "%d\t%s\n", (int)thr->tid, thr->name);
 	}
 }

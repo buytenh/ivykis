@@ -36,7 +36,7 @@ struct iv_signal {
 	void			*cookie;
 	void			(*handler)(void *);
 
-	struct list_head	list;
+	struct iv_list_head	list;
 	struct iv_event_raw	ev;
 	pid_t			owner;
 	int			active;

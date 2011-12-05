@@ -39,7 +39,7 @@ struct iv_wait_interest {
 
 	struct iv_avl_node	avl_node;
 	struct iv_event		ev;
-	struct list_head	events;
+	struct iv_list_head	events;
 	void			**term;
 	unsigned		dead:1;
 };

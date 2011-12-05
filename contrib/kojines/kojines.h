@@ -21,7 +21,7 @@ struct kojines_instance
 					struct sockaddr_in *origdst);
 
 	struct iv_fd		listen_fd;
-	struct list_head	kojines;
+	struct iv_list_head	kojines;
 };
 
 int kojines_instance_register(struct kojines_instance *);

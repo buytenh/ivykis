@@ -33,7 +33,7 @@ struct iv_event {
 	void			(*handler)(void *);
 
 	void			*tinfo;
-	struct list_head	list;
+	struct iv_list_head	list;
 };
 
 static inline void IV_EVENT_INIT(struct iv_event *this)

@@ -62,7 +62,7 @@ struct foo {
 
 static void printit(struct iv_avl_node *an)
 {
-	struct foo *f = container_of(an, struct foo, an);
+	struct foo *f = iv_container_of(an, struct foo, an);
 
 	printf("%d (height %d)\n", f->num, f->an.height);
 }
@@ -134,8 +134,8 @@ static void tree_check(struct iv_avl_tree *this, int expected_count)
 
 static int docomp(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
-	struct foo *a = container_of(_a, struct foo, an);
-	struct foo *b = container_of(_b, struct foo, an);
+	struct foo *a = iv_container_of(_a, struct foo, an);
+	struct foo *b = iv_container_of(_b, struct foo, an);
 
 	if (a->num < b->num)
 		return -1;

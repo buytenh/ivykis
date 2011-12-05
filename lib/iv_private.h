@@ -44,7 +44,7 @@ struct iv_fd_ {
 	 * fd->ready_bands will indicate which bands are currently
 	 * active.
 	 */
-	struct list_head	list_active;
+	struct iv_list_head	list_active;
 	unsigned		ready_bands:3;
 
 	/*
@@ -72,7 +72,7 @@ struct iv_fd_ {
 	 * ->list_notify is used by poll methods that defer updating
 	 * kernel registrations to ->poll() time.
          */
-	struct list_head	list_notify;
+	struct iv_list_head	list_notify;
 
 	/*
 	 * This is for state internal to some of the poll methods:
@@ -96,7 +96,7 @@ struct iv_task_ {
 	/*
 	 * Private data.
 	 */
-	struct list_head	list;
+	struct iv_list_head	list;
 };
 
 struct iv_timer_ {
@@ -125,7 +125,7 @@ struct iv_state {
 	int			quit;
 
 	/* iv_task.c  */
-	struct list_head	tasks;
+	struct iv_list_head	tasks;
 
 	/* iv_timer.c  */
 	struct timespec		time;
@@ -141,17 +141,17 @@ struct iv_state {
 		struct {
 			struct iv_avl_tree	fds;
 			int			poll_fd;
-			struct list_head	notify;
+			struct iv_list_head	notify;
 		} dev_poll;
 
 		struct {
 			int			epoll_fd;
-			struct list_head	notify;
+			struct iv_list_head	notify;
 		} epoll;
 
 		struct {
 			int			kqueue_fd;
-			struct list_head	notify;
+			struct iv_list_head	notify;
 		} kqueue;
 
 		struct {
@@ -162,7 +162,7 @@ struct iv_state {
 
 		struct {
 			int			port_fd;
-			struct list_head	notify;
+			struct iv_list_head	notify;
 		} port;
 
 		struct {
@@ -207,7 +207,7 @@ struct iv_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st, int maxfd);
 	void	(*poll)(struct iv_state *st, 
-			struct list_head *active, int msec);
+			struct iv_list_head *active, int msec);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);
@@ -225,7 +225,8 @@ extern struct iv_poll_method iv_method_select;
 /* iv_main.c */
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
-void iv_fd_make_ready(struct list_head *active, struct iv_fd_ *fd, int bands);
+void iv_fd_make_ready(struct iv_list_head *active,
+		      struct iv_fd_ *fd, int bands);
 
 /* iv_task.c */
 void iv_task_init(struct iv_state *st);

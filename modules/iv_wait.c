@@ -33,7 +33,7 @@
 #endif
 
 struct wait_event {
-	struct list_head	list;
+	struct iv_list_head	list;
 	int			status;
 #ifdef HAVE_WAIT4
 	struct rusage		rusage;
@@ -46,8 +46,8 @@ iv_wait_interest_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 	struct iv_wait_interest *a;
 	struct iv_wait_interest *b;
 
-	a = container_of(_a, struct iv_wait_interest, avl_node);
-	b = container_of(_b, struct iv_wait_interest, avl_node);
+	a = iv_container_of(_a, struct iv_wait_interest, avl_node);
+	b = iv_container_of(_b, struct iv_wait_interest, avl_node);
 
 	if (a->pid < b->pid)
 		return -1;
@@ -68,7 +68,7 @@ static struct iv_wait_interest *__iv_wait_interest_find(int pid)
 	while (an != NULL) {
 		struct iv_wait_interest *p;
 
-		p = container_of(an, struct iv_wait_interest, avl_node);
+		p = iv_container_of(an, struct iv_wait_interest, avl_node);
 		if (pid == p->pid)
 			return p;
 
@@ -136,7 +136,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
-			list_add_tail(&we->list, &p->events);
+			iv_list_add_tail(&we->list, &p->events);
 			iv_event_post(&p->ev);
 		} else {
 			free(we);
@@ -165,11 +165,12 @@ static void iv_wait_completion(void *_this)
 	this->term = (void **)&this;
 
 	pthread_mutex_lock(&iv_wait_lock);
-	while (!list_empty(&this->events)) {
+	while (!iv_list_empty(&this->events)) {
 		struct wait_event *we;
 
-		we = container_of(this->events.next, struct wait_event, list);
-		list_del(&we->list);
+		we = iv_container_of(this->events.next,
+				     struct wait_event, list);
+		iv_list_del(&we->list);
 
 		pthread_mutex_unlock(&iv_wait_lock);
 #ifdef HAVE_WAIT4
@@ -229,7 +230,7 @@ static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
 	this->ev.cookie = this;
 	iv_event_register(&this->ev);
 
-	INIT_LIST_HEAD(&this->events);
+	INIT_IV_LIST_HEAD(&this->events);
 
 	this->term = NULL;
 
@@ -252,11 +253,12 @@ static void __iv_wait_interest_unregister(struct iv_wait_thr_info *tinfo,
 {
 	iv_event_unregister(&this->ev);
 
-	while (!list_empty(&this->events)) {
+	while (!iv_list_empty(&this->events)) {
 		struct wait_event *we;
 
-		we = container_of(this->events.next, struct wait_event, list);
-		list_del(&we->list);
+		we = iv_container_of(this->events.next,
+				     struct wait_event, list);
+		iv_list_del(&we->list);
 		free(we);
 	}
 

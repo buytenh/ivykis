@@ -28,9 +28,9 @@ struct iv_openssl {
 	struct iv_fd		ifd;
 	unsigned		ready_in:1;
 	unsigned		ready_out:1;
-	struct list_head	req;
-	struct list_head	req_rd;
-	struct list_head	req_done;
+	struct iv_list_head	req;
+	struct iv_list_head	req_rd;
+	struct iv_list_head	req_done;
 };
 
 int iv_openssl_register(struct iv_openssl *ssl);
@@ -59,7 +59,7 @@ struct iv_openssl_request {
 	void				*cookie;
 	void				(*handler)(void *cookie, int ret);
 
-	struct list_head	list;
+	struct iv_list_head	list;
 	int			want;
 	int			ret;
 	struct iv_task		complete;

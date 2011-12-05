@@ -71,21 +71,21 @@ int iv_openssl_register(struct iv_openssl *ssl)
 
 	ssl->ready_in = 1;
 	ssl->ready_out = 1;
-	INIT_LIST_HEAD(&ssl->req);
-	INIT_LIST_HEAD(&ssl->req_rd);
-	INIT_LIST_HEAD(&ssl->req_done);
+	INIT_IV_LIST_HEAD(&ssl->req);
+	INIT_IV_LIST_HEAD(&ssl->req_rd);
+	INIT_IV_LIST_HEAD(&ssl->req_done);
 
 	return 0;
 }
 
 void iv_openssl_unregister(struct iv_openssl *ssl)
 {
-	struct list_head *lh;
+	struct iv_list_head *ilh;
 
-	list_for_each (lh, &ssl->req_done) {
+	iv_list_for_each (ilh, &ssl->req_done) {
 		struct iv_openssl_request *req;
 
-		req = container_of(lh, struct iv_openssl_request, list);
+		req = iv_container_of(ilh, struct iv_openssl_request, list);
 		iv_task_unregister(&req->complete);
 	}
 
@@ -97,7 +97,7 @@ static void iv_openssl_request_complete(void *_req)
 {
 	struct iv_openssl_request *req = _req;
 
-	list_del_init(&req->list);
+	iv_list_del_init(&req->list);
 	req->handler(req->cookie, req->ret);
 }
 
@@ -188,8 +188,8 @@ iv_openssl_attempt_request(struct iv_openssl *ssl,
 
 	ret = __iv_openssl_attempt_request(ssl, req);
 	if (ret) {
-		list_del(&req->list);
-		list_add_tail(&req->list, &ssl->req_done);
+		iv_list_del(&req->list);
+		iv_list_add_tail(&req->list, &ssl->req_done);
 		iv_task_register(&req->complete);
 	} else {
 		if (req->want == SSL_ERROR_WANT_READ)
@@ -200,25 +200,26 @@ iv_openssl_attempt_request(struct iv_openssl *ssl,
 }
 
 static struct iv_openssl_request *
-iv_openssl_list_first_req(struct list_head *lh)
+iv_openssl_list_first_req(struct iv_list_head *ilh)
 {
-	if (!list_empty(lh))
-		return container_of(lh->next, struct iv_openssl_request, list);
+	if (iv_list_empty(ilh))
+		return NULL;
 
-	return NULL;
+	return iv_container_of(ilh->next, struct iv_openssl_request, list);
 }
 
 static void
-iv_openssl_attempt_request_list(struct iv_openssl *ssl, struct list_head *lh,
+iv_openssl_attempt_request_list(struct iv_openssl *ssl,
+				struct iv_list_head *ilh,
 				int *want_rd, int *want_wr)
 {
 	struct iv_openssl_request *req;
 
-	req = iv_openssl_list_first_req(lh);
+	req = iv_openssl_list_first_req(ilh);
 	if (req != NULL) {
 		iv_openssl_attempt_request(ssl, req);
 
-		req = iv_openssl_list_first_req(lh);
+		req = iv_openssl_list_first_req(ilh);
 		if (req != NULL) {
 			if (req->want == SSL_ERROR_WANT_READ)
 				*want_rd = 1;
@@ -268,14 +269,14 @@ static void iv_openssl_attempt_requests(struct iv_openssl *ssl)
 
 void iv_openssl_request_init(struct iv_openssl_request *req)
 {
-	INIT_LIST_HEAD(&req->list);
+	INIT_IV_LIST_HEAD(&req->list);
 	IV_TASK_INIT(&req->complete);
 }
 
 void iv_openssl_request_submit(struct iv_openssl_request *req)
 {
 	struct iv_openssl *ssl = req->ssl;
-	struct list_head *list;
+	struct iv_list_head *list;
 	int is_empty;
 
 	if (req->type == IV_OPENSSL_REQ_READ)
@@ -283,9 +284,9 @@ void iv_openssl_request_submit(struct iv_openssl_request *req)
 	else
 		list = &ssl->req;
 
-	is_empty = !!list_empty(list);
+	is_empty = !!iv_list_empty(list);
 
-	list_add_tail(&req->list, list);
+	iv_list_add_tail(&req->list, list);
 	req->want = 0;
 	req->ret = 0;
 	IV_TASK_INIT(&req->complete);
@@ -300,7 +301,7 @@ void iv_openssl_request_cancel(struct iv_openssl_request *req)
 {
 	/* @@@ Check if this request has already been submitted.  */
 
-	list_del(&req->list);
+	iv_list_del(&req->list);
 	if (iv_task_registered(&req->complete))
 		iv_task_unregister(&req->complete);
 }

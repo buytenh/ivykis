@@ -27,11 +27,11 @@
 
 static int inited;
 static off_t last_offset;
-static struct list_head iv_tls_users = LIST_HEAD_INIT(iv_tls_users);
+static struct iv_list_head iv_tls_users = IV_LIST_HEAD_INIT(iv_tls_users);
 
 void iv_tls_thread_init(struct iv_state *st)
 {
-	struct list_head *lh;
+	struct iv_list_head *ilh;
 
 	inited = 1;
 
@@ -41,10 +41,10 @@ void iv_tls_thread_init(struct iv_state *st)
 		abort();
 	}
 
-	list_for_each (lh, &iv_tls_users) {
+	iv_list_for_each (ilh, &iv_tls_users) {
 		struct iv_tls_user *itu;
 
-		itu = container_of(lh, struct iv_tls_user, list);
+		itu = iv_container_of(ilh, struct iv_tls_user, list);
 		if (itu->init_thread != NULL)
 			itu->init_thread(st->tls_ptr + itu->state_offset);
 	}
@@ -52,12 +52,12 @@ void iv_tls_thread_init(struct iv_state *st)
 
 void iv_tls_thread_deinit(struct iv_state *st)
 {
-	struct list_head *lh;
+	struct iv_list_head *ilh;
 
-	list_for_each (lh, &iv_tls_users) {
+	iv_list_for_each (ilh, &iv_tls_users) {
 		struct iv_tls_user *itu;
 
-		itu = container_of(lh, struct iv_tls_user, list);
+		itu = iv_container_of(ilh, struct iv_tls_user, list);
 		if (itu->deinit_thread != NULL)
 			itu->deinit_thread(st->tls_ptr + itu->state_offset);
 	}
@@ -75,7 +75,7 @@ void iv_tls_user_register(struct iv_tls_user *itu)
 	itu->state_offset = last_offset;
 	last_offset = (last_offset + itu->sizeof_state + 15) & ~15;
 
-	list_add_tail(&itu->list, &iv_tls_users);
+	iv_list_add_tail(&itu->list, &iv_tls_users);
 }
 
 void *iv_tls_user_ptr(struct iv_tls_user *itu)
