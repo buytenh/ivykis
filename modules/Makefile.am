@@ -7,7 +7,7 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 
 AM_CFLAGS		= -Wall
 
-lib_LIBRARIES		= libivykis-modules.a
+noinst_LTLIBRARIES	= libivykis-modules.la
 
 if HAVE_INOTIFY
 INOTIFY_SRC = iv_inotify.c
@@ -17,7 +17,7 @@ INOTIFY_SRC =
 INOTIFY_INCLUDE =
 endif
 
-libivykis_modules_a_SOURCES	= iv_event.c			\
+libivykis_modules_la_SOURCES	= iv_event.c			\
 				  iv_event_raw.c		\
 				  iv_fd_pump.c			\
 				  $(INOTIFY_SRC)		\

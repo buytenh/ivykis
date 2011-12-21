@@ -5,8 +5,8 @@ AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
 
 # Checks for programs.
+LT_INIT
 AC_PROG_CC
-AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_SEARCH_LIBS([clock_gettime], [rt])
@@ -95,7 +95,6 @@ AC_CONFIG_FILES([Makefile			\
 		 lib/test/Makefile		\
 		 misc/Makefile			\
 		 misc/ivykis.pc			\
-		 misc/ivykis-modules.pc		\
 		 modules/Makefile		\
 		 modules/man3/Makefile		\
 		 modules/test/Makefile])
