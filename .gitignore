@@ -4,9 +4,12 @@ autom4te.cache
 
 # autoconf
 configure
+config.guess
+config.sub
 
 # automake
 Makefile.in
+.deps/
 
 # automake --missing
 compile
@@ -17,5 +20,27 @@ missing
 # autoheader
 config.h.in
 
+# libtool
+libtool
+ltmain.sh
+.libs/
+
 # editor backup files
 *~
+
+# Generated files
+config.h
+config.status
+config.log
+ivykis.spec
+lib/include/iv.h
+misc/ivykis.pc
+stamp-h1
+Makefile
+
+# Compiled files
+*.o
+*.lo
+*.la
+*.a
+*.so
