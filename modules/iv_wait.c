@@ -32,6 +32,8 @@
 #define WIFCONTINUED(x)		0
 #endif
 
+#define IV_WAIT_STATUS_DEAD	1
+
 struct wait_event {
 	struct iv_list_head	list;
 	int			status;
@@ -152,7 +154,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 		 */
 		if (iv_wait_status_dead(status)) {
 			iv_avl_tree_delete(&iv_wait_interests, &p->avl_node);
-			p->dead = 1;
+			p->flags = IV_WAIT_STATUS_DEAD;
 		}
 	}
 	pthread_mutex_unlock(&iv_wait_lock);
@@ -234,7 +236,7 @@ static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
 
 	this->term = NULL;
 
-	this->dead = 0;
+	this->flags = 0;
 }
 
 void iv_wait_interest_register(struct iv_wait_interest *this)
@@ -304,7 +306,7 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 
 	pthread_mutex_lock(&iv_wait_lock);
-	if (!this->dead)
+	if (!(this->flags & IV_WAIT_STATUS_DEAD))
 		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
 	pthread_mutex_unlock(&iv_wait_lock);
 
@@ -316,7 +318,10 @@ int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
 	int ret;
 
 	pthread_mutex_lock(&iv_wait_lock);
-	ret = !this->dead ? kill(this->pid, sig) : -ESRCH;
+	if (!(this->flags & IV_WAIT_STATUS_DEAD))
+		ret = kill(this->pid, sig);
+	else
+		ret = -ESRCH;
 	pthread_mutex_unlock(&iv_wait_lock);
 
 	return ret;

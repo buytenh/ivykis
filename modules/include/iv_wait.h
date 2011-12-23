@@ -41,7 +41,7 @@ struct iv_wait_interest {
 	struct iv_event		ev;
 	struct iv_list_head	events;
 	void			**term;
-	unsigned		dead:1;
+	unsigned int		flags;
 };
 
 static inline void IV_WAIT_INTEREST_INIT(struct iv_wait_interest *this)
