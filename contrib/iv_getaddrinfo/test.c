@@ -29,6 +29,14 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#ifndef AI_ADDRCONFIG
+#define AI_ADDRCONFIG	0
+#endif
+
+#ifndef AI_V4MAPPED
+#define AI_V4MAPPED	0
+#endif
+
 static void got_results(void *_ig, int ret, struct addrinfo *res)
 {
 	struct iv_getaddrinfo *ig = _ig;
