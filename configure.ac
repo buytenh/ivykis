@@ -63,6 +63,7 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
 	[AC_MSG_RESULT([no])])
 
 # Check for -pthreads.
+ac_c_werror_flag=yes
 ac_save_CFLAGS=$CFLAGS
 AC_CACHE_CHECK(whether $CC accepts -pthreads, ac_cv_prog_cc_pthreads,
 	[ac_cv_prog_cc_pthreads=no
