@@ -32,7 +32,7 @@ extern "C" {
 
 struct iv_signal {
 	int			signum;
-	unsigned		exclusive:1;
+	unsigned int		flags;
 	void			*cookie;
 	void			(*handler)(void *);
 
@@ -45,6 +45,8 @@ struct iv_signal {
 static inline void IV_SIGNAL_INIT(struct iv_signal *this)
 {
 }
+
+#define IV_SIGNAL_FLAG_EXCLUSIVE	1
 
 int iv_signal_register(struct iv_signal *this);
 void iv_signal_unregister(struct iv_signal *this);

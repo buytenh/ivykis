@@ -204,7 +204,7 @@ static void iv_wait_tls_init_thread(void *_tinfo)
 
 	IV_SIGNAL_INIT(&tinfo->sigchld_interest);
 	tinfo->sigchld_interest.signum = SIGCHLD;
-	tinfo->sigchld_interest.exclusive = 1;
+	tinfo->sigchld_interest.flags = IV_SIGNAL_FLAG_EXCLUSIVE;
 	tinfo->sigchld_interest.handler = iv_wait_got_sigchld;
 }
 

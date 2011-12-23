@@ -64,7 +64,7 @@ static void iv_signal_handler(int signum)
 		iv_event_raw_post(&is->ev);
 		is->active = 1;
 
-		if (is->exclusive)
+		if (is->flags & IV_SIGNAL_FLAG_EXCLUSIVE)
 			break;
 	}
 
@@ -139,7 +139,7 @@ void iv_signal_unregister(struct iv_signal *this)
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = 0;
 		sigaction(this->signum, &sa, NULL);
-	} else if (this->exclusive && this->active) {
+	} else if ((this->flags & IV_SIGNAL_FLAG_EXCLUSIVE) && this->active) {
 		struct iv_signal *nxt;
 
 		nxt = iv_container_of(sig_interests[this->signum].next,

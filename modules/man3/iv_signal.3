@@ -12,7 +12,7 @@ IV_SIGNAL_INIT, iv_signal_register, iv_signal_unregister \- ivykis signal handli
 .nf
 struct iv_signal {
         int             signum;
-        unsigned        exclusive:1;
+        unsigned int    flags;
         void            *cookie;
         void            (*handler)(void *);
 };
@@ -63,17 +63,21 @@ It is permitted to register multiple
 .B struct iv_signal
 objects for the same signal number.  If all such objects are
 registered with
-.B ->exclusive
-set to zero, then all objects will have their callback functions
-called upon arrival of the signal, in no guaranteed order.
+.B IV_SIGNAL_FLAG_EXCLUSIVE
+in
+.B ->flags
+unset, then all objects will have their callback functions called upon
+arrival of the signal, in no guaranteed order.
 .PP
 Invoking callback functions stops at the first
 .B struct iv_signal
 object with
-.B ->exclusive
-set to true, so that if all objects have
-.B ->exclusive
-set to one, only one callback function will be invoked.
+.B IV_SIGNAL_FLAG_EXCLUSIVE
+in
+.B ->flags
+set, so that if all objects have
+.B IV_SIGNAL_FLAG_EXCLUSIVE
+set, only one callback function will be invoked.
 .PP
 To deinitialize a
 .B struct iv_signal
