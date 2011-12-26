@@ -53,6 +53,7 @@ void iv_tls_thread_init(struct iv_state *st)
 void iv_tls_thread_deinit(struct iv_state *st)
 {
 	struct iv_list_head *ilh;
+	void *ptr;
 
 	iv_list_for_each (ilh, &iv_tls_users) {
 		struct iv_tls_user *itu;
@@ -62,7 +63,12 @@ void iv_tls_thread_deinit(struct iv_state *st)
 			itu->deinit_thread(st->tls_ptr + itu->state_offset);
 	}
 
-	free(st->tls_ptr);
+	ptr = st->tls_ptr;
+	st->tls_ptr = NULL;
+
+	barrier();
+
+	free(ptr);
 }
 
 void iv_tls_user_register(struct iv_tls_user *itu)
@@ -82,5 +88,8 @@ void *iv_tls_user_ptr(struct iv_tls_user *itu)
 {
 	struct iv_state *st = iv_get_state();
 
-	return st->tls_ptr + itu->state_offset;
+	if (st != NULL && st->tls_ptr != NULL)
+		return st->tls_ptr + itu->state_offset;
+
+	return NULL;
 }

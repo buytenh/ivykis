@@ -195,6 +195,11 @@ static inline struct iv_state *iv_get_state(void)
 }
 #endif
 
+static inline void barrier(void)
+{
+	__asm__ __volatile__("" : : : "memory");
+}
+
 
 /*
  * Misc internal stuff.
