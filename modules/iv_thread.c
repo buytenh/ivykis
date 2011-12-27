@@ -26,20 +26,13 @@
 #include <iv_tls.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/syscall.h>
 
 /* gettid *******************************************************************/
 #ifdef __FreeBSD__
 /* Older FreeBSDs (6.1) don't include ucontext.h in thr.h.  */
 #include <sys/ucontext.h>
 #include <sys/thr.h>
-#endif
-
-#ifndef __NR_gettid
-#if defined(linux) && defined(__x86_64__)
-#define __NR_gettid	186
-#elif defined(linux) && defined(__i386__)
-#define __NR_gettid	224
-#endif
 #endif
 
 static pid_t gettid(void)
