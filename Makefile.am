@@ -1,7 +1,6 @@
-SUBDIRS = lib modules misc
+SUBDIRS = lib modules contrib misc
 
 EXTRA_DIST = DEDICATION
-DIST_SUBDIRS = lib modules contrib misc
 
 lib_LTLIBRARIES = libivykis.la
 
