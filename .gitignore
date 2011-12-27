@@ -32,7 +32,6 @@ ltmain.sh
 config.h
 config.status
 config.log
-ivykis.spec
 lib/include/iv.h
 misc/ivykis.pc
 stamp-h1

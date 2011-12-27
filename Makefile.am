@@ -1,6 +1,6 @@
 SUBDIRS = lib modules misc
 
-EXTRA_DIST = DEDICATION ivykis.spec
+EXTRA_DIST = DEDICATION
 DIST_SUBDIRS = lib modules contrib misc
 
 lib_LTLIBRARIES = libivykis.la
