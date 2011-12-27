@@ -22,6 +22,16 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 	AC_MSG_ERROR(some required header files not installed.))
 AC_CHECK_HEADERS([sys/devpoll.h sys/select.h])
 
+# Check for <linux/netfilter_ipv4.h> header file.
+AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
+	[ac_cv_header_linux_netfilter_ipv4_h=no
+	 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+		#include <arpa/inet.h>
+		#include <limits.h>
+		#include <linux/netfilter_ipv4.h>
+	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
+	])
+
 # Check which header file defines 'struct timespec'.
 for hdr in sys/time.h sys/timers.h time.h pthread.h
 do
@@ -86,11 +96,13 @@ else
 	CFLAGS=$ac_save_CFLAGS
 fi
 
-# Conditionals for poll methods.
+# Conditionals.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
 AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
+AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
+		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
 AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
 
 AC_CONFIG_FILES([Makefile			\
