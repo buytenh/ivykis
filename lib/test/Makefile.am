@@ -2,7 +2,7 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include -I$(top_builddir)/lib/i
 
 AM_CFLAGS		= -Wall
 
-LDADD			= ../libivykis.la
+LDADD			= $(top_builddir)/libivykis.la
 
 noinst_PROGRAMS		= avl				\
 			  client			\

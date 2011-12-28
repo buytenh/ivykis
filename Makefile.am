@@ -1,4 +1,4 @@
-SUBDIRS = lib modules contrib misc
+SUBDIRS = lib modules . contrib lib/test modules/test misc
 
 EXTRA_DIST = DEDICATION
 
