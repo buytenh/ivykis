@@ -40,14 +40,9 @@ static void iv_signal_init(void)
 		INIT_IV_LIST_HEAD(&sig_interests[i]);
 }
 
-static void iv_signal_handler(int signum)
+static void __iv_signal_do_wake(int signum)
 {
 	struct iv_list_head *ilh;
-
-	if (signum < 0 || signum >= MAX_SIGS)
-		return;
-
-	pthread_spin_lock(&sig_interests_lock);
 
 	iv_list_for_each (ilh, &sig_interests[signum]) {
 		struct iv_signal *is;
@@ -67,7 +62,15 @@ static void iv_signal_handler(int signum)
 		if (is->flags & IV_SIGNAL_FLAG_EXCLUSIVE)
 			break;
 	}
+}
 
+static void iv_signal_handler(int signum)
+{
+	if (signum < 0 || signum >= MAX_SIGS)
+		return;
+
+	pthread_spin_lock(&sig_interests_lock);
+	__iv_signal_do_wake(signum);
 	pthread_spin_unlock(&sig_interests_lock);
 }
 
@@ -140,11 +143,7 @@ void iv_signal_unregister(struct iv_signal *this)
 		sa.sa_flags = 0;
 		sigaction(this->signum, &sa, NULL);
 	} else if ((this->flags & IV_SIGNAL_FLAG_EXCLUSIVE) && this->active) {
-		struct iv_signal *nxt;
-
-		nxt = iv_container_of(sig_interests[this->signum].next,
-				      struct iv_signal, list);
-		iv_event_raw_post(&nxt->ev);
+		__iv_signal_do_wake(this->signum);
 	}
 
 	pthread_spin_unlock(&sig_interests_lock);
