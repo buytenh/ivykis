@@ -26,8 +26,13 @@
 #include <string.h>
 #include "spinlock.h"
 
+#ifndef _NSIG
+#define _NSIG		64
+#endif
+
 static pid_t sig_owner_pid;
 static spinlock_t sig_lock;
+static int total_num_interests[_NSIG];
 static struct iv_avl_tree process_sigs;
 static sigset_t sig_mask_fork;
 
@@ -159,21 +164,16 @@ static void iv_signal_event(void *_this)
 void iv_signal_child_reset_postfork(void)
 {
 	struct sigaction sa;
-	int last_signum;
-	struct iv_avl_node *an;
+	int i;
 
 	sa.sa_handler = SIG_DFL;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 
-	last_signum = -1;
-	iv_avl_tree_for_each (an, &process_sigs) {
-		struct iv_signal *is;
-
-		is = iv_container_of(an, struct iv_signal, an);
-		if (is->signum != last_signum) {
-			sigaction(is->signum, &sa, NULL);
-			last_signum = is->signum;
+	for (i = 0; i < _NSIG; i++) {
+		if (total_num_interests[i]) {
+			sigaction(i, &sa, NULL);
+			total_num_interests[i] = 0;
 		}
 	}
 
@@ -186,6 +186,9 @@ int iv_signal_register(struct iv_signal *this)
 {
 	pid_t mypid;
 	sigset_t mask;
+
+	if (this->signum < 0 || this->signum >= _NSIG)
+		return -1;
 
 	spin_lock_sigmask(&sig_lock, &mask);
 
@@ -204,7 +207,7 @@ int iv_signal_register(struct iv_signal *this)
 
 	this->active = 0;
 
-	if (__iv_signal_find_first(this->signum) == NULL) {
+	if (!total_num_interests[this->signum]++) {
 		struct sigaction sa;
 
 		sa.sa_handler = iv_signal_handler;
@@ -230,10 +233,13 @@ void iv_signal_unregister(struct iv_signal *this)
 {
 	sigset_t mask;
 
+	if (this->signum < 0 || this->signum >= _NSIG)
+		iv_fatal("iv_signal_unregister: signal number out of range");
+
 	spin_lock_sigmask(&sig_lock, &mask);
 
 	iv_avl_tree_delete(&process_sigs, &this->an);
-	if (__iv_signal_find_first(this->signum) == NULL) {
+	if (!--total_num_interests[this->signum]) {
 		struct sigaction sa;
 
 		sa.sa_handler = SIG_DFL;
