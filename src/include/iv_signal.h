@@ -46,6 +46,7 @@ static inline void IV_SIGNAL_INIT(struct iv_signal *this)
 }
 
 #define IV_SIGNAL_FLAG_EXCLUSIVE	1
+#define IV_SIGNAL_FLAG_THIS_THREAD	2
 
 int iv_signal_register(struct iv_signal *this);
 void iv_signal_unregister(struct iv_signal *this);
