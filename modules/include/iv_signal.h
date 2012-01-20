@@ -22,8 +22,8 @@
 #define __IV_SIGNAL_H
 
 #include <iv.h>
+#include <iv_avl.h>
 #include <iv_event_raw.h>
-#include <iv_list.h>
 #include <signal.h>
 
 #ifdef __cplusplus
@@ -36,7 +36,7 @@ struct iv_signal {
 	void			*cookie;
 	void			(*handler)(void *);
 
-	struct iv_list_head	list;
+	struct iv_avl_node	an;
 	struct iv_event_raw	ev;
 	pid_t			owner;
 	int			active;

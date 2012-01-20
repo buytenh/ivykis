@@ -20,34 +20,81 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iv_list.h>
 #include <iv_signal.h>
 #include <pthread.h>
 #include <inttypes.h>
 
-#define MAX_SIGS	32
-
 static pthread_spinlock_t sig_interests_lock;
-static struct iv_list_head sig_interests[MAX_SIGS];
+static struct iv_avl_tree sig_interests;
+
+static int iv_signal_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+{
+	struct iv_signal *a = iv_container_of(_a, struct iv_signal, an);
+	struct iv_signal *b = iv_container_of(_b, struct iv_signal, an);
+
+	if (a->signum < b->signum)
+		return -1;
+	if (a->signum > b->signum)
+		return 1;
+
+	if ((a->flags & IV_SIGNAL_FLAG_EXCLUSIVE) &&
+	    !(b->flags & IV_SIGNAL_FLAG_EXCLUSIVE))
+		return -1;
+	if (!(a->flags & IV_SIGNAL_FLAG_EXCLUSIVE) &&
+	    (b->flags & IV_SIGNAL_FLAG_EXCLUSIVE))
+		return 1;
+
+	if (a < b)
+		return -1;
+	if (a > b)
+		return 1;
+
+	return 0;
+}
 
 static void iv_signal_init(void) __attribute__((constructor));
 static void iv_signal_init(void)
 {
-	int i;
-
 	pthread_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
 
-	for (i = 0; i < MAX_SIGS; i++)
-		INIT_IV_LIST_HEAD(&sig_interests[i]);
+	INIT_IV_AVL_TREE(&sig_interests, iv_signal_compare);
+}
+
+static struct iv_avl_node *__iv_signal_find_first(int signum)
+{
+	struct iv_avl_node *iter;
+	struct iv_avl_node *best;
+
+	for (iter = sig_interests.root, best = NULL; iter != NULL; ) {
+		struct iv_signal *is;
+
+		is = iv_container_of(iter, struct iv_signal, an);
+		if (signum == is->signum)
+			best = iter;
+
+		if (signum <= is->signum)
+			iter = iter->left;
+		else
+			iter = iter->right;
+	}
+
+	return best;
 }
 
 static void __iv_signal_do_wake(int signum)
 {
-	struct iv_list_head *ilh;
+	struct iv_avl_node *an;
 
-	iv_list_for_each (ilh, &sig_interests[signum]) {
+	an = __iv_signal_find_first(signum);
+	while (an != NULL) {
 		struct iv_signal *is;
 
-		is = iv_container_of(ilh, struct iv_signal, list);
+		is = iv_container_of(an, struct iv_signal, an);
+		if (is->signum != signum)
+			break;
+
+		an = iv_avl_tree_next(an);
 
 		/*
 		 * Prevent signals delivered to child processes
@@ -66,9 +113,6 @@ static void __iv_signal_do_wake(int signum)
 
 static void iv_signal_handler(int signum)
 {
-	if (signum < 0 || signum >= MAX_SIGS)
-		return;
-
 	pthread_spin_lock(&sig_interests_lock);
 	__iv_signal_do_wake(signum);
 	pthread_spin_unlock(&sig_interests_lock);
@@ -95,9 +139,6 @@ int iv_signal_register(struct iv_signal *this)
 {
 	sigset_t mask;
 
-	if (this->signum < 0 || this->signum >= MAX_SIGS)
-		return -EINVAL;
-
 	IV_EVENT_RAW_INIT(&this->ev);
 	this->ev.cookie = this;
 	this->ev.handler = iv_signal_event;
@@ -110,7 +151,7 @@ int iv_signal_register(struct iv_signal *this)
 	pthread_sigmask(SIG_BLOCK, &mask, &mask);
 	pthread_spin_lock(&sig_interests_lock);
 
-	if (iv_list_empty(&sig_interests[this->signum])) {
+	if (__iv_signal_find_first(this->signum) == NULL) {
 		struct sigaction sa;
 
 		sa.sa_handler = iv_signal_handler;
@@ -118,7 +159,7 @@ int iv_signal_register(struct iv_signal *this)
 		sa.sa_flags = SA_RESTART;
 		sigaction(this->signum, &sa, NULL);
 	}
-	iv_list_add_tail(&this->list, &sig_interests[this->signum]);
+	iv_avl_tree_insert(&sig_interests, &this->an);
 
 	pthread_spin_unlock(&sig_interests_lock);
 	pthread_sigmask(SIG_SETMASK, &mask, NULL);
@@ -134,8 +175,8 @@ void iv_signal_unregister(struct iv_signal *this)
 	pthread_sigmask(SIG_BLOCK, &mask, &mask);
 	pthread_spin_lock(&sig_interests_lock);
 
-	iv_list_del(&this->list);
-	if (iv_list_empty(&sig_interests[this->signum])) {
+	iv_avl_tree_delete(&sig_interests, &this->an);
+	if (__iv_signal_find_first(this->signum) == NULL) {
 		struct sigaction sa;
 
 		sa.sa_handler = SIG_DFL;
