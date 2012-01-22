@@ -27,6 +27,7 @@
 
 static pthread_spinlock_t sig_interests_lock;
 static struct iv_avl_tree sig_interests;
+static sigset_t sig_mask_fork;
 
 static int iv_signal_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
@@ -53,12 +54,61 @@ static int iv_signal_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 	return 0;
 }
 
+static void iv_signal_prepare(void)
+{
+	sigset_t mask;
+
+	sigfillset(&mask);
+	pthread_sigmask(SIG_BLOCK, &mask, &mask);
+	pthread_spin_lock(&sig_interests_lock);
+
+	sig_mask_fork = mask;
+}
+
+static void iv_signal_parent(void)
+{
+	sigset_t mask;
+
+	mask = sig_mask_fork;
+
+	pthread_spin_unlock(&sig_interests_lock);
+	pthread_sigmask(SIG_SETMASK, &mask, NULL);
+}
+
+static void iv_signal_child(void)
+{
+	struct sigaction sa;
+	int last_signum;
+	struct iv_avl_node *an;
+
+	sa.sa_handler = SIG_DFL;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+
+	last_signum = -1;
+	iv_avl_tree_for_each (an, &sig_interests) {
+		struct iv_signal *is;
+
+		is = iv_container_of(an, struct iv_signal, an);
+		if (is->signum != last_signum) {
+			sigaction(is->signum, &sa, NULL);
+			last_signum = is->signum;
+		}
+	}
+
+	sig_interests.root = NULL;
+
+	iv_signal_parent();
+}
+
 static void iv_signal_init(void) __attribute__((constructor));
 static void iv_signal_init(void)
 {
 	pthread_spin_init(&sig_interests_lock, PTHREAD_PROCESS_PRIVATE);
 
 	INIT_IV_AVL_TREE(&sig_interests, iv_signal_compare);
+
+	pthread_atfork(iv_signal_prepare, iv_signal_parent, iv_signal_child);
 }
 
 static struct iv_avl_node *__iv_signal_find_first(int signum)
@@ -94,20 +144,13 @@ static void __iv_signal_do_wake(int signum)
 		if (is->signum != signum)
 			break;
 
-		an = iv_avl_tree_next(an);
-
-		/*
-		 * Prevent signals delivered to child processes
-		 * from causing callbacks to be invoked.
-		 */
-		if (is->owner != getpid())
-			continue;
-
-		iv_event_raw_post(&is->ev);
 		is->active = 1;
+		iv_event_raw_post(&is->ev);
 
 		if (is->flags & IV_SIGNAL_FLAG_EXCLUSIVE)
 			break;
+
+		an = iv_avl_tree_next(an);
 	}
 }
 
@@ -144,7 +187,6 @@ int iv_signal_register(struct iv_signal *this)
 	this->ev.handler = iv_signal_event;
 	iv_event_raw_register(&this->ev);
 
-	this->owner = getpid();
 	this->active = 0;
 
 	sigfillset(&mask);

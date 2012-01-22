@@ -37,9 +37,8 @@ struct iv_signal {
 	void			(*handler)(void *);
 
 	struct iv_avl_node	an;
+	uint8_t			active;
 	struct iv_event_raw	ev;
-	pid_t			owner;
-	int			active;
 };
 
 static inline void IV_SIGNAL_INIT(struct iv_signal *this)
