@@ -51,17 +51,23 @@ struct work_pool_thread {
 
 
 /* worker thread ************************************************************/
-static void __iv_work_thread_cleanup(struct work_pool_thread *thr, int timeout)
+static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
 
 	iv_list_del(&thr->list);
 	iv_event_unregister(&thr->kick);
-	if (!timeout)
+	if (iv_timer_registered(&thr->idle_timer))
 		iv_timer_unregister(&thr->idle_timer);
 	free(thr);
 
 	pool->started_threads--;
+
+	if (pool->thread_stop != NULL)
+		pool->thread_stop(pool->cookie);
+
+	if (pool->public == NULL && !pool->started_threads)
+		iv_event_post(&pool->ev);
 }
 
 static void iv_work_thread_got_event(void *_thr)
@@ -101,11 +107,8 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_event_post(&pool->ev);
 	}
 
-	if (pool->public == NULL) {
-		__iv_work_thread_cleanup(thr, 0);
-		if (!pool->started_threads)
-			iv_event_post(&pool->ev);
-	}
+	if (pool->public == NULL)
+		__iv_work_thread_die(thr);
 
 	pthread_mutex_unlock(&pool->lock);
 }
@@ -127,10 +130,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 		return;
 	}
 
-	__iv_work_thread_cleanup(thr, 1);
-
-	if (pool->public == NULL && !pool->started_threads)
-		iv_event_post(&pool->ev);
+	__iv_work_thread_die(thr);
 
 	pthread_mutex_unlock(&pool->lock);
 }
@@ -167,9 +167,6 @@ static void iv_work_thread(void *_thr)
 	iv_event_post(&thr->kick);
 
 	iv_main();
-
-	if (pool->thread_stop != NULL)
-		pool->thread_stop(pool->cookie);
 
 	iv_deinit();
 }
