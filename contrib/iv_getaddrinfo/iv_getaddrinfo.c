@@ -22,6 +22,7 @@
 #include <iv.h>
 #include <iv_tls.h>
 #include <netdb.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "iv_getaddrinfo.h"
@@ -55,36 +56,105 @@ static void iv_getaddrinfo_tls_init(void)
 	iv_tls_user_register(&iv_getaddrinfo_tls_user);
 }
 
-static void iv_getaddrinfo_work(void *_ig)
-{
-	struct iv_getaddrinfo *ig = _ig;
 
-	ig->ret = getaddrinfo(ig->node, ig->service, ig->hints, &ig->res);
+struct iv_getaddrinfo_task {
+	struct iv_getaddrinfo	*ig;
+
+	struct iv_work_item	work;
+
+	char			*node;
+	char			*service;
+	int			have_hints;
+	struct addrinfo		hints;
+
+	int			ret;
+	struct addrinfo		*res;
+};
+
+static void iv_getaddrinfo_task_work(void *_igt)
+{
+	struct iv_getaddrinfo_task *igt = _igt;
+
+	igt->ret = getaddrinfo(igt->node, igt->service,
+			       igt->have_hints ? &igt->hints : NULL, &igt->res);
 }
 
-static void iv_getaddrinfo_complete(void *_ig)
+static void iv_getaddrinfo_task_complete(void *_igt)
 {
-	struct iv_getaddrinfo *ig = _ig;
-	struct iv_getaddrinfo_thr_info *tinfo =
-		iv_tls_user_ptr(&iv_getaddrinfo_tls_user);
+	struct iv_getaddrinfo_task *igt = _igt;
+	struct iv_getaddrinfo *ig;
+	struct iv_getaddrinfo_thr_info *tinfo;
 
+	ig = igt->ig;
+	if (ig != NULL)
+		ig->handler(ig->cookie, igt->ret, igt->res);
+	else
+		freeaddrinfo(igt->res);
+
+	free(igt->node);
+	free(igt->service);
+	free(igt);
+
+	tinfo = iv_tls_user_ptr(&iv_getaddrinfo_tls_user);
 	if (!--tinfo->num_requests)
 		iv_work_pool_put(&tinfo->pool);
-
-	ig->handler(ig->cookie, ig->ret, ig->res);
 }
 
-void iv_getaddrinfo_submit(struct iv_getaddrinfo *ig)
+int iv_getaddrinfo_submit(struct iv_getaddrinfo *ig)
 {
-	struct iv_getaddrinfo_thr_info *tinfo =
-		iv_tls_user_ptr(&iv_getaddrinfo_tls_user);
+	struct iv_getaddrinfo_task *igt;
+	struct iv_getaddrinfo_thr_info *tinfo;
 
+	igt = calloc(1, sizeof(*igt));
+	if (igt == NULL)
+		return -1;
+
+	igt->ig = ig;
+
+	IV_WORK_ITEM_INIT(&igt->work);
+	igt->work.cookie = igt;
+	igt->work.work = iv_getaddrinfo_task_work;
+	igt->work.completion = iv_getaddrinfo_task_complete;
+
+	if (ig->node != NULL) {
+		igt->node = strdup(ig->node);
+		if (igt->node == NULL) {
+			free(igt);
+			return -1;
+		}
+	}
+
+	if (ig->service != NULL) {
+		igt->service = strdup(ig->service);
+		if (igt->service == NULL) {
+			free(igt->node);
+			free(igt);
+			return -1;
+		}
+	}
+
+	if (ig->hints != NULL) {
+		igt->hints.ai_family = ig->hints->ai_family;
+		igt->hints.ai_socktype = ig->hints->ai_socktype;
+		igt->hints.ai_protocol = ig->hints->ai_protocol;
+		igt->hints.ai_flags = ig->hints->ai_flags;
+
+		igt->have_hints = 1;
+	}
+
+	tinfo = iv_tls_user_ptr(&iv_getaddrinfo_tls_user);
 	if (!tinfo->num_requests++)
 		iv_work_pool_create(&tinfo->pool);
 
-	IV_WORK_ITEM_INIT(&ig->work);
-	ig->work.cookie = ig;
-	ig->work.work = iv_getaddrinfo_work;
-	ig->work.completion = iv_getaddrinfo_complete;
-	iv_work_pool_submit_work(&tinfo->pool, &ig->work);
+	iv_work_pool_submit_work(&tinfo->pool, &igt->work);
+
+	return 0;
+}
+
+void iv_getaddrinfo_cancel(struct iv_getaddrinfo *ig)
+{
+	struct iv_getaddrinfo_task *t = ig->task;
+
+	ig->task = NULL;
+	t->ig = NULL;
 }

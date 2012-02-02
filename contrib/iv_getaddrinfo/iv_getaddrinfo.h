@@ -27,9 +27,8 @@ struct iv_getaddrinfo {
 	void			(*handler)(void *cookie, int ret,
 					   struct addrinfo *res);
 
-	struct iv_work_item	work;
-	int			ret;
-	struct addrinfo		*res;
+	void			*task;
 };
 
-void iv_getaddrinfo_submit(struct iv_getaddrinfo *ig);
+int iv_getaddrinfo_submit(struct iv_getaddrinfo *ig);
+void iv_getaddrinfo_cancel(struct iv_getaddrinfo *ig);
