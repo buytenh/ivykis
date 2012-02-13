@@ -213,7 +213,7 @@ int iv_work_pool_create(struct iv_work_pool *this)
 		return -1;
 
 	ret = pthread_mutex_init(&pool->lock, NULL);
-	if (ret < 0) {
+	if (ret) {
 		free(pool);
 		return -1;
 	}

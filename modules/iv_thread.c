@@ -157,15 +157,15 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 	thr->arg = arg;
 
 	ret = pthread_attr_init(&attr);
-	if (ret < 0)
+	if (ret)
 		goto out_event;
 
 	ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	if (ret < 0)
+	if (ret)
 		goto out_attr;
 
 	ret = pthread_create(&t, &attr, iv_thread_handler, thr);
-	if (ret < 0)
+	if (ret)
 		goto out_attr;
 
 	pthread_attr_destroy(&attr);
