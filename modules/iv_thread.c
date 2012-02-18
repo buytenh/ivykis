@@ -55,6 +55,7 @@ static pid_t gettid(void)
 /* data structures and global data ******************************************/
 struct iv_thread {
 	struct iv_list_head	list;
+	pthread_t		thread_id;
 	struct iv_event		dead;
 	char			*name;
 	pid_t			tid;
@@ -77,9 +78,23 @@ static void iv_thread_tls_init_thread(void *_tinfo)
 	INIT_IV_LIST_HEAD(&tinfo->child_threads);
 }
 
+static void iv_thread_tls_deinit_thread(void *_tinfo)
+{
+	struct iv_thread_thr_info *tinfo = _tinfo;
+	struct iv_list_head *ilh;
+
+	iv_list_for_each (ilh, &tinfo->child_threads) {
+		struct iv_thread *thr;
+
+		thr = iv_list_entry(ilh, struct iv_thread, list);
+		pthread_detach(thr->thread_id);
+	}
+}
+
 static struct iv_tls_user iv_thread_tls_user = {
 	.sizeof_state	= sizeof(struct iv_thread_thr_info),
 	.init_thread	= iv_thread_tls_init_thread,
+	.deinit_thread	= iv_thread_tls_deinit_thread,
 };
 
 static void iv_thread_tls_init(void) __attribute__((constructor));
@@ -125,6 +140,8 @@ static void iv_thread_died(void *_thr)
 {
 	struct iv_thread *thr = _thr;
 
+	pthread_join(thr->thread_id, NULL);
+
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] joined\n", thr->name);
 
@@ -138,8 +155,6 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_thread *thr;
-	pthread_attr_t attr;
-	pthread_t t;
 	int ret;
 
 	thr = malloc(sizeof(*thr));
@@ -156,19 +171,9 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 	thr->start_routine = start_routine;
 	thr->arg = arg;
 
-	ret = pthread_attr_init(&attr);
+	ret = pthread_create(&thr->thread_id, NULL, iv_thread_handler, thr);
 	if (ret)
-		goto out_event;
-
-	ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	if (ret)
-		goto out_attr;
-
-	ret = pthread_create(&t, &attr, iv_thread_handler, thr);
-	if (ret)
-		goto out_attr;
-
-	pthread_attr_destroy(&attr);
+		goto out;
 
 	iv_list_add_tail(&thr->list, &tinfo->child_threads);
 
@@ -177,10 +182,7 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 
 	return 0;
 
-out_attr:
-	pthread_attr_destroy(&attr);
-
-out_event:
+out:
 	iv_event_unregister(&thr->dead);
 	free(thr);
 
