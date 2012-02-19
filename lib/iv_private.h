@@ -117,6 +117,8 @@ struct iv_timer_ {
 /*
  * Per-thread state.
  */
+#define NEED_SELECT
+
 struct iv_state {
 	/* iv_main.c  */
 	int			initialised;
@@ -138,33 +140,49 @@ struct iv_state {
 
 	/* poll methods  */
 	union {
+#ifdef HAVE_SYS_DEVPOLL_H
+#undef NEED_SELECT
 		struct {
 			struct iv_avl_tree	fds;
 			int			poll_fd;
 			struct iv_list_head	notify;
 		} dev_poll;
+#endif
 
+#ifdef HAVE_EPOLL_CREATE
+#undef NEED_SELECT
 		struct {
 			int			epoll_fd;
 			struct iv_list_head	notify;
 		} epoll;
+#endif
 
+#ifdef HAVE_KQUEUE
+#undef NEED_SELECT
 		struct {
 			int			kqueue_fd;
 			struct iv_list_head	notify;
 		} kqueue;
+#endif
 
+#ifdef HAVE_POLL
+#undef NEED_SELECT
 		struct {
 			struct pollfd		*pfds;
 			struct iv_fd_		**fds;
 			int			num_registered_fds;
 		} poll;
+#endif
 
+#ifdef HAVE_PORT_CREATE
+#undef NEED_SELECT
 		struct {
 			int			port_fd;
 			struct iv_list_head	notify;
 		} port;
+#endif
 
+#ifdef NEED_SELECT
 		struct {
 			struct iv_avl_tree	fds;
 			int			setsize;
@@ -174,6 +192,7 @@ struct iv_state {
 			fd_set			*readfds;
 			fd_set			*writefds;
 		} select;
+#endif
 	};
 };
 
