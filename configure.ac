@@ -62,6 +62,7 @@ AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([epoll_create1])
 AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
+AC_CHECK_FUNCS([poll])
 AC_CHECK_FUNCS([port_create])
 AC_CHECK_FUNCS([splice])
 AC_CHECK_FUNCS([wait4])
@@ -97,14 +98,23 @@ else
 	CFLAGS=$ac_save_CFLAGS
 fi
 
-# Conditionals.
+# Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
-AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
+AM_CONDITIONAL([HAVE_POLL], [test x$ac_cv_func_poll = xyes])
+AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
+AM_CONDITIONAL([NEED_SELECT],
+		[test x$ac_cv_header_sys_devpoll_h != xyes &&
+		 test x$ac_cv_func_epoll_create != xyes &&
+		 test x$ac_cv_func_kqueue != xyes &&
+		 test x$ac_cv_func_poll != xyes &&
+		 test x$ac_cv_func_port_create != xyes])
+
+# Other conditionals.
+AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
-AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\

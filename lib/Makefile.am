@@ -24,10 +24,22 @@ else
 KQUEUE_SRC =
 endif
 
+if HAVE_POLL
+POLL_SRC = iv_method_poll.c
+else
+POLL_SRC =
+endif
+
 if HAVE_PORT
 PORT_SRC = iv_method_port.c
 else
 PORT_SRC =
+endif
+
+if NEED_SELECT
+SELECT_SRC = iv_method_select.c
+else
+SELECT_SRC =
 endif
 
 libivykis_la_SOURCES	= iv_avl.c			\
@@ -36,8 +48,8 @@ libivykis_la_SOURCES	= iv_avl.c			\
 			  $(EPOLL_SRC)			\
 			  $(KQUEUE_SRC)			\
 			  $(PORT_SRC)			\
-			  iv_method_poll.c		\
-			  iv_method_select.c		\
+			  $(POLL_SRC)			\
+			  $(SELECT_SRC)			\
 			  iv_task.c			\
 			  iv_timer.c			\
 			  iv_tls.c

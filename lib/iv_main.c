@@ -122,8 +122,12 @@ static void iv_init_first_thread(struct iv_state *st)
 #ifdef HAVE_KQUEUE
 	consider_poll_method(st, exclude, &iv_method_kqueue);
 #endif
+#ifdef HAVE_POLL
 	consider_poll_method(st, exclude, &iv_method_poll);
+#endif
+#ifdef NEED_SELECT
 	consider_poll_method(st, exclude, &iv_method_select);
+#endif
 
 	if (method == NULL) {
 		syslog(LOG_CRIT, "iv_init: can't find suitable event "
