@@ -24,97 +24,6 @@
 #include "config.h"
 
 /*
- * Private versions of the fd/task/timer structures, exposing their
- * internal state.  The user data fields of these structures MUST
- * match the definitions in the public header file iv.h.
- */
-struct iv_fd_ {
-	/*
-	 * User data.
-	 */
-	int			fd;
-	void			*cookie;
-	void			(*handler_in)(void *);
-	void			(*handler_out)(void *);
-	void			(*handler_err)(void *);
-
-	/*
-	 * If this fd gathered any events during this polling round,
-	 * fd->list_active will be on iv_main()'s active list, and
-	 * fd->ready_bands will indicate which bands are currently
-	 * active.
-	 */
-	struct iv_list_head	list_active;
-	unsigned		ready_bands:3;
-
-	/*
-	 * Reflects whether the fd has been registered with
-	 * iv_fd_register().  Will be zero in ->notify_fd() if the
-	 * fd is being unregistered.
-	 */
-	unsigned		registered:1;
-
-	/*
-	 * ->wanted_bands is set by the ivykis core to indicate
-	 * which bands currenty have handlers registered for them.
-	 */
-	unsigned		wanted_bands:3;
-
-	/*
-	 * ->registered_bands is maintained by the poll method to
-	 * indicate which bands are currently registered with the
-	 * kernel, so that the ivykis core knows when to call
-	 * the poll method's ->notify_fd() on an fd.
-	 */
-	unsigned		registered_bands:3;
-
-	/*
-	 * ->list_notify is used by poll methods that defer updating
-	 * kernel registrations to ->poll() time.
-         */
-	struct iv_list_head	list_notify;
-
-	/*
-	 * This is for state internal to some of the poll methods:
-	 * ->avl_node is used by poll methods that maintain an
-	 * internal fd tree, and ->index is used by iv_method_poll
-	 * to maintain the index of this fd in the list of pollfds.
-	 */
-	union {
-		struct iv_avl_node	avl_node;
-		int			index;
-	};
-};
-
-struct iv_task_ {
-	/*
-	 * User data.
-	 */
-	void			*cookie;
-	void			(*handler)(void *);
-
-	/*
-	 * Private data.
-	 */
-	struct iv_list_head	list;
-};
-
-struct iv_timer_ {
-	/*
-	 * User data.
-	 */
-	struct timespec		expires;
-	void			*cookie;
-	void			(*handler)(void *);
-
-	/*
-	 * Private data.
-	 */
-	int			index;
-};
-
-
-/*
  * Per-thread state.
  */
 #define NEED_SELECT
@@ -218,6 +127,104 @@ static inline void barrier(void)
 {
 	__asm__ __volatile__("" : : : "memory");
 }
+
+
+/*
+ * Private versions of the fd/task/timer structures, exposing their
+ * internal state.  The user data fields of these structures MUST
+ * match the definitions in the public header file iv.h.
+ */
+struct iv_fd_ {
+	/*
+	 * User data.
+	 */
+	int			fd;
+	void			*cookie;
+	void			(*handler_in)(void *);
+	void			(*handler_out)(void *);
+	void			(*handler_err)(void *);
+
+	/*
+	 * If this fd gathered any events during this polling round,
+	 * fd->list_active will be on iv_main()'s active list, and
+	 * fd->ready_bands will indicate which bands are currently
+	 * active.
+	 */
+	struct iv_list_head	list_active;
+	unsigned		ready_bands:3;
+
+	/*
+	 * Reflects whether the fd has been registered with
+	 * iv_fd_register().  Will be zero in ->notify_fd() if the
+	 * fd is being unregistered.
+	 */
+	unsigned		registered:1;
+
+	/*
+	 * ->wanted_bands is set by the ivykis core to indicate
+	 * which bands currenty have handlers registered for them.
+	 */
+	unsigned		wanted_bands:3;
+
+	/*
+	 * ->registered_bands is maintained by the poll method to
+	 * indicate which bands are currently registered with the
+	 * kernel, so that the ivykis core knows when to call
+	 * the poll method's ->notify_fd() on an fd.
+	 */
+	unsigned		registered_bands:3;
+
+#if defined(HAVE_SYS_DEVPOLL_H) || defined(HAVE_EPOLL_CREATE) ||	\
+    defined(HAVE_KQUEUE) || defined(HAVE_PORT_CREATE)
+	/*
+	 * ->list_notify is used by poll methods that defer updating
+	 * kernel registrations to ->poll() time.
+         */
+	struct iv_list_head	list_notify;
+#endif
+
+	/*
+	 * This is for state internal to some of the poll methods:
+	 * ->avl_node is used by poll methods that maintain an
+	 * internal fd tree, and ->index is used by iv_method_poll
+	 * to maintain the index of this fd in the list of pollfds.
+	 */
+	union {
+#if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
+		struct iv_avl_node	avl_node;
+#endif
+#ifdef HAVE_POLL
+		int			index;
+#endif
+	};
+};
+
+struct iv_task_ {
+	/*
+	 * User data.
+	 */
+	void			*cookie;
+	void			(*handler)(void *);
+
+	/*
+	 * Private data.
+	 */
+	struct iv_list_head	list;
+};
+
+struct iv_timer_ {
+	/*
+	 * User data.
+	 */
+	struct timespec		expires;
+	void			*cookie;
+	void			(*handler)(void *);
+
+	/*
+	 * Private data.
+	 */
+	int			index;
+};
 
 
 /*

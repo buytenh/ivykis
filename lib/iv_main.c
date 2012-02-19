@@ -337,6 +337,7 @@ void iv_deinit(void)
 
 
 /* file descriptor avl tree handling ****************************************/
+#if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 {
 	struct iv_avl_node *an;
@@ -371,6 +372,7 @@ int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 
 	return 0;
 }
+#endif
 
 
 /* file descriptor handling *************************************************/
