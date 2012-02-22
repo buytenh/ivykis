@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE([foreign])
 # Checks for programs.
 LT_INIT
 AC_PROG_CC
+AC_PROG_LIBTOOL
 
 # Checks for libraries.
 AC_SEARCH_LIBS([clock_gettime], [rt])
