@@ -195,6 +195,7 @@ static void free_ratnode(struct ratnode *node, int depth)
 void iv_timer_deinit(struct iv_state *st)
 {
 	free_ratnode(st->timer_root, SPLIT_LEVELS - 1);
+	st->timer_root = NULL;
 }
 
 static void pull_up(struct iv_state *st, int index, struct iv_timer_ **i)
