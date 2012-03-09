@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_fd 3 2010-08-15 "ivykis" "ivykis programmer's manual"
 .SH NAME
-iv_fd_register, iv_fd_unregister, iv_fd_registered, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
+iv_fd_register, iv_fd_register_try, iv_fd_unregister, iv_fd_registered, iv_fd_set_handler_in, iv_fd_set_handler_err, iv_fd_set_handler_out \- deal with ivykis file descriptors
 .SH SYNOPSIS
 .B #include <iv.h>
 .sp
@@ -23,6 +23,8 @@ struct iv_fd {
 .br
 .BI "void iv_fd_register(struct iv_fd *" fd ");"
 .br
+.BI "int iv_fd_register_try(struct iv_fd *" fd ");"
+.br
 .BI "void iv_fd_unregister(struct iv_fd *" fd ");"
 .br
 .BI "int iv_fd_registered(struct iv_fd *" fd ");"
@@ -39,7 +41,7 @@ The functions
 and
 .B iv_fd_unregister
 register, respectively unregister, a file descriptor with the current
-thread's ivykis event loop.
+thread's ivykis event loop.  Calling
 .B iv_fd_registered
 on a file descriptor returns true if that file descriptor is currently
 registered with ivykis.
@@ -137,6 +139,23 @@ It is allowed to register the same underlying OS file descriptor in
 multiple threads, but a given
 .B struct iv_fd
 can only be registered in one thread at a time.
+.PP
+.B iv_fd_register
+does not return errors to the caller, and in case of an error while
+registering the file descriptor, for example if it isn't open or is
+unpollable,
+.BR abort (3)
+will be invoked.  If it is not known whether registering the file
+descriptor with the kernel will be successful or not, use
+.B iv_fd_register_try
+instead, which is a variant on
+.B iv_fd_register
+which returns a nonzero value in case of a registration error.
+Since
+.B iv_fd_register_try
+disables various internal optimisations, it is recommended to use
+.B iv_fd_register
+whenever possible.
 .PP
 See
 .BR iv_examples (3)

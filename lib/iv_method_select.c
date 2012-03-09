@@ -157,6 +157,31 @@ static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	fd->registered_bands = fd->wanted_bands;
 }
 
+static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	int bytes;
+	struct timeval to = { 0, 0 };
+	int ret;
+
+	bytes = ((st->select.fd_max + 1) + 7) / 8;
+
+	memset(st->select.readfds, 0, bytes);
+	memset(st->select.writefds, 0, bytes);
+
+	FD_SET(fd->fd, st->select.readfds);
+	FD_SET(fd->fd, st->select.writefds);
+
+	ret = select(fd->fd + 1, st->select.readfds,
+		     st->select.writefds, NULL, &to);
+
+	if (ret < 0)
+		return -1;
+
+	iv_select_notify_fd(st, fd);
+
+	return 0;
+}
+
 static void iv_select_deinit(struct iv_state *st)
 {
 	free(st->select.readfds_master);
@@ -170,5 +195,6 @@ struct iv_poll_method iv_method_select = {
 	.register_fd	= iv_select_register_fd,
 	.unregister_fd	= iv_select_unregister_fd,
 	.notify_fd	= iv_select_notify_fd,
+	.notify_fd_sync	= iv_select_notify_fd_sync,
 	.deinit		= iv_select_deinit,
 };

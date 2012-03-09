@@ -55,7 +55,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
+static int __iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
@@ -67,13 +67,19 @@ static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 	else
 		ret = port_dissociate(st->port.port_fd, PORT_SOURCE_FD, fd->fd);
 
-	if (ret < 0) {
+	if (ret == 0)
+		fd->registered_bands = fd->wanted_bands;
+
+	return ret;
+}
+
+static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
+{
+	if (__iv_port_upload_one(st, fd) < 0) {
 		syslog(LOG_CRIT, "iv_port_upload_one: got error %d[%s]",
 		       errno, strerror(errno));
 		abort();
 	}
-
-	fd->registered_bands = fd->wanted_bands;
 }
 
 static void iv_port_upload(struct iv_state *st)
@@ -154,6 +160,11 @@ static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		iv_list_add_tail(&fd->list_notify, &st->port.notify);
 }
 
+static void iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	return __iv_port_upload_one(st, fd);
+}
+
 static void iv_port_deinit(struct iv_state *st)
 {
 	close(st->port.port_fd);
@@ -166,5 +177,6 @@ struct iv_poll_method iv_method_port = {
 	.poll		= iv_port_poll,
 	.unregister_fd	= iv_port_unregister_fd,
 	.notify_fd	= iv_port_notify_fd,
+	.notify_fd_sync	= iv_port_notify_fd_sync,
 	.deinit		= iv_port_deinit,
 };

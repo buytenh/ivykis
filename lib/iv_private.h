@@ -242,6 +242,7 @@ struct iv_poll_method {
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);
+	int	(*notify_fd_sync)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*deinit)(struct iv_state *st);
 };
 

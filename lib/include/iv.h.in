@@ -70,6 +70,7 @@ struct iv_fd {
 
 void IV_FD_INIT(struct iv_fd *);
 void iv_fd_register(struct iv_fd *);
+int iv_fd_register_try(struct iv_fd *);
 void iv_fd_unregister(struct iv_fd *);
 int iv_fd_registered(struct iv_fd *);
 void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));

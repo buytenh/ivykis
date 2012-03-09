@@ -71,11 +71,16 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
+static int __iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int op;
 	struct epoll_event event;
 	int ret;
+
+	iv_list_del_init(&fd->list_notify);
+
+	if (fd->registered_bands == fd->wanted_bands)
+		return 0;
 
 	if (!fd->registered_bands && fd->wanted_bands)
 		op = EPOLL_CTL_ADD;
@@ -90,14 +95,19 @@ static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
-	if (ret < 0) {
+	if (ret == 0)
+		fd->registered_bands = fd->wanted_bands;
+
+	return ret;
+}
+
+static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
+{
+	if (__iv_epoll_flush_one(st, fd) < 0) {
 		syslog(LOG_CRIT, "iv_epoll_flush_one: got "
 		       "error %d[%s]", errno, strerror(errno));
 		abort();
 	}
-
-	fd->registered_bands = fd->wanted_bands;
-	iv_list_del_init(&fd->list_notify);
 }
 
 static void iv_epoll_flush_pending(struct iv_state *st)
@@ -162,6 +172,11 @@ static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		iv_list_add_tail(&fd->list_notify, &st->epoll.notify);
 }
 
+static int iv_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	return __iv_epoll_flush_one(st, fd);
+}
+
 static void iv_epoll_deinit(struct iv_state *st)
 {
 	close(st->epoll.epoll_fd);
@@ -174,5 +189,6 @@ struct iv_poll_method iv_method_epoll = {
 	.poll		= iv_epoll_poll,
 	.unregister_fd	= iv_epoll_unregister_fd,
 	.notify_fd	= iv_epoll_notify_fd,
+	.notify_fd_sync	= iv_epoll_notify_fd_sync,
 	.deinit		= iv_epoll_deinit,
 };

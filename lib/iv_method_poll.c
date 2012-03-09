@@ -138,6 +138,23 @@ static void iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	fd->registered_bands = fd->wanted_bands;
 }
 
+static int iv_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	struct pollfd pfd;
+	int ret;
+
+	pfd.fd = fd->fd;
+	pfd.events = POLLIN | POLLOUT | POLLHUP;
+	ret = poll(&pfd, 1, 0);
+
+	if (ret < 0 || (pfd.revents & POLLNVAL))
+		return -1;
+
+	iv_poll_notify_fd(st, fd);
+
+	return 0;
+}
+
 static void iv_poll_deinit(struct iv_state *st)
 {
 	free(st->poll.fds);
@@ -151,5 +168,6 @@ struct iv_poll_method iv_method_poll = {
 	.poll		= iv_poll_poll,
 	.register_fd	= iv_poll_register_fd,
 	.notify_fd	= iv_poll_notify_fd,
+	.notify_fd_sync	= iv_poll_notify_fd_sync,
 	.deinit		= iv_poll_deinit,
 };

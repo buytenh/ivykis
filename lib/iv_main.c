@@ -235,7 +235,7 @@ void iv_quit(void)
 	st->quit = 1;
 }
 
-static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void recompute_wanted_flags(struct iv_fd_ *fd)
 {
 	int wanted;
 
@@ -250,6 +250,11 @@ static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	}
 
 	fd->wanted_bands = wanted;
+}
+
+static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+{
+	recompute_wanted_flags(fd);
 
 	method->notify_fd(st, fd);
 }
@@ -387,13 +392,8 @@ void IV_FD_INIT(struct iv_fd *_fd)
 	fd->registered = 0;
 }
 
-void iv_fd_register(struct iv_fd *_fd)
+static void iv_fd_register_prologue(struct iv_state *st, struct iv_fd_ *fd)
 {
-	struct iv_state *st = iv_get_state();
-	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
-	int flags;
-	int yes;
-
 	if (fd->registered) {
 		syslog(LOG_CRIT, "iv_fd_register: called with fd which "
 				 "is still registered");
@@ -405,6 +405,23 @@ void iv_fd_register(struct iv_fd *_fd)
 				 "%d (maxfd=%d)", fd->fd, maxfd);
 		abort();
 	}
+
+	fd->registered = 1;
+	INIT_IV_LIST_HEAD(&fd->list_active);
+	fd->ready_bands = 0;
+	fd->registered_bands = 0;
+	INIT_IV_LIST_HEAD(&fd->list_notify);
+
+	if (method->register_fd != NULL)
+		method->register_fd(st, fd);
+}
+
+static void iv_fd_register_epilogue(struct iv_state *st, struct iv_fd_ *fd)
+{
+	int flags;
+	int yes;
+
+	st->numfds++;
 
 	flags = fcntl(fd->fd, F_GETFD);
 	if (!(flags & FD_CLOEXEC)) {
@@ -420,18 +437,39 @@ void iv_fd_register(struct iv_fd *_fd)
 
 	yes = 1;
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));
+}
 
-	fd->registered = 1;
-	INIT_IV_LIST_HEAD(&fd->list_active);
-	fd->ready_bands = 0;
-	fd->registered_bands = 0;
-	INIT_IV_LIST_HEAD(&fd->list_notify);
+void iv_fd_register(struct iv_fd *_fd)
+{
+	struct iv_state *st = iv_get_state();
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
-	st->numfds++;
+	iv_fd_register_prologue(st, fd);
 
-	if (method->register_fd != NULL)
-		method->register_fd(st, fd);
 	notify_fd(st, fd);
+
+	iv_fd_register_epilogue(st, fd);
+}
+
+int iv_fd_register_try(struct iv_fd *_fd)
+{
+	struct iv_state *st = iv_get_state();
+	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
+	int ret;
+
+	iv_fd_register_prologue(st, fd);
+
+	recompute_wanted_flags(fd);
+
+	ret = method->notify_fd_sync(st, fd);
+	if (ret) {
+		fd->registered = 0;
+		return ret;
+	}
+
+	iv_fd_register_epilogue(st, fd);
+
+	return 0;
 }
 
 void iv_fd_unregister(struct iv_fd *_fd)

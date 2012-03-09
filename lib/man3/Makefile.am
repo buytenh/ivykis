@@ -2,6 +2,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_examples.3				\
 		  iv_fd.3				\
 		  iv_fd_register.3			\
+		  iv_fd_register_try.3			\
 		  iv_fd_set_handler_err.3		\
 		  iv_fd_set_handler_in.3		\
 		  iv_fd_set_handler_out.3		\

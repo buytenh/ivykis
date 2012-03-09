@@ -205,6 +205,43 @@ static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		iv_list_add_tail(&fd->list_notify, &st->dev_poll.notify);
 }
 
+static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	int num;
+	struct pollfd pfd[2];
+	int ret;
+
+	iv_list_del_init(&fd->list_notify);
+
+	if (fd->registered_bands == fd->wanted_bands)
+		return 0;
+
+	num = 0;
+
+	if (fd->registered_bands & ~fd->wanted_bands) {
+		pfd[num].fd = fd->fd;
+		pfd[num].events = POLLREMOVE;
+		num++;
+	}
+
+	if (fd->wanted_bands) {
+		pfd[num].fd = fd->fd;
+		pfd[num].events = bits_to_poll_mask(fd->wanted_bands);
+		num++;
+	}
+
+	do {
+		ret = write(st->dev_poll.poll_fd, pfd, num * sizeof(pfd[0]));
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0)
+		return -1;
+
+	fd->registered_bands = fd->wanted_bands;
+
+	return 0;
+}
+
 static void iv_dev_poll_deinit(struct iv_state *st)
 {
 	close(st->dev_poll.poll_fd);
@@ -218,5 +255,6 @@ struct iv_poll_method iv_method_dev_poll = {
 	.register_fd	= iv_dev_poll_register_fd,
 	.unregister_fd	= iv_dev_poll_unregister_fd,
 	.notify_fd	= iv_dev_poll_notify_fd,
+	.notify_fd_sync	= iv_dev_poll_notify_fd_sync,
 	.deinit		= iv_dev_poll_deinit,
 };

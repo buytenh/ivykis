@@ -58,6 +58,8 @@ iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 	int wanted;
 	int regd;
 
+	iv_list_del_init(&fd->list_notify);
+
 	num = *_num;
 	wanted = fd->wanted_bands;
 	regd = fd->registered_bands;
@@ -82,8 +84,6 @@ iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 		num++;
 	}
 
-	fd->registered_bands = fd->wanted_bands;
-
 	*_num = num;
 }
 
@@ -95,7 +95,6 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 	*num = 0;
 
 	while (!iv_list_empty(&st->kqueue.notify)) {
-		struct iv_list_head *ilh;
 		struct iv_fd_ *fd;
 
 		if (*num > size - 2) {
@@ -112,12 +111,11 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 			*num = 0;
 		}
 
-		ilh = st->kqueue.notify.next;
-		iv_list_del_init(ilh);
-
-		fd = iv_list_entry(ilh, struct iv_fd_, list_notify);
+		fd = iv_list_entry(st->kqueue.notify.next,
+				   struct iv_fd_, list_notify);
 
 		iv_kqueue_queue_one(kev, num, fd);
+		fd->registered_bands = fd->wanted_bands;
 	}
 }
 
@@ -206,6 +204,24 @@ static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		iv_list_add_tail(&fd->list_notify, &st->kqueue.notify);
 }
 
+static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+{
+	struct kevent kev[2];
+	int num;
+	struct timespec to = { 0, 0 };
+	int ret;
+
+	iv_kqueue_queue_one(&kev, &num, fd);
+	if (num == 0)
+		return 0;
+
+	ret = kqueue(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
+	if (ret == 0)
+		fd->registered_bands = fd->wanted_bands;
+
+	return ret;
+}
+
 static void iv_kqueue_deinit(struct iv_state *st)
 {
 	close(st->kqueue.kqueue_fd);
@@ -218,5 +234,6 @@ struct iv_poll_method iv_method_kqueue = {
 	.poll		= iv_kqueue_poll,
 	.unregister_fd	= iv_kqueue_unregister_fd,
 	.notify_fd	= iv_kqueue_notify_fd,
+	.notify_fd_sync	= iv_kqueue_notify_fd_sync,
 	.deinit		= iv_kqueue_deinit,
 };
