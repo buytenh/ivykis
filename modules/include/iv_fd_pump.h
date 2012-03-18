@@ -32,10 +32,7 @@ struct iv_fd_pump {
 	void		(*set_bands)(void *cookie, int pollin, int pollout);
 	int		relay_eof;
 
-	union {
-		unsigned char	*buf;
-		int	pfd[2];
-	};
+	void		*buf;
 	int		bytes;
 	int		full;
 	int		saw_fin;

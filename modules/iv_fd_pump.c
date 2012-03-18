@@ -22,13 +22,53 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <iv.h>
+#include <iv_list.h>
+#include <iv_tls.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <syslog.h>
 #include "config.h"
 #include "iv_fd_pump.h"
 
-#define BUF_SIZE	4096
+/* thread state handling ****************************************************/
+struct iv_fd_pump_thr_info {
+	int			num_bufs;
+	struct iv_list_head	bufs;
+};
+
+static void buf_purge(struct iv_fd_pump_thr_info *tinfo);
+
+static void iv_fd_pump_tls_init_thread(void *_tinfo)
+{
+	struct iv_fd_pump_thr_info *tinfo = _tinfo;
+
+	tinfo->num_bufs = 0;
+	INIT_IV_LIST_HEAD(&tinfo->bufs);
+}
+
+static void iv_fd_pump_tls_deinit_thread(void *_tinfo)
+{
+	struct iv_fd_pump_thr_info *tinfo = _tinfo;
+
+	buf_purge(tinfo);
+}
+
+static struct iv_tls_user iv_fd_pump_tls_user = {
+	.sizeof_state	= sizeof(struct iv_fd_pump_thr_info),
+	.init_thread	= iv_fd_pump_tls_init_thread,
+	.deinit_thread	= iv_fd_pump_tls_deinit_thread,
+};
+
+static void iv_fd_pump_tls_init(void) __attribute__((constructor));
+static void iv_fd_pump_tls_init(void)
+{
+	iv_tls_user_register(&iv_fd_pump_tls_user);
+}
+
+
+/* buffer management ********************************************************/
+#define MAX_CACHED_BUFS		20
+#define BUF_SIZE		4096
 
 #ifndef HAVE_SPLICE
 #define splice_available	 0
@@ -37,42 +77,145 @@
 static int splice_available = -1;
 #endif
 
+struct iv_fd_pump_buf {
+	struct iv_list_head	list;
+	union {
+		unsigned char	buf[0];
+		int		pfd[2];
+	};
+};
+
+static struct iv_fd_pump_buf *buf_alloc(void)
+{
+	int size;
+	struct iv_fd_pump_buf *buf;
+
+	if (!splice_available)
+		size = sizeof(struct iv_list_head) + BUF_SIZE;
+	else
+		size = sizeof(struct iv_fd_pump_buf);
+
+	buf = malloc(size);
+
+	if (buf != NULL && splice_available && pipe(buf->pfd) < 0) {
+		free(buf);
+		buf = NULL;
+	}
+
+	return buf;
+}
+
+static void __buf_free(struct iv_fd_pump_buf *buf)
+{
+	if (splice_available) {
+		close(buf->pfd[0]);
+		close(buf->pfd[1]);
+	}
+	free(buf);
+}
+
+static void buf_put(struct iv_fd_pump_buf *buf, int bytes)
+{
+	struct iv_fd_pump_thr_info *tinfo;
+
+	if (splice_available && bytes) {
+		__buf_free(buf);
+		return;
+	}
+
+	tinfo = iv_tls_user_ptr(&iv_fd_pump_tls_user);
+	if (tinfo->num_bufs < MAX_CACHED_BUFS) {
+		tinfo->num_bufs++;
+		iv_list_add(&buf->list, &tinfo->bufs);
+	} else {
+		__buf_free(buf);
+	}
+}
+
+static void check_splice_available(void)
+{
+#ifdef HAVE_SPLICE
+	struct iv_fd_pump_buf *b0;
+	struct iv_fd_pump_buf *b1;
+	int ret;
+
+	splice_available = 1;
+
+	b0 = buf_alloc();
+	if (b0 == NULL) {
+		splice_available = 0;
+		return;
+	}
+
+	b1 = buf_alloc();
+	if (b1 == NULL) {
+		__buf_free(b0);
+		splice_available = 0;
+		return;
+	}
+
+	ret = splice(b0->pfd[0], NULL, b1->pfd[1], NULL, 1, SPLICE_F_NONBLOCK);
+	if (ret < 0 && errno == EAGAIN) {
+		buf_put(b1, 0);
+		buf_put(b0, 0);
+	} else {
+		__buf_free(b0);
+		__buf_free(b1);
+		splice_available = 0;
+	}
+#endif
+}
+
+static struct iv_fd_pump_buf *__buf_dequeue(struct iv_fd_pump_thr_info *tinfo)
+{
+	if (!iv_list_empty(&tinfo->bufs)) {
+		struct iv_list_head *ilh;
+
+		tinfo->num_bufs--;
+
+		ilh = tinfo->bufs.next;
+		iv_list_del(ilh);
+
+		return iv_container_of(ilh, struct iv_fd_pump_buf, list);
+	}
+
+	return NULL;
+}
+
+static struct iv_fd_pump_buf *buf_get(void)
+{
+	struct iv_fd_pump_thr_info *tinfo =
+		iv_tls_user_ptr(&iv_fd_pump_tls_user);
+	struct iv_fd_pump_buf *buf;
+
+	buf = __buf_dequeue(tinfo);
+	if (buf == NULL)
+		buf = buf_alloc();
+
+	return buf;
+}
+
+static void buf_purge(struct iv_fd_pump_thr_info *tinfo)
+{
+	struct iv_fd_pump_buf *buf;
+
+	while ((buf = __buf_dequeue(tinfo)) != NULL)
+		__buf_free(buf);
+}
+
+
+/* iv_fd_pump ***************************************************************/
+static struct iv_fd_pump_buf *iv_fd_pump_buf(struct iv_fd_pump *ip)
+{
+	return (struct iv_fd_pump_buf *)ip->buf;
+}
 
 int iv_fd_pump_init(struct iv_fd_pump *ip)
 {
-#ifdef HAVE_SPLICE
-	if (splice_available == -1) {
-		int pfd[4];
-		int ret;
+	if (splice_available == -1)
+		check_splice_available();
 
-		if (pipe(pfd) < 0 || pipe(pfd + 2) < 0) {
-			syslog(LOG_CRIT, "iv_fd_pump_init: got error %d[%s]",
-			       errno, strerror(errno));
-			abort();
-		}
-
-		ret = splice(pfd[0], NULL, pfd[3], NULL, 1, SPLICE_F_NONBLOCK);
-		if (ret < 0 && errno == EAGAIN)
-			splice_available = 1;
-		else
-			splice_available = 0;
-
-		close(pfd[0]);
-		close(pfd[1]);
-		close(pfd[2]);
-		close(pfd[3]);
-	}
-#endif
-
-	if (!splice_available) {
-		ip->buf = malloc(BUF_SIZE);
-		if (ip->buf == NULL)
-			return -1;
-	} else {
-		if (pipe(ip->pfd) < 0)
-			return -1;
-	}
-
+	ip->buf = NULL;
 	ip->bytes = 0;
 	ip->full = 0;
 	ip->saw_fin = 0;
@@ -84,25 +227,35 @@ int iv_fd_pump_init(struct iv_fd_pump *ip)
 
 void iv_fd_pump_destroy(struct iv_fd_pump *ip)
 {
-	ip->set_bands(ip->cookie, 0, 0);
+	struct iv_fd_pump_buf *buf = iv_fd_pump_buf(ip);
 
-	if (!splice_available) {
-		free(ip->buf);
-	} else {
-		close(ip->pfd[0]);
-		close(ip->pfd[1]);
+	if (ip->saw_fin != 2)
+		ip->set_bands(ip->cookie, 0, 0);
+
+	if (buf != NULL) {
+		buf_put(buf, ip->bytes);
+		ip->buf = NULL;
 	}
 }
 
 static int iv_fd_pump_try_input(struct iv_fd_pump *ip)
 {
+	struct iv_fd_pump_buf *buf = iv_fd_pump_buf(ip);
 	int ret;
 
+	if (buf == NULL) {
+		buf = buf_get();
+		if (buf == NULL)
+			return -1;
+
+		ip->buf = (void *)buf;
+	}
+
 	if (!splice_available)
-		ret = read(ip->from_fd, ip->buf + ip->bytes,
+		ret = read(ip->from_fd, buf->buf + ip->bytes,
 			   BUF_SIZE - ip->bytes);
 	else
-		ret = splice(ip->from_fd, NULL, ip->pfd[1], NULL,
+		ret = splice(ip->from_fd, NULL, buf->pfd[1], NULL,
 			     1048576, SPLICE_F_NONBLOCK);
 
 	if (ret < 0) {
@@ -139,12 +292,13 @@ static int iv_fd_pump_try_input(struct iv_fd_pump *ip)
 
 static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 {
+	struct iv_fd_pump_buf *buf = iv_fd_pump_buf(ip);
 	int ret;
 
 	if (!splice_available)
-		ret = write(ip->to_fd, ip->buf, ip->bytes);
+		ret = write(ip->to_fd, buf->buf, ip->bytes);
 	else
-		ret = splice(ip->pfd[0], NULL, ip->to_fd, NULL,
+		ret = splice(buf->pfd[0], NULL, ip->to_fd, NULL,
 			     ip->bytes, 0);
 
 	if (ret <= 0)
@@ -154,7 +308,7 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 
 	ip->bytes -= ret;
 	if (!splice_available)
-		memmove(ip->buf, ip->buf + ret, ip->bytes);
+		memmove(buf->buf, buf->buf + ret, ip->bytes);
 
 	if (!ip->bytes && ip->saw_fin == 1) {
 		if (ip->relay_eof)
@@ -165,7 +319,7 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 	return 0;
 }
 
-int iv_fd_pump_pump(struct iv_fd_pump *ip)
+static int __iv_fd_pump_pump(struct iv_fd_pump *ip)
 {
 	if (!ip->full && ip->saw_fin == 0) {
 		if (iv_fd_pump_try_input(ip))
@@ -194,6 +348,23 @@ int iv_fd_pump_pump(struct iv_fd_pump *ip)
 
 	syslog(LOG_CRIT, "iv_fd_pump_pump: saw_fin == %d", ip->saw_fin);
 	abort();
+}
+
+int iv_fd_pump_pump(struct iv_fd_pump *ip)
+{
+	int ret;
+
+	ret = __iv_fd_pump_pump(ip);
+	if (ret < 0 || !ip->bytes) {
+		struct iv_fd_pump_buf *buf = iv_fd_pump_buf(ip);
+
+		if (buf != NULL) {
+			buf_put(buf, ip->bytes);
+			ip->buf = NULL;
+		}
+	}
+
+	return ret;
 }
 
 int iv_fd_pump_is_done(struct iv_fd_pump *ip)
