@@ -264,6 +264,18 @@ static void server_connect_timeout(void *_k)
 	__kojine_kill(k);
 }
 
+static void set_keepalive(int fd)
+{
+	int yes;
+
+	yes = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) < 0) {
+		fprintf(stderr, "set_keepalive: error %d while "
+				"setsockopt(SO_KEEPALIVE)\n", errno);
+		abort();
+	}
+}
+
 static void got_kojine(void *_ki)
 {
 	struct kojines_instance *ki = (struct kojines_instance *)_ki;
@@ -297,6 +309,8 @@ static void got_kojine(void *_ki)
 		return;
 	}
 
+	set_keepalive(client);
+
 	server = socket(AF_INET, SOCK_STREAM, 0);
 	if (server < 0) {
 		close(client);
@@ -309,6 +323,8 @@ static void got_kojine(void *_ki)
 		close(client);
 		return;
 	}
+
+	set_keepalive(server);
 
 	iv_list_add_tail(&k->list, &ki->kojines);
 
