@@ -67,8 +67,18 @@ static void cs_pump(void *_k)
 	int ret;
 
 	ret = iv_fd_pump_pump(&k->cs);
-	if (ret < 0 || (ret == 0 && iv_fd_pump_is_done(&k->sc)))
+
+	if (ret < 0) {
 		kojine_kill(k);
+		return;
+	}
+
+	if (ret == 0) {
+		if (!iv_fd_pump_is_done(&k->sc))
+			shutdown(k->server_fd.fd, SHUT_WR);
+		else
+			kojine_kill(k);
+	}
 }
 
 static void cs_set_bands(void *_k, int pollin, int pollout)
@@ -85,8 +95,18 @@ static void sc_pump(void *_k)
 	int ret;
 
 	ret = iv_fd_pump_pump(&k->sc);
-	if (ret < 0 || (ret == 0 && iv_fd_pump_is_done(&k->cs)))
+
+	if (ret < 0) {
 		kojine_kill(k);
+		return;
+	}
+
+	if (ret == 0) {
+		if (!iv_fd_pump_is_done(&k->cs))
+			shutdown(k->client_fd.fd, SHUT_WR);
+		else
+			kojine_kill(k);
+	}
 }
 
 static void sc_set_bands(void *_k, int pollin, int pollout)
@@ -136,6 +156,7 @@ static void got_server_connect_reply(void *_k)
 	k->cs.to_fd = k->server_fd.fd;
 	k->cs.cookie = k;
 	k->cs.set_bands = cs_set_bands;
+	k->cs.relay_eof = 0;
 	if (iv_fd_pump_init(&k->cs)) {
 		__kojine_kill(k);
 		return;
@@ -146,6 +167,7 @@ static void got_server_connect_reply(void *_k)
 	k->sc.to_fd = k->client_fd.fd;
 	k->sc.cookie = k;
 	k->sc.set_bands = sc_set_bands;
+	k->sc.relay_eof = 0;
 	if (iv_fd_pump_init(&k->sc)) {
 		iv_fd_pump_destroy(&k->cs);
 		__kojine_kill(k);
