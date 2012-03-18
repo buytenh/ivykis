@@ -7,7 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
+#include <iv_signal.h>
 #include "kojines.h"
+
+static struct kojines_instance ki;
+static struct iv_signal sigusr1;
+
+static void got_sigusr1(void *_dummy)
+{
+	kojines_instance_detach(&ki);
+	iv_signal_unregister(&sigusr1);
+}
 
 /*
  * Given src and origdst addresses of a connection attempt, determine
@@ -25,16 +35,21 @@ static int get_nexthop(void *cookie, struct sockaddr_in *nexthop,
 
 int main()
 {
-	struct kojines_instance ki;
-
 	iv_init();
 
 	ki.listen_port = 63636;
 	ki.cookie = NULL;
 	ki.get_nexthop = get_nexthop;
-	kojines_instance_register(&ki);
+	if (kojines_instance_register(&ki)) {
+		IV_SIGNAL_INIT(&sigusr1);
+		sigusr1.signum = SIGUSR1;
+		sigusr1.flags = 0;
+		sigusr1.cookie = NULL;
+		sigusr1.handler = got_sigusr1;
+		iv_signal_register(&sigusr1);
 
-	iv_main();
+		iv_main();
+	}
 
 	iv_deinit();
 
