@@ -412,3 +412,15 @@ void kojines_instance_unregister(struct kojines_instance *ki)
 		kojine_kill(k);
 	}
 }
+
+void kojines_instance_detach(struct kojines_instance *ki)
+{
+	struct iv_list_head *ilh;
+	struct iv_list_head *ilh2;
+
+	iv_fd_unregister(&ki->listen_fd);
+	close(ki->listen_fd.fd);
+
+	iv_list_for_each_safe (ilh, ilh2, &ki->kojines)
+		iv_list_del_init(ilh);
+}

@@ -26,6 +26,7 @@ struct kojines_instance
 
 int kojines_instance_register(struct kojines_instance *);
 void kojines_instance_unregister(struct kojines_instance *);
+void kojines_instance_detach(struct kojines_instance *);
 
 
 #endif
