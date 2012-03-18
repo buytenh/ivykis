@@ -239,7 +239,7 @@ static void server_connect_timeout(void *_k)
 {
 	struct kojine *k = (struct kojine *)_k;
 
-	kojine_kill(k);
+	__kojine_kill(k);
 }
 
 static void got_kojine(void *_ki)
