@@ -305,6 +305,7 @@ static void got_kojine(void *_ki)
 
 	k = malloc(sizeof(*k));
 	if (k == NULL) {
+		close(server);
 		close(client);
 		return;
 	}
