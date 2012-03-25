@@ -71,7 +71,7 @@ void iv_tls_thread_deinit(struct iv_state *st)
 	free(ptr);
 }
 
-void iv_tls_user_register(struct iv_tls_user *itu)
+IV_API void iv_tls_user_register(struct iv_tls_user *itu)
 {
 	if (inited) {
 		syslog(LOG_CRIT, "iv_tls_user_register: called after iv_init");
@@ -84,7 +84,7 @@ void iv_tls_user_register(struct iv_tls_user *itu)
 	iv_list_add_tail(&itu->list, &iv_tls_users);
 }
 
-void *iv_tls_user_ptr(struct iv_tls_user *itu)
+IV_API void *iv_tls_user_ptr(struct iv_tls_user *itu)
 {
 	struct iv_state *st = iv_get_state();
 

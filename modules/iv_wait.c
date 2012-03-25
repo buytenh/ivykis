@@ -239,7 +239,7 @@ static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
 	this->flags = 0;
 }
 
-void iv_wait_interest_register(struct iv_wait_interest *this)
+IV_API void iv_wait_interest_register(struct iv_wait_interest *this)
 {
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 
@@ -271,8 +271,9 @@ static void __iv_wait_interest_unregister(struct iv_wait_thr_info *tinfo,
 		iv_signal_unregister(&tinfo->sigchld_interest);
 }
 
-int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
-				    void (*fn)(void *cookie), void *cookie)
+IV_API int
+iv_wait_interest_register_spawn(struct iv_wait_interest *this,
+				void (*fn)(void *cookie), void *cookie)
 {
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 	pid_t pid;
@@ -301,7 +302,7 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 	return 0;
 }
 
-void iv_wait_interest_unregister(struct iv_wait_interest *this)
+IV_API void iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 
@@ -313,7 +314,7 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 	__iv_wait_interest_unregister(tinfo, this);
 }
 
-int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
+IV_API int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
 {
 	int ret;
 

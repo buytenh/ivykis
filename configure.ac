@@ -82,6 +82,25 @@ netbsd*)
 	;;
 esac
 
+# Check for -fvisibility=hidden.
+ac_save_CFLAGS=$CFLAGS
+AC_CACHE_CHECK(whether $CC accepts -fvisibility=hidden,
+	ac_cv_prog_cc_visibility_hidden,
+	[ac_cv_prog_cc_visibility_hidden=no
+	 CFLAGS="-fvisibility=hidden"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
+		[ac_cv_prog_cc_visibility_hidden=yes], [])
+	])
+if test $ac_cv_prog_cc_visibility_hidden = yes
+then
+	AC_DEFINE(IV_API, [__attribute__((visibility("default")))],
+		  [Use this to mark shared library exports.])
+	CFLAGS="$ac_save_CFLAGS -fvisibility=hidden"
+else
+	AC_DEFINE(IV_API, [], [Use this to mark shared library exports.])
+	CFLAGS=$ac_save_CFLAGS
+fi
+
 # Check for -pthreads.
 ac_c_werror_flag=yes
 ac_save_CFLAGS=$CFLAGS

@@ -187,7 +187,7 @@ static void iv_destroy_state(struct iv_state *st)
 
 
 /* main loop ****************************************************************/
-void iv_init(void)
+IV_API void iv_init(void)
 {
 	struct iv_state *st;
 
@@ -212,19 +212,19 @@ void iv_init(void)
 	iv_tls_thread_init(st);
 }
 
-int iv_inited(void)
+IV_API int iv_inited(void)
 {
 	struct iv_state *st = iv_get_state();
 
 	return st != NULL && st->initialised;
 }
 
-const char *iv_poll_method_name(void)
+IV_API const char *iv_poll_method_name(void)
 {
 	return method != NULL ? method->name : NULL;
 }
 
-void iv_quit(void)
+IV_API void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
 
@@ -266,7 +266,7 @@ static int should_quit(struct iv_state *st)
 	return 0;
 }
 
-void iv_main(void)
+IV_API void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_list_head active;
@@ -298,7 +298,7 @@ void iv_main(void)
 	}
 }
 
-void iv_deinit(void)
+IV_API void iv_deinit(void)
 {
 	struct iv_state *st = iv_get_state();
 

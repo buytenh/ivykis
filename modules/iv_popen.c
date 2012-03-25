@@ -26,6 +26,7 @@
 #include <iv_wait.h>
 #include <signal.h>
 #include <string.h>
+#include "config.h"
 
 /*
  * This struct contains the child state that may need to persist
@@ -94,7 +95,7 @@ static void iv_popen_child(void *cookie)
 	perror("execvp");
 }
 
-int iv_popen_request_submit(struct iv_popen_request *this)
+IV_API int iv_popen_request_submit(struct iv_popen_request *this)
 {
 	struct iv_popen_running_child *ch;
 	struct iv_popen_spawn_info info;
@@ -178,7 +179,7 @@ static void iv_popen_running_child_timer(void *_ch)
 	iv_timer_register(&ch->signal_timer);
 }
 
-void iv_popen_request_close(struct iv_popen_request *this)
+IV_API void iv_popen_request_close(struct iv_popen_request *this)
 {
 	struct iv_popen_running_child *ch = this->child;
 

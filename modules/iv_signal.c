@@ -24,6 +24,7 @@
 #include <iv_signal.h>
 #include <pthread.h>
 #include <inttypes.h>
+#include "config.h"
 
 static pthread_spinlock_t sig_interests_lock;
 static struct iv_avl_tree sig_interests;
@@ -178,7 +179,7 @@ static void iv_signal_event(void *_this)
 	this->handler(this->cookie);
 }
 
-int iv_signal_register(struct iv_signal *this)
+IV_API int iv_signal_register(struct iv_signal *this)
 {
 	sigset_t mask;
 
@@ -209,7 +210,7 @@ int iv_signal_register(struct iv_signal *this)
 	return 0;
 }
 
-void iv_signal_unregister(struct iv_signal *this)
+IV_API void iv_signal_unregister(struct iv_signal *this)
 {
 	sigset_t mask;
 
