@@ -140,9 +140,31 @@ pthread_key_t			iv_state_key;
 __thread struct iv_state	*__st;
 #endif
 
+static void __iv_deinit(struct iv_state *st)
+{
+	st->initialised = 0;
+
+	method->deinit(st);
+
+	iv_timer_deinit(st);
+	iv_tls_thread_deinit(st);
+
+	pthread_setspecific(iv_state_key, NULL);
+#ifdef HAVE_THREAD
+	__st = NULL;
+#endif
+
+	barrier();
+
+	free(st);
+}
+
 static void iv_state_destructor(void *data)
 {
-	free(data);
+	struct iv_state *st = data;
+
+	pthread_setspecific(iv_state_key, st);
+	__iv_deinit(st);
 }
 
 static struct iv_state *iv_allocate_state(void)
@@ -279,19 +301,5 @@ IV_API void iv_deinit(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	st->initialised = 0;
-
-	method->deinit(st);
-
-	iv_timer_deinit(st);
-	iv_tls_thread_deinit(st);
-
-	pthread_setspecific(iv_state_key, NULL);
-#ifdef HAVE_THREAD
-	__st = NULL;
-#endif
-
-	barrier();
-
-	free(st);
+	__iv_deinit(st);
 }
