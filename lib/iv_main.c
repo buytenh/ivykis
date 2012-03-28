@@ -135,7 +135,7 @@ static void iv_init_first_thread(struct iv_state *st)
 
 /* tls handling *************************************************************/
 #ifdef HAVE_THREAD
-__thread struct iv_state __st;
+__thread struct iv_state *__st;
 
 static void iv_state_allocate_key(void)
 {
@@ -143,11 +143,15 @@ static void iv_state_allocate_key(void)
 
 static struct iv_state *iv_allocate_state(void)
 {
-	return &__st;
+	__st = calloc(1, sizeof(*__st));
+
+	return __st;
 }
 
 static void iv_destroy_state(struct iv_state *st)
 {
+	__st = NULL;
+	free(st);
 }
 #else
 #include <pthread.h>
