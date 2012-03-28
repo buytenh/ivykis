@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <signal.h>
 #include <string.h>
 #include <syslog.h>
@@ -133,46 +134,15 @@ static void iv_init_first_thread(struct iv_state *st)
 }
 
 
-/* tls handling *************************************************************/
+/* main loop ****************************************************************/
+pthread_key_t			iv_state_key;
 #ifdef HAVE_THREAD
-__thread struct iv_state *__st;
-
-static void iv_state_allocate_key(void)
-{
-}
-
-static struct iv_state *iv_allocate_state(void)
-{
-	__st = calloc(1, iv_tls_total_state_size());
-
-	return __st;
-}
-
-static void iv_destroy_state(struct iv_state *st)
-{
-	__st = NULL;
-
-	barrier();
-
-	free(st);
-}
-#else
-#include <pthread.h>
-
-pthread_key_t iv_state_key;
+__thread struct iv_state	*__st;
+#endif
 
 static void iv_state_destructor(void *data)
 {
 	free(data);
-}
-
-static void iv_state_allocate_key(void)
-{
-	if (pthread_key_create(&iv_state_key, iv_state_destructor)) {
-		fprintf(stderr, "iv_state_allocate_key: failed to allocate "
-				"TLS key\n");
-		abort();
-	}
 }
 
 static struct iv_state *iv_allocate_state(void)
@@ -180,29 +150,26 @@ static struct iv_state *iv_allocate_state(void)
 	struct iv_state *st;
 
 	st = calloc(1, iv_tls_total_state_size());
+
 	pthread_setspecific(iv_state_key, st);
+#ifdef HAVE_THREAD
+	__st = st;
+#endif
 
 	return st;
 }
 
-static void iv_destroy_state(struct iv_state *st)
-{
-	pthread_setspecific(iv_state_key, NULL);
-
-	barrier();
-
-	free(st);
-}
-#endif
-
-
-/* main loop ****************************************************************/
 IV_API void iv_init(void)
 {
 	struct iv_state *st;
 
-	if (method == NULL)
-		iv_state_allocate_key();
+	if (method == NULL) {
+		if (pthread_key_create(&iv_state_key, iv_state_destructor)) {
+			fprintf(stderr, "iv_state_allocate_key: failed "
+					"to allocate TLS key\n");
+			abort();
+		}
+	}
 
 	st = iv_allocate_state();
 
@@ -319,5 +286,12 @@ IV_API void iv_deinit(void)
 	iv_timer_deinit(st);
 	iv_tls_thread_deinit(st);
 
-	iv_destroy_state(st);
+	pthread_setspecific(iv_state_key, NULL);
+#ifdef HAVE_THREAD
+	__st = NULL;
+#endif
+
+	barrier();
+
+	free(st);
 }
