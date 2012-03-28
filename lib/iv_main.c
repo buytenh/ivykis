@@ -143,7 +143,7 @@ static void iv_state_allocate_key(void)
 
 static struct iv_state *iv_allocate_state(void)
 {
-	__st = calloc(1, sizeof(*__st));
+	__st = calloc(1, iv_tls_total_state_size());
 
 	return __st;
 }
@@ -151,6 +151,9 @@ static struct iv_state *iv_allocate_state(void)
 static void iv_destroy_state(struct iv_state *st)
 {
 	__st = NULL;
+
+	barrier();
+
 	free(st);
 }
 #else
@@ -176,7 +179,7 @@ static struct iv_state *iv_allocate_state(void)
 {
 	struct iv_state *st;
 
-	st = calloc(1, sizeof(*st));
+	st = calloc(1, iv_tls_total_state_size());
 	pthread_setspecific(iv_state_key, st);
 
 	return st;
@@ -185,6 +188,9 @@ static struct iv_state *iv_allocate_state(void)
 static void iv_destroy_state(struct iv_state *st)
 {
 	pthread_setspecific(iv_state_key, NULL);
+
+	barrier();
+
 	free(st);
 }
 #endif

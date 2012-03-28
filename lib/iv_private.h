@@ -44,9 +44,6 @@ struct iv_state {
 	int			num_timers;
 	struct ratnode		*timer_root;
 
-	/* iv_tls.c  */
-	void			*tls_ptr;
-
 	/* poll methods  */
 	union {
 #ifdef HAVE_SYS_DEVPOLL_H
@@ -279,5 +276,6 @@ void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
 
 /* iv_tls.c */
+int iv_tls_total_state_size(void);
 void iv_tls_thread_init(struct iv_state *st);
 void iv_tls_thread_deinit(struct iv_state *st);
