@@ -125,10 +125,9 @@ static struct iv_timer_ **get_node(struct iv_state *st, int index)
 		int bits;
 
 		if (*r == NULL) {
-			*r = malloc(sizeof(struct ratnode));
+			*r = calloc(1, sizeof(struct ratnode));
 			if (*r == NULL)
 				return NULL;
-			memset(*r, 0, sizeof(struct ratnode));
 		}
 
 		bits = (index >> i * SPLIT_BITS) & (SPLIT_NODES - 1);
