@@ -6,4 +6,6 @@ LDADD			= $(top_builddir)/libivykis.la -lssl -lcrypto
 
 noinst_PROGRAMS		= test
 
-test_SOURCES		= test.c iv_getaddrinfo.c iv_getaddrinfo.h
+test_SOURCES		= test.c iv_getaddrinfo.c
+
+noinst_HEADERS		= iv_getaddrinfo.h

@@ -6,8 +6,10 @@ LDADD			= $(top_builddir)/libivykis.la -lssl -lcrypto
 
 noinst_PROGRAMS		= echo stress
 
-echo_SOURCES		= echo.c iv_openssl.c iv_openssl.h
+echo_SOURCES		= echo.c iv_openssl.c
 
-stress_SOURCES		= stress.c iv_openssl.c iv_openssl.h
+stress_SOURCES		= stress.c iv_openssl.c
+
+noinst_HEADERS		= iv_openssl.h
 
 EXTRA_DIST		= mkkeycert
