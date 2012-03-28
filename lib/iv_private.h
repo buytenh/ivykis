@@ -246,6 +246,11 @@ struct iv_poll_method {
 	void	(*deinit)(struct iv_state *st);
 };
 
+/* iv_main.c */
+extern int maxfd;
+extern struct iv_poll_method *method;
+
+/* poll methods */
 extern struct iv_poll_method iv_method_dev_poll;
 extern struct iv_poll_method iv_method_epoll;
 extern struct iv_poll_method iv_method_kqueue;
@@ -254,7 +259,7 @@ extern struct iv_poll_method iv_method_port;
 extern struct iv_poll_method iv_method_select;
 
 
-/* iv_main.c */
+/* iv_fd.c */
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
 void iv_fd_make_ready(struct iv_list_head *active,

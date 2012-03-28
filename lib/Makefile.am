@@ -43,6 +43,7 @@ SELECT_SRC =
 endif
 
 libivykis_la_SOURCES	= iv_avl.c			\
+			  iv_fd.c			\
 			  iv_main.c			\
 			  $(DEV_POLL_SRC)		\
 			  $(EPOLL_SRC)			\
