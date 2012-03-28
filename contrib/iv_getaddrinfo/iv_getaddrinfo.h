@@ -17,7 +17,14 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef __IV_GETADDRINFO_H
+#define __IV_GETADDRINFO_H
+
 #include <iv_work.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct iv_getaddrinfo {
 	const char		*node;
@@ -32,3 +39,10 @@ struct iv_getaddrinfo {
 
 int iv_getaddrinfo_submit(struct iv_getaddrinfo *ig);
 void iv_getaddrinfo_cancel(struct iv_getaddrinfo *ig);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif

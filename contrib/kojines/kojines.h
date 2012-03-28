@@ -24,6 +24,10 @@
 #include <iv.h>
 #include <iv_list.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct kojines_instance
 {
 	int			listen_port;
@@ -40,6 +44,10 @@ struct kojines_instance
 int kojines_instance_register(struct kojines_instance *);
 void kojines_instance_unregister(struct kojines_instance *);
 void kojines_instance_detach(struct kojines_instance *);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

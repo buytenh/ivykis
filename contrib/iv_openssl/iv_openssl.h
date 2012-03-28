@@ -17,8 +17,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef __IV_OPENSSL_H
+#define __IV_OPENSSL_H
+
 #include <iv_list.h>
 #include <openssl/ssl.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct iv_openssl {
 	SSL_CTX			*ctx;
@@ -68,3 +75,10 @@ struct iv_openssl_request {
 void iv_openssl_request_init(struct iv_openssl_request *req);
 void iv_openssl_request_submit(struct iv_openssl_request *req);
 void iv_openssl_request_cancel(struct iv_openssl_request *req);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#endif
