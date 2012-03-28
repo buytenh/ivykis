@@ -26,7 +26,7 @@
 #include <syslog.h>
 #include "iv_private.h"
 
-static int iv_epoll_init(struct iv_state *st, int maxfd)
+static int iv_epoll_init(struct iv_state *st)
 {
 	int fd;
 	int flags;

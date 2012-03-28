@@ -27,7 +27,7 @@
 
 #define PORTEV_NUM	1024
 
-static int iv_port_init(struct iv_state *st, int maxfd)
+static int iv_port_init(struct iv_state *st)
 {
 	int fd;
 

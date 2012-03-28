@@ -26,7 +26,7 @@
 #include <sys/poll.h>
 #include "iv_private.h"
 
-static int iv_poll_init(struct iv_state *st, int maxfd)
+static int iv_poll_init(struct iv_state *st)
 {
 	st->poll.pfds = malloc(maxfd * sizeof(struct pollfd));
 	if (st->poll.pfds == NULL)

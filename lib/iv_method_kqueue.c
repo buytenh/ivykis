@@ -30,7 +30,7 @@
 
 #define UPLOAD_BATCH	1024
 
-static int iv_kqueue_init(struct iv_state *st, int maxfd)
+static int iv_kqueue_init(struct iv_state *st)
 {
 	int kqueue_fd;
 	int flags;

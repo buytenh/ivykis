@@ -31,7 +31,7 @@
 #include <sys/time.h>
 #include "iv_private.h"
 
-static int iv_select_init(struct iv_state *st, int maxfd)
+static int iv_select_init(struct iv_state *st)
 {
 	int setsize;
 	unsigned char *fdsets;

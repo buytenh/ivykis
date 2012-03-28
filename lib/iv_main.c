@@ -84,7 +84,7 @@ static void consider_poll_method(struct iv_state *st, char *exclude,
 				 struct iv_poll_method *m)
 {
 	if (method == NULL && !method_is_excluded(exclude, m->name)) {
-		if (m->init(st, maxfd) >= 0)
+		if (m->init(st) >= 0)
 			method = m;
 	}
 }
@@ -198,7 +198,7 @@ void iv_init(void)
 
 	if (method == NULL) {
 		iv_init_first_thread(st);
-	} else if (method->init(st, maxfd) < 0) {
+	} else if (method->init(st) < 0) {
 		syslog(LOG_CRIT, "iv_init: can't initialize event dispatcher");
 		abort();
 	}
