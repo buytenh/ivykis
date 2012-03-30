@@ -30,7 +30,6 @@
 
 struct iv_state {
 	/* iv_main.c  */
-	int			initialised;
 	struct iv_fd_		*handled_fd;
 	int			numfds;
 	int			quit;

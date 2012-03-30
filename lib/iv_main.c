@@ -142,8 +142,6 @@ __thread struct iv_state	*__st;
 
 static void __iv_deinit(struct iv_state *st)
 {
-	st->initialised = 0;
-
 	method->deinit(st);
 
 	iv_timer_deinit(st);
@@ -202,7 +200,6 @@ IV_API void iv_init(void)
 		abort();
 	}
 
-	st->initialised = 1;
 	st->handled_fd = NULL;
 	st->numfds = 0;
 
@@ -213,9 +210,7 @@ IV_API void iv_init(void)
 
 IV_API int iv_inited(void)
 {
-	struct iv_state *st = iv_get_state();
-
-	return st != NULL && st->initialised;
+	return iv_get_state() != NULL;
 }
 
 IV_API const char *iv_poll_method_name(void)
