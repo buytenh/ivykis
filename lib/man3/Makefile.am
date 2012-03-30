@@ -19,6 +19,9 @@ man3_MANS	= iv_deinit.3				\
 		  iv_timer.3				\
 		  iv_timer_register.3			\
 		  iv_timer_unregister.3			\
+		  iv_tls.3				\
+		  iv_tls_user_ptr.3			\
+		  iv_tls_user_register.3		\
 		  iv_validate_now.3			\
 		  ivykis.3
 

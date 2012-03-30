@@ -1,0 +1,116 @@
+.\" This man page is Copyright (C) 2012 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_tls 3 2012-03-30 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_tls_user_register, iv_tls_user_ptr \- thread-local storage handling for ivykis modules
+.SH SYNOPSIS
+.B #include <iv_tls.h>
+.sp
+.nf
+struct iv_tls_user {
+        size_t          sizeof_state;
+        void            (*init_thread)(void *st);
+        void            (*deinit_thread)(void *st);
+};
+.fi
+.sp
+.BI "void iv_tls_user_register(struct iv_tls_user *" tu ");"
+.br
+.BI "void *iv_tls_user_ptr(struct iv_tls_user *" tu ");"
+.br
+.SH DESCRIPTION
+The
+.B iv_tls
+interface provides thread-local storage handling to
+.B ivykis
+modules.
+.PP
+An ivykis module can arrange for an amount of memory to be allocated
+for its use in each ivykis thread by calling
+.B iv_tls_user_register.
+This must be done before any calls to
+.B iv_init
+have been made in this process, and is typically done from a module
+initialization function marked as a constructor function.
+.PP
+The
+.B ->sizeof_state
+member of the passed-in structure indicates how many bytes of
+memory the module wants allocated for its use in every ivykis
+thread.
+.PP
+When a thread calls
+.B iv_init,
+.B ->sizeof_state
+bytes of memory will be allocated for use by this module in that
+thread, and initialised to zero.  A pointer to this memory area
+can be obtained by calling
+.B iv_tls_user_ptr
+(which returns NULL in non-ivykis threads).
+.PP
+If the specified
+.B ->init_thread
+function pointer is not NULL, it will be invoked at the end of
+.B iv_init,
+with its argument pointing to this thread's memory area allocation
+for this module.
+.PP
+If
+.B ->deinit_thread
+is not NULL, it will be invoked at the start of
+.B iv_deinit,
+or if the thread fails to call
+.B iv_deinit
+before terminating, at thread termination time.  The argument
+passed into
+.B ->deinit_thread
+is the same as for
+.B ->init_thread.
+.PP
+It is permitted to call any ivykis API functions from the
+.B ->init_thread
+and
+.B ->deinit_thread
+callbacks.
+.PP
+There is no explicit serialization on calls to
+.B ->init_thread
+and
+.B ->deinit_thread.
+.PP
+Care must be taken when calling
+.B iv_tls_user_ptr
+from a signal handler, as there is a time window where it will
+return a non-NULL value before
+.B ->init_thread
+or after
+.B ->deinit_thread
+have been called.
+.PP
+Use of
+.B iv_tls
+for managing thread-local state is preferred over direct use of the
+.B __thread
+keyword, as not all platforms that ivykis runs on provide the
+.B __thread
+keyword.
+.PP
+Use of
+.B iv_tls
+for managing thread-local state is preferred over direct use of the
+.B pthread_key_create
+and
+.B pthread_setspecific
+APIs, as
+.B iv_tls
+provides a thread init hook as well as a destructor hook, and
+properly sequences
+.B ->init_thread
+and
+.B ->deinit_thread
+calls with core ivykis initialization and cleanup.
+.SH "SEE ALSO"
+.BR iv_init (3)
