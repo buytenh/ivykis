@@ -82,6 +82,12 @@ IV_API void *iv_tls_user_ptr(struct iv_tls_user *itu)
 {
 	struct iv_state *st = iv_get_state();
 
+	if (itu->state_offset == 0) {
+		syslog(LOG_CRIT, "iv_tls_user_ptr: called on "
+				 "unregistered iv_tls_user");
+		abort();
+	}
+
 	if (st != NULL)
 		return ((void *)st) + itu->state_offset;
 
