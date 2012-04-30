@@ -21,7 +21,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 		  stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
-AC_CHECK_HEADERS([sys/devpoll.h sys/select.h])
+AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/select.h])
 
 # Check for <linux/netfilter_ipv4.h> header file.
 AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
@@ -60,6 +60,7 @@ AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
 AC_CHECK_FUNCS([clock_gettime])
 AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([epoll_create1])
+AC_CHECK_FUNCS([eventfd])
 AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([poll])

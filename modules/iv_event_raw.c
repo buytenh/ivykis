@@ -29,31 +29,30 @@
 #include "config.h"
 
 /* eventfd syscall **********************************************************/
-#ifdef linux
-#include <sys/syscall.h>
-#if !defined(__NR_eventfd2) && defined(__x86_64__)
-#define __NR_eventfd2	290
-#elif !defined(__NR_eventfd2) && defined(__i386__)
-#define __NR_eventfd2	328
-#endif
+#ifdef HAVE_SYS_EVENTFD_H
+#include <sys/eventfd.h>
 #endif
 
-#ifndef EFD_NONBLOCK
-#define EFD_NONBLOCK	04000
-#endif
-#ifndef EFD_CLOEXEC
-#define EFD_CLOEXEC	02000000
-#endif
-
-int eventfd2(unsigned int count, int flags)
+#if defined(HAVE_EVENTFD) && defined(EFD_NONBLOCK) && defined(EFD_CLOEXEC)
+static int grab_eventfd(void)
 {
-#ifdef __NR_eventfd2
-	return syscall(__NR_eventfd2, count, flags);
-#else
-	errno = ENOSYS;
-	return -1;
-#endif
+	int fd;
+
+	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+	if (fd < 0) {
+		if (errno != ENOSYS)
+			perror("eventfd");
+		return -errno;
+	}
+
+	return fd;
 }
+#else
+static int grab_eventfd(void)
+{
+	return -ENOSYS;
+}
+#endif
 
 
 /* implementation ***********************************************************/
@@ -91,13 +90,10 @@ IV_API int iv_event_raw_register(struct iv_event_raw *this)
 	if (!eventfd_unavailable) {
 		int ret;
 
-		ret = eventfd2(0, EFD_NONBLOCK | EFD_CLOEXEC);
+		ret = grab_eventfd();
 		if (ret < 0) {
-			if (errno != ENOSYS) {
-				perror("eventfd2");
+			if (ret != -ENOSYS)
 				return -1;
-			}
-
 			eventfd_unavailable = 1;
 		} else {
 			fd[0] = ret;
