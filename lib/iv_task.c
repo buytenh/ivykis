@@ -52,14 +52,14 @@ void iv_run_tasks(struct iv_state *st)
 	iv_list_del(&last);
 }
 
-IV_API void IV_TASK_INIT(struct iv_task *_t)
+void IV_TASK_INIT(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	INIT_IV_LIST_HEAD(&t->list);
 }
 
-IV_API void iv_task_register(struct iv_task *_t)
+void iv_task_register(struct iv_task *_t)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_task_ *t = (struct iv_task_ *)_t;
@@ -73,7 +73,7 @@ IV_API void iv_task_register(struct iv_task *_t)
 	iv_list_add_tail(&t->list, &st->tasks);
 }
 
-IV_API void iv_task_unregister(struct iv_task *_t)
+void iv_task_unregister(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
@@ -86,7 +86,7 @@ IV_API void iv_task_unregister(struct iv_task *_t)
 	iv_list_del_init(&t->list);
 }
 
-IV_API int iv_task_registered(struct iv_task *_t)
+int iv_task_registered(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 

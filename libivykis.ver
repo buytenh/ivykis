@@ -1,0 +1,94 @@
+IVYKIS_0.29 {
+global:
+	# lib/iv_avl
+	iv_avl_tree_insert;
+	iv_avl_tree_delete;
+	iv_avl_tree_next;
+	iv_avl_tree_prev;
+
+	# lib/iv_fd
+	IV_FD_INIT;
+	iv_fd_register;
+	iv_fd_register_try;
+	iv_fd_unregister;
+	iv_fd_registered;
+	iv_fd_set_handler_in;
+	iv_fd_set_handler_out;
+	iv_fd_set_handler_err;
+
+	# lib/iv_main
+	iv_init;
+	iv_inited;
+	iv_poll_method_name;
+	iv_quit;
+	iv_main;
+	iv_deinit;
+
+	# lib/iv_task
+	IV_TASK_INIT;
+	iv_task_register;
+	iv_task_unregister;
+	iv_task_registered;
+
+	# lib/iv_timer
+	iv_invalidate_now;
+	iv_validate_now;
+	__iv_now_location;
+	IV_TIMER_INIT;
+	iv_timer_register;
+	iv_timer_unregister;
+	iv_timer_registered;
+
+	# lib/iv_tls
+	iv_tls_user_register;
+	iv_tls_user_ptr;
+
+	# modules/iv_event
+	iv_event_register;
+	iv_event_unregister;
+	iv_event_post;
+
+	# modules/iv_event_raw
+	iv_event_raw_register;
+	iv_event_raw_unregister;
+	iv_event_raw_post;
+
+	# modules/iv_fd_pump
+	iv_fd_pump_init;
+	iv_fd_pump_destroy;
+	iv_fd_pump_pump;
+	iv_fd_pump_is_done;
+
+	# modules/iv_inotify
+	iv_inotify_register;
+	iv_inotify_unregister;
+	iv_inotify_watch_register;
+	iv_inotify_watch_unregister;
+
+	# modules/iv_popen
+	iv_popen_request_submit;
+	iv_popen_request_close;
+
+	# modules/iv_signal
+	iv_signal_register;
+	iv_signal_unregister;
+
+	# modules/iv_thread
+	iv_thread_create;
+	iv_thread_set_debug_state;
+	iv_thread_list_children;
+
+	# modules/iv_wait
+	iv_wait_interest_register;
+	iv_wait_interest_register_spawn;
+	iv_wait_interest_unregister;
+	iv_wait_interest_kill;
+
+	# modules/iv_work
+	iv_work_pool_create;
+	iv_work_pool_put;
+	iv_work_pool_submit_work;
+
+local:
+	*;
+};

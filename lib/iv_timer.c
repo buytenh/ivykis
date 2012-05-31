@@ -32,7 +32,7 @@ void __iv_invalidate_now(struct iv_state *st)
 	st->time_valid = 0;
 }
 
-IV_API void iv_invalidate_now(void)
+void iv_invalidate_now(void)
 {
 	struct iv_state *st = iv_get_state();
 
@@ -72,14 +72,14 @@ static void __iv_validate_now(struct iv_state *st)
 	}
 }
 
-IV_API void iv_validate_now(void)
+void iv_validate_now(void)
 {
 	struct iv_state *st = iv_get_state();
 
 	__iv_validate_now(st);
 }
 
-IV_API struct timespec *__iv_now_location(void)
+struct timespec *__iv_now_location(void)
 {
 	struct iv_state *st = iv_get_state();
 
@@ -94,7 +94,7 @@ IV_API struct timespec *__iv_now_location(void)
 #define SPLIT_MAX		(1 << (SPLIT_BITS * SPLIT_LEVELS))
 struct ratnode { void *child[SPLIT_NODES]; };
 
-IV_API void IV_TIMER_INIT(struct iv_timer *_t)
+void IV_TIMER_INIT(struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 
@@ -222,7 +222,7 @@ static void pull_up(struct iv_state *st, int index, struct iv_timer_ **i)
 	}
 }
 
-IV_API void iv_timer_register(struct iv_timer *_t)
+void iv_timer_register(struct iv_timer *_t)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
@@ -287,7 +287,7 @@ static void push_down(struct iv_state *st, int index, struct iv_timer_ **i)
 	}
 }
 
-IV_API void iv_timer_unregister(struct iv_timer *_t)
+void iv_timer_unregister(struct iv_timer *_t)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
@@ -340,7 +340,7 @@ void iv_run_timers(struct iv_state *st)
 	}
 }
 
-IV_API int iv_timer_registered(struct iv_timer *_t)
+int iv_timer_registered(struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 

@@ -83,24 +83,18 @@ netbsd*)
 	;;
 esac
 
-# Check for -fvisibility=hidden.
-ac_save_CFLAGS=$CFLAGS
-AC_CACHE_CHECK(whether $CC accepts -fvisibility=hidden,
-	ac_cv_prog_cc_visibility_hidden,
-	[ac_cv_prog_cc_visibility_hidden=no
-	 CFLAGS="-fvisibility=hidden"
-	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
-		[ac_cv_prog_cc_visibility_hidden=yes], [])
+# Check for linker version script support.
+ac_save_LDFLAGS=$LDFLAGS
+AC_CACHE_CHECK(whether $LD supports symbol version scripts,
+	ac_cv_prog_ld_version_script,
+	[ac_cv_prog_ld_version_script=no
+	 echo "TEST { local: *; };" > conftest.ver
+	 LDFLAGS="$LDFLAGS -Wl,--version-script,conftest.ver"
+	 _AC_LINK_IFELSE([AC_LANG_PROGRAM()],
+		[ac_cv_prog_ld_version_script=yes], [])
 	])
-if test $ac_cv_prog_cc_visibility_hidden = yes
-then
-	AC_DEFINE(IV_API, [__attribute__((visibility("default")))],
-		  [Use this to mark shared library exports.])
-	CFLAGS="$ac_save_CFLAGS -fvisibility=hidden"
-else
-	AC_DEFINE(IV_API, [], [Use this to mark shared library exports.])
-	CFLAGS=$ac_save_CFLAGS
-fi
+LDFLAGS=$ac_save_LDFLAGS
+AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
 
 # Check for -pthreads.
 ac_c_werror_flag=yes

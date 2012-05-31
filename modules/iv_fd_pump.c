@@ -210,7 +210,7 @@ static struct iv_fd_pump_buf *iv_fd_pump_buf(struct iv_fd_pump *ip)
 	return (struct iv_fd_pump_buf *)ip->buf;
 }
 
-IV_API int iv_fd_pump_init(struct iv_fd_pump *ip)
+int iv_fd_pump_init(struct iv_fd_pump *ip)
 {
 	if (splice_available == -1)
 		check_splice_available();
@@ -225,7 +225,7 @@ IV_API int iv_fd_pump_init(struct iv_fd_pump *ip)
 	return 0;
 }
 
-IV_API void iv_fd_pump_destroy(struct iv_fd_pump *ip)
+void iv_fd_pump_destroy(struct iv_fd_pump *ip)
 {
 	struct iv_fd_pump_buf *buf = iv_fd_pump_buf(ip);
 
@@ -350,7 +350,7 @@ static int __iv_fd_pump_pump(struct iv_fd_pump *ip)
 	abort();
 }
 
-IV_API int iv_fd_pump_pump(struct iv_fd_pump *ip)
+int iv_fd_pump_pump(struct iv_fd_pump *ip)
 {
 	int ret;
 
@@ -367,7 +367,7 @@ IV_API int iv_fd_pump_pump(struct iv_fd_pump *ip)
 	return ret;
 }
 
-IV_API int iv_fd_pump_is_done(struct iv_fd_pump *ip)
+int iv_fd_pump_is_done(struct iv_fd_pump *ip)
 {
 	return !!(ip->saw_fin == 2);
 }

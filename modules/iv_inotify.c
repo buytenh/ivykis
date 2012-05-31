@@ -27,7 +27,6 @@
 #include <iv_list.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
-#include "config.h"
 
 static struct iv_inotify_watch *__find_watch(struct iv_inotify *this, int wd)
 {
@@ -113,7 +112,7 @@ __iv_inotify_watch_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 	return 0;
 }
 
-IV_API int iv_inotify_register(struct iv_inotify *this)
+int iv_inotify_register(struct iv_inotify *this)
 {
 	int fd;
 
@@ -132,7 +131,7 @@ IV_API int iv_inotify_register(struct iv_inotify *this)
 	return 0;
 }
 
-IV_API void iv_inotify_unregister(struct iv_inotify *this)
+void iv_inotify_unregister(struct iv_inotify *this)
 {
 	iv_fd_unregister(&this->fd);
 	close(this->fd.fd);
@@ -141,7 +140,7 @@ IV_API void iv_inotify_unregister(struct iv_inotify *this)
 		*this->term = NULL;
 }
 
-IV_API int iv_inotify_watch_register(struct iv_inotify_watch *w)
+int iv_inotify_watch_register(struct iv_inotify_watch *w)
 {
 	struct iv_inotify *inotify = w->inotify;
 
@@ -152,7 +151,7 @@ IV_API int iv_inotify_watch_register(struct iv_inotify_watch *w)
 	return iv_avl_tree_insert(&inotify->watches, &w->an);
 }
 
-IV_API void iv_inotify_watch_unregister(struct iv_inotify_watch *w)
+void iv_inotify_watch_unregister(struct iv_inotify_watch *w)
 {
 	struct iv_inotify *inotify = w->inotify;
 

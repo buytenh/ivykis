@@ -26,7 +26,6 @@
 #include <iv_tls.h>
 #include <iv_work.h>
 #include <pthread.h>
-#include "config.h"
 
 /* data structures **********************************************************/
 struct work_pool_priv {
@@ -204,7 +203,7 @@ static void iv_work_event(void *_pool)
 	pthread_mutex_unlock(&pool->lock);
 }
 
-IV_API int iv_work_pool_create(struct iv_work_pool *this)
+int iv_work_pool_create(struct iv_work_pool *this)
 {
 	struct work_pool_priv *pool;
 	int ret;
@@ -238,7 +237,7 @@ IV_API int iv_work_pool_create(struct iv_work_pool *this)
 	return 0;
 }
 
-IV_API void iv_work_pool_put(struct iv_work_pool *this)
+void iv_work_pool_put(struct iv_work_pool *this)
 {
 	struct work_pool_priv *pool = this->priv;
 	struct iv_list_head *ilh;
@@ -370,7 +369,7 @@ static void iv_work_submit_local(struct iv_work_item *work)
 		iv_task_register(&tinfo->task);
 }
 
-IV_API void
+void
 iv_work_pool_submit_work(struct iv_work_pool *this, struct iv_work_item *work)
 {
 	if (this != NULL)

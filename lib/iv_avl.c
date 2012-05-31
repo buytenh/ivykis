@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <iv.h>
 #include "iv_avl.h"
-#include "config.h"
 
 static int height(struct iv_avl_node *an)
 {
@@ -263,7 +262,7 @@ static void rebalance_path(struct iv_avl_tree *tree, struct iv_avl_node *an)
 	}
 }
 
-IV_API int iv_avl_tree_insert(struct iv_avl_tree *tree, struct iv_avl_node *an)
+int iv_avl_tree_insert(struct iv_avl_tree *tree, struct iv_avl_node *an)
 {
 	struct iv_avl_node *p;
 	struct iv_avl_node **pp;
@@ -382,7 +381,7 @@ iv_avl_tree_delete_nonleaf(struct iv_avl_tree *tree, struct iv_avl_node *an)
 	return p;
 }
 
-IV_API void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an)
+void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an)
 {
 	struct iv_avl_node *p;
 
@@ -394,7 +393,7 @@ IV_API void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an)
 	rebalance_path(tree, p);
 }
 
-IV_API struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an)
+struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an)
 {
 	struct iv_avl_node *p;
 
@@ -415,7 +414,7 @@ IV_API struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an)
 	return p;
 }
 
-IV_API struct iv_avl_node *iv_avl_tree_prev(struct iv_avl_node *an)
+struct iv_avl_node *iv_avl_tree_prev(struct iv_avl_node *an)
 {
 	struct iv_avl_node *p;
 

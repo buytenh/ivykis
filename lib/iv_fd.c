@@ -64,7 +64,7 @@ int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 
 
 /* file descriptor handling *************************************************/
-IV_API void IV_FD_INIT(struct iv_fd *_fd)
+void IV_FD_INIT(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
@@ -146,7 +146,7 @@ static void iv_fd_register_epilogue(struct iv_state *st, struct iv_fd_ *fd)
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));
 }
 
-IV_API void iv_fd_register(struct iv_fd *_fd)
+void iv_fd_register(struct iv_fd *_fd)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
@@ -158,7 +158,7 @@ IV_API void iv_fd_register(struct iv_fd *_fd)
 	iv_fd_register_epilogue(st, fd);
 }
 
-IV_API int iv_fd_register_try(struct iv_fd *_fd)
+int iv_fd_register_try(struct iv_fd *_fd)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
@@ -179,7 +179,7 @@ IV_API int iv_fd_register_try(struct iv_fd *_fd)
 	return 0;
 }
 
-IV_API void iv_fd_unregister(struct iv_fd *_fd)
+void iv_fd_unregister(struct iv_fd *_fd)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
@@ -203,7 +203,7 @@ IV_API void iv_fd_unregister(struct iv_fd *_fd)
 		st->handled_fd = NULL;
 }
 
-IV_API int iv_fd_registered(struct iv_fd *_fd)
+int iv_fd_registered(struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
@@ -219,8 +219,7 @@ void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)
 	fd->ready_bands |= bands;
 }
 
-IV_API void
-iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
+void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
@@ -235,8 +234,7 @@ iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 	notify_fd(st, fd);
 }
 
-IV_API void
-iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
+void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
@@ -251,8 +249,7 @@ iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 	notify_fd(st, fd);
 }
 
-IV_API void
-iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
+void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;

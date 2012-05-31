@@ -179,7 +179,7 @@ static struct iv_state *iv_allocate_state(void)
 	return st;
 }
 
-IV_API void iv_init(void)
+void iv_init(void)
 {
 	struct iv_state *st;
 
@@ -208,17 +208,17 @@ IV_API void iv_init(void)
 	iv_tls_thread_init(st);
 }
 
-IV_API int iv_inited(void)
+int iv_inited(void)
 {
 	return iv_get_state() != NULL;
 }
 
-IV_API const char *iv_poll_method_name(void)
+const char *iv_poll_method_name(void)
 {
 	return method != NULL ? method->name : NULL;
 }
 
-IV_API void iv_quit(void)
+void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
 
@@ -260,7 +260,7 @@ static int should_quit(struct iv_state *st)
 	return 0;
 }
 
-IV_API void iv_main(void)
+void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_list_head active;
@@ -292,7 +292,7 @@ IV_API void iv_main(void)
 	}
 }
 
-IV_API void iv_deinit(void)
+void iv_deinit(void)
 {
 	struct iv_state *st = iv_get_state();
 

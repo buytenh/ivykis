@@ -26,7 +26,6 @@
 #include <iv_event_raw.h>
 #include <inttypes.h>
 #include <unistd.h>
-#include "config.h"
 
 /* eventfd syscall **********************************************************/
 #ifdef HAVE_SYS_EVENTFD_H
@@ -83,7 +82,7 @@ static void iv_event_raw_got_event(void *_this)
 	this->handler(this->cookie);
 }
 
-IV_API int iv_event_raw_register(struct iv_event_raw *this)
+int iv_event_raw_register(struct iv_event_raw *this)
 {
 	int fd[2];
 
@@ -134,7 +133,7 @@ IV_API int iv_event_raw_register(struct iv_event_raw *this)
 	return 0;
 }
 
-IV_API void iv_event_raw_unregister(struct iv_event_raw *this)
+void iv_event_raw_unregister(struct iv_event_raw *this)
 {
 	iv_fd_unregister(&this->event_rfd);
 	close(this->event_rfd.fd);
@@ -143,7 +142,7 @@ IV_API void iv_event_raw_unregister(struct iv_event_raw *this)
 		close(this->event_wfd);
 }
 
-IV_API void iv_event_raw_post(struct iv_event_raw *this)
+void iv_event_raw_post(struct iv_event_raw *this)
 {
 	if (eventfd_unavailable) {
 		write(this->event_wfd, "", 1);

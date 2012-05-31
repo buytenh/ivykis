@@ -26,7 +26,6 @@
 #include <iv_tls.h>
 #include <pthread.h>
 #include <signal.h>
-#include "config.h"
 
 struct iv_event_thr_info {
 	int			event_count;
@@ -98,7 +97,7 @@ static void iv_event_tls_init(void)
 	iv_tls_user_register(&iv_event_tls_user);
 }
 
-IV_API int iv_event_register(struct iv_event *this)
+int iv_event_register(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
 
@@ -116,7 +115,7 @@ IV_API int iv_event_register(struct iv_event *this)
 	return 0;
 }
 
-IV_API void iv_event_unregister(struct iv_event *this)
+void iv_event_unregister(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
 
@@ -130,7 +129,7 @@ IV_API void iv_event_unregister(struct iv_event *this)
 		iv_event_raw_unregister(&tinfo->ier);
 }
 
-IV_API void iv_event_post(struct iv_event *this)
+void iv_event_post(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = this->tinfo;
 

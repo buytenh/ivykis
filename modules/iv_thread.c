@@ -27,7 +27,6 @@
 #include <pthread.h>
 #include <string.h>
 #include <sys/syscall.h>
-#include "config.h"
 
 /* gettid *******************************************************************/
 #ifdef __FreeBSD__
@@ -152,8 +151,7 @@ static void iv_thread_died(void *_thr)
 	free(thr);
 }
 
-IV_API int
-iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
+int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_thread *thr;
@@ -194,12 +192,12 @@ out:
 	return -1;
 }
 
-IV_API void iv_thread_set_debug_state(int state)
+void iv_thread_set_debug_state(int state)
 {
 	iv_thread_debug = !!state;
 }
 
-IV_API void iv_thread_list_children(void)
+void iv_thread_list_children(void)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_list_head *ilh;

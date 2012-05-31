@@ -29,7 +29,7 @@ static int inited;
 static off_t last_offset;
 static struct iv_list_head iv_tls_users = IV_LIST_HEAD_INIT(iv_tls_users);
 
-IV_API void iv_tls_user_register(struct iv_tls_user *itu)
+void iv_tls_user_register(struct iv_tls_user *itu)
 {
 	if (inited) {
 		syslog(LOG_CRIT, "iv_tls_user_register: called after iv_init");
@@ -78,7 +78,7 @@ void iv_tls_thread_deinit(struct iv_state *st)
 	}
 }
 
-IV_API void *iv_tls_user_ptr(struct iv_tls_user *itu)
+void *iv_tls_user_ptr(struct iv_tls_user *itu)
 {
 	struct iv_state *st = iv_get_state();
 
