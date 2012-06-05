@@ -31,9 +31,8 @@ struct connector {
 
 static void create_connector(struct connector *conn);
 
-static void connect_done(void *c)
+static int __connect_done(struct connector *conn)
 {
-	struct connector *conn = (struct connector *)c;
 	socklen_t len;
 	int ret;
 
@@ -45,7 +44,7 @@ static void connect_done(void *c)
 	}
 
 	if (ret == EINPROGRESS)
-		return;
+		return 0;
 
 	if (ret)
 		fprintf(stderr, "blah: %s\n", strerror(ret));
@@ -56,7 +55,16 @@ static void connect_done(void *c)
 
 	iv_fd_unregister(&conn->fd);
 	close(conn->fd.fd);
-	create_connector(conn);
+
+	return 1;
+}
+
+static void connect_done(void *c)
+{
+	struct connector *conn = (struct connector *)c;
+
+	if (__connect_done(conn))
+		create_connector(conn);
 }
 
 static void create_connector(struct connector *conn)
@@ -64,6 +72,7 @@ static void create_connector(struct connector *conn)
 	int fd;
 	int ret;
 
+again:
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("socket");
@@ -77,8 +86,8 @@ static void create_connector(struct connector *conn)
 	iv_fd_register(&conn->fd);
 
 	ret = connect(fd, (struct sockaddr *)&conn->addr, sizeof(conn->addr));
-	if (ret == 0 || errno != EINPROGRESS)
-		connect_done((void *)conn);
+	if ((ret == 0 || errno != EINPROGRESS) && __connect_done(conn))
+		goto again;
 }
 
 int main()
