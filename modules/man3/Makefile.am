@@ -8,6 +8,12 @@ man3_MANS	= iv_event.3				\
 		  iv_event_raw_unregister.3		\
 		  iv_event_register.3			\
 		  iv_event_unregister.3			\
+		  iv_fd_pump.3				\
+		  iv_fd_pump_destroy.3			\
+		  IV_FD_PUMP_INIT.3			\
+		  iv_fd_pump_init.3			\
+		  iv_fd_pump_is_done.3			\
+		  iv_fd_pump_pump.3			\
 		  iv_inotify.3				\
 		  IV_INOTIFY_INIT.3			\
 		  iv_inotify_register.3			\

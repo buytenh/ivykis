@@ -1,0 +1,144 @@
+.\" This man page is Copyright (C) 2012 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_fd_pump 3 2012-06-05 "ivykis" "ivykis programmer's manual"
+.SH NAME
+IV_FD_PUMP_INIT, iv_fd_pump_init, iv_fd_pump_destroy, iv_fd_pump_pump, iv_fd_pump_is_done \- pump data between file descriptors
+.SH SYNOPSIS
+.B #include <iv_fd_pump.h>
+.sp
+.nf
+struct iv_fd_pump {
+        int             from_fd;
+        int             to_fd;
+        void            *cookie;
+        void            (*set_bands)(void *cookie, int pollin, int pollout);
+        unsigned int    flags;
+};
+.fi
+.sp
+.BI "void IV_FD_PUMP_INIT(struct iv_fd_pump *" this ");"
+.br
+.BI "void iv_fd_pump_init(struct iv_fd_pump *" this ");"
+.br
+.BI "void iv_fd_pump_destroy(struct iv_fd_pump *" this ");"
+.br
+.BI "int iv_fd_pump_pump(struct iv_fd_pump *" this ");"
+.br
+.BI "int iv_fd_pump_is_done(struct iv_fd_pump *" this ");"
+.br
+.SH DESCRIPTION
+.B iv_fd_pump
+provides a way for moving data between two file descriptors.
+.PP
+To set up
+.B iv_fd_pump
+for moving data, call
+.B IV_FD_PUMP_INIT
+on a
+.B struct iv_fd_pump
+object, fill in the
+.B ->from_fd, ->to_fd, ->cookie, ->set_bands
+and
+.B ->flags
+members, and then call
+.B iv_fd_pump_init
+on the object.
+.PP
+Conversely, to destroy a
+.B struct iv_fd_pump
+object, call
+.B iv_fd_pump_destroy.
+There are no restrictions on when this function can be called.
+.PP
+A call to
+.B iv_fd_pump_pump
+will attempt to move data from
+.B ->from_fd
+to
+.B ->to_fd
+via an internal buffer associated with the
+.B struct iv_fd_pump
+object.
+.PP
+During calls to
+.B iv_fd_pump_init,
+.B iv_fd_pump_destroy
+and
+.B iv_fd_pump_pump,
+the callback function specified by
+.B ->set_bands
+may be invoked (with
+.B ->cookie
+as its first argument), by which
+.B iv_fd_pump
+indicates under which circumstances it wishes for future invocations
+of
+.B iv_fd_pump_pump
+to be done.
+.PP
+If the
+.B pollin
+argument to
+.B ->set_bands
+is true, there is space left in the internal buffer (and we have not
+yet seen an end-of-file condition on input), and so you should call
+.B iv_fd_pump_pump
+again when there is a POLLIN condition on
+.B ->from_fd.
+.PP
+If the
+.B pollout
+argument to
+.B ->set_bands
+is true, there is data in the internal buffer that could not all be
+transferred to
+.B ->to_fd,
+and so you should call
+.B iv_fd_pump_pump
+again when there is a POLLOUT condition on
+.B ->to_fd.
+.PP
+If
+.B IV_FD_PUMP_FLAG_RELAY_EOF
+is set in
+.B ->flags,
+.B iv_fd_pump_pump
+will call
+.BR shutdown (2)
+on
+.B ->to_fd
+with
+.B SHUT_WR
+as its second argument upon seeing an end-of-file condition on
+.B ->from_fd
+(but only after all data from the internal buffer has been drained
+into
+.B ->to_fd
+first).
+.PP
+.B iv_fd_pump_pump
+will return \-1 if there was an error, 0 if we're done pumping data
+(meaning that an end-of-file condition was seen on the input file
+descriptor and that all data in the internal buffer has been drained
+into the output file descriptor), or 1 if there is more data left to
+be pumped.
+.PP
+.B iv_fd_pump_is_done
+will return a true value if iv_fd_pump_pump has previously returned
+0, otherwise it will return false.
+.PP
+Internally,
+.B iv_fd_pump_pump
+will use
+.BR splice (2)
+if it is available, otherwise it will fall back to
+.BR read (2)
+and
+.BR write (2).
+.PP
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR splice (2)
