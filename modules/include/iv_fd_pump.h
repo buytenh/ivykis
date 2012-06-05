@@ -44,7 +44,7 @@ static inline void IV_FD_PUMP_INIT(struct iv_fd_pump *this)
 
 #define IV_FD_PUMP_FLAG_RELAY_EOF	1
 
-int iv_fd_pump_init(struct iv_fd_pump *ip);
+void iv_fd_pump_init(struct iv_fd_pump *ip);
 void iv_fd_pump_destroy(struct iv_fd_pump *ip);
 int iv_fd_pump_pump(struct iv_fd_pump *ip);
 int iv_fd_pump_is_done(struct iv_fd_pump *ip);

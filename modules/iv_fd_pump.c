@@ -210,7 +210,7 @@ static struct iv_fd_pump_buf *iv_fd_pump_buf(struct iv_fd_pump *ip)
 	return (struct iv_fd_pump_buf *)ip->buf;
 }
 
-int iv_fd_pump_init(struct iv_fd_pump *ip)
+void iv_fd_pump_init(struct iv_fd_pump *ip)
 {
 	if (splice_available == -1)
 		check_splice_available();
@@ -221,8 +221,6 @@ int iv_fd_pump_init(struct iv_fd_pump *ip)
 	ip->saw_fin = 0;
 
 	ip->set_bands(ip->cookie, 1, 0);
-
-	return 0;
 }
 
 void iv_fd_pump_destroy(struct iv_fd_pump *ip)
