@@ -66,21 +66,21 @@ iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 
 	if (!(wanted & MASKIN) && (regd & MASKIN)) {
 		EV_SET(&kev[num], fd->fd, EVFILT_READ, EV_DELETE,
-		       0, 0, (intptr_t)fd);
+		       0, 0, (void *)(intptr_t)fd);
 		num++;
 	} else if ((wanted & MASKIN) && !(regd & MASKIN)) {
 		EV_SET(&kev[num], fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
-		       0, 0, (intptr_t)fd);
+		       0, 0, (void *)(intptr_t)fd);
 		num++;
 	}
 
 	if (!(wanted & MASKOUT) && (regd & MASKOUT)) {
 		EV_SET(&kev[num], fd->fd, EVFILT_WRITE, EV_DELETE,
-		       0, 0, (intptr_t)fd);
+		       0, 0, (void *)(intptr_t)fd);
 		num++;
 	} else if ((wanted & MASKOUT) && !(regd & MASKOUT)) {
 		EV_SET(&kev[num], fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
-		       0, 0, (intptr_t)fd);
+		       0, 0, (void *)(intptr_t)fd);
 		num++;
 	}
 
@@ -211,11 +211,11 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	struct timespec to = { 0, 0 };
 	int ret;
 
-	iv_kqueue_queue_one(&kev, &num, fd);
+	iv_kqueue_queue_one(kev, &num, fd);
 	if (num == 0)
 		return 0;
 
-	ret = kqueue(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
+	ret = kevent(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
 	if (ret == 0)
 		fd->registered_bands = fd->wanted_bands;
 
