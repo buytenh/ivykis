@@ -30,7 +30,7 @@ struct iv_fd_pump {
 	int		to_fd;
 	void		*cookie;
 	void		(*set_bands)(void *cookie, int pollin, int pollout);
-	int		relay_eof;
+	unsigned int	flags;
 
 	void		*buf;
 	int		bytes;
@@ -41,6 +41,8 @@ struct iv_fd_pump {
 static inline void IV_FD_PUMP_INIT(struct iv_fd_pump *this)
 {
 }
+
+#define IV_FD_PUMP_FLAG_RELAY_EOF	1
 
 int iv_fd_pump_init(struct iv_fd_pump *ip);
 void iv_fd_pump_destroy(struct iv_fd_pump *ip);
