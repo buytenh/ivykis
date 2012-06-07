@@ -135,7 +135,6 @@ AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
 		 contrib/iv_getaddrinfo/Makefile	\
-		 contrib/iv_openssl/Makefile	\
 		 contrib/kojines/Makefile	\
 		 lib/Makefile			\
 		 lib/include/iv.h		\

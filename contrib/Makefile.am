@@ -1,4 +1,4 @@
-SUBDIRS = iv_getaddrinfo iv_openssl
+SUBDIRS = iv_getaddrinfo
 
 if HAVE_LINUX_NETFILTER_IPV4_H
 SUBDIRS += kojines
