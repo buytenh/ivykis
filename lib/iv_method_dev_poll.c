@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/devpoll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -56,9 +55,8 @@ static void xwrite(int fd, const void *buf, size_t count)
 		} while (ret < 0 && errno == EINTR);
 
 		if (ret < 0) {
-			syslog(LOG_CRIT, "iv_dev_poll_flush_pending: got "
-			       "error %d[%s]", errno, strerror(errno));
-			abort();
+			iv_fatal("iv_dev_poll_flush_pending: got error "
+				 "%d[%s]", errno, strerror(errno));
 		}
 
 		buf += ret;
@@ -149,9 +147,8 @@ iv_dev_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_dev_poll_poll: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+		iv_fatal("iv_dev_poll_poll: got error %d[%s]",
+			 errno, strerror(errno));
 	}
 
 	for (i = 0; i < ret; i++) {
@@ -160,9 +157,8 @@ iv_dev_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 
 		fd = iv_fd_avl_find(&st->dev_poll.fds, batch[i].fd);
 		if (fd == NULL) {
-			syslog(LOG_CRIT, "iv_dev_poll_poll: got event for "
-					 "unknown fd %d", batch[i].fd);
-			abort();
+			iv_fatal("iv_dev_poll_poll: got event for "
+				 "unknown fd %d", batch[i].fd);
 		}
 
 		revents = batch[i].revents;
@@ -184,9 +180,8 @@ static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 	ret = iv_avl_tree_insert(&st->dev_poll.fds, &fd->avl_node);
 	if (ret) {
-		syslog(LOG_CRIT, "iv_dev_poll_register_fd: got error %d[%s]",
-		       ret, strerror(ret));
-		abort();
+		iv_fatal("iv_dev_poll_register_fd: got error %d[%s]",
+			 ret, strerror(ret));
 	}
 }
 

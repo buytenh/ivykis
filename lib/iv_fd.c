@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 #if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
@@ -102,15 +101,13 @@ static void notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 static void iv_fd_register_prologue(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_register: called with fd which "
-				 "is still registered");
-		abort();
+		iv_fatal("iv_fd_register: called with fd which is "
+			 "still registered");
 	}
 
 	if (fd->fd < 0 || fd->fd >= maxfd) {
-		syslog(LOG_CRIT, "iv_fd_register: called with invalid fd "
-				 "%d (maxfd=%d)", fd->fd, maxfd);
-		abort();
+		iv_fatal("iv_fd_register: called with invalid fd %d "
+			 "(maxfd=%d)", fd->fd, maxfd);
 	}
 
 	fd->registered = 1;
@@ -188,9 +185,8 @@ void iv_fd_unregister(struct iv_fd *_fd)
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_unregister: called with fd which "
-				 "is not registered");
-		abort();
+		iv_fatal("iv_fd_unregister: called with fd which is "
+			 "not registered");
 	}
 	fd->registered = 0;
 
@@ -228,9 +224,8 @@ void iv_fd_set_handler_in(struct iv_fd *_fd, void (*handler_in)(void *))
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_in: called with fd "
-				 "which is not registered");
-		abort();
+		iv_fatal("iv_fd_set_handler_in: called with fd which "
+			 "is not registered");
 	}
 
 	fd->handler_in = handler_in;
@@ -243,9 +238,8 @@ void iv_fd_set_handler_out(struct iv_fd *_fd, void (*handler_out)(void *))
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_out: called with fd "
-				 "which is not registered");
-		abort();
+		iv_fatal("iv_fd_set_handler_out: called with fd which "
+			 "is not registered");
 	}
 
 	fd->handler_out = handler_out;
@@ -258,9 +252,8 @@ void iv_fd_set_handler_err(struct iv_fd *_fd, void (*handler_err)(void *))
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 
 	if (!fd->registered) {
-		syslog(LOG_CRIT, "iv_fd_set_handler_err: called with fd "
-				 "which is not registered");
-		abort();
+		iv_fatal("iv_fd_set_handler_err: called with fd which "
+			 "is not registered");
 	}
 
 	fd->handler_err = handler_err;

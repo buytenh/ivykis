@@ -23,7 +23,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/epoll.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 static int iv_epoll_init(struct iv_state *st)
@@ -104,9 +103,8 @@ static int __iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (__iv_epoll_flush_one(st, fd) < 0) {
-		syslog(LOG_CRIT, "iv_epoll_flush_one: got "
-		       "error %d[%s]", errno, strerror(errno));
-		abort();
+		iv_fatal("iv_epoll_flush_one: got error %d[%s]",
+			 errno, strerror(errno));
 	}
 }
 
@@ -136,9 +134,8 @@ iv_epoll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_epoll_poll: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+		iv_fatal("iv_epoll_poll: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 
 	for (i = 0; i < ret; i++) {

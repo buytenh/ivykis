@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <string.h>
 #include <syslog.h>
 #include <sys/resource.h>
@@ -123,11 +124,8 @@ static void iv_init_first_thread(struct iv_state *st)
 	consider_poll_method(st, exclude, &iv_method_select);
 #endif
 
-	if (method == NULL) {
-		syslog(LOG_CRIT, "iv_init: can't find suitable event "
-				 "dispatcher");
-		abort();
-	}
+	if (method == NULL)
+		iv_fatal("iv_init: can't find suitable event dispatcher");
 }
 
 
@@ -136,6 +134,7 @@ pthread_key_t			iv_state_key;
 #ifdef HAVE_THREAD
 __thread struct iv_state	*__st;
 #endif
+void				(*fatal_msg_handler)(const char *msg);
 
 static void __iv_deinit(struct iv_state *st)
 {
@@ -181,21 +180,16 @@ void iv_init(void)
 	struct iv_state *st;
 
 	if (method == NULL) {
-		if (pthread_key_create(&iv_state_key, iv_state_destructor)) {
-			fprintf(stderr, "iv_state_allocate_key: failed "
-					"to allocate TLS key\n");
-			abort();
-		}
+		if (pthread_key_create(&iv_state_key, iv_state_destructor))
+			iv_fatal("iv_init: failed to allocate TLS key");
 	}
 
 	st = iv_allocate_state();
 
-	if (method == NULL) {
+	if (method == NULL)
 		iv_init_first_thread(st);
-	} else if (method->init(st) < 0) {
-		syslog(LOG_CRIT, "iv_init: can't initialize event dispatcher");
-		abort();
-	}
+	else if (method->init(st) < 0)
+		iv_fatal("iv_init: can't initialize event dispatcher");
 
 	st->handled_fd = NULL;
 	st->numfds = 0;
@@ -294,4 +288,28 @@ void iv_deinit(void)
 	struct iv_state *st = iv_get_state();
 
 	__iv_deinit(st);
+}
+
+void iv_fatal(const char *fmt, ...)
+{
+	va_list ap;
+	char msg[1024];
+
+	va_start(ap, fmt);
+	vsnprintf(msg, sizeof(msg), fmt, ap);
+	va_end(ap);
+
+	msg[sizeof(msg) - 1] = 0;
+
+	if (fatal_msg_handler != NULL)
+		fatal_msg_handler(msg);
+	else
+		syslog(LOG_CRIT, msg);
+
+	abort();
+}
+
+void iv_set_fatal_msg_handler(void (*handler)(const char *msg))
+{
+	fatal_msg_handler = handler;
 }

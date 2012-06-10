@@ -26,7 +26,6 @@
 #include <iv_tls.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <syslog.h>
 #include "config.h"
 #include "iv_fd_pump.h"
 
@@ -350,8 +349,7 @@ static int __iv_fd_pump_pump(struct iv_fd_pump *ip)
 		return 0;
 	}
 
-	syslog(LOG_CRIT, "iv_fd_pump_pump: saw_fin == %d", ip->saw_fin);
-	abort();
+	iv_fatal("iv_fd_pump_pump: saw_fin == %d", ip->saw_fin);
 }
 
 int iv_fd_pump_pump(struct iv_fd_pump *ip)

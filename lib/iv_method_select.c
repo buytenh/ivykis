@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -94,9 +93,8 @@ iv_select_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_select_poll: got error %d[%s]", errno,
-		       strerror(errno));
-		abort();
+		iv_fatal("iv_select_poll: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 
 	for (i = 0; i <= st->select.fd_max; i++) {
@@ -109,11 +107,8 @@ iv_select_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 			struct iv_fd_ *fd;
 
 			fd = iv_fd_avl_find(&st->select.fds, i);
-			if (fd == NULL) {
-				syslog(LOG_CRIT, "iv_select_poll: can't "
-						 "find fd");
-				abort();
-			}
+			if (fd == NULL)
+				iv_fatal("iv_select_poll: can't find fd");
 
 			if (pollin)
 				iv_fd_make_ready(active, fd, MASKIN);
@@ -130,9 +125,8 @@ static void iv_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 	ret = iv_avl_tree_insert(&st->select.fds, &fd->avl_node);
 	if (ret) {
-		syslog(LOG_CRIT, "iv_select_register_fd: got error %d[%s]",
-		       ret, strerror(ret));
-		abort();
+		iv_fatal("iv_select_register_fd: got error %d[%s]", ret,
+			 strerror(ret));
 	}
 
 	if (fd->fd > st->select.fd_max)

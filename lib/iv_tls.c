@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <iv_list.h>
 #include <iv_tls.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 static int inited;
@@ -31,10 +30,8 @@ static struct iv_list_head iv_tls_users = IV_LIST_HEAD_INIT(iv_tls_users);
 
 void iv_tls_user_register(struct iv_tls_user *itu)
 {
-	if (inited) {
-		syslog(LOG_CRIT, "iv_tls_user_register: called after iv_init");
-		abort();
-	}
+	if (inited)
+		iv_fatal("iv_tls_user_register: called after iv_init");
 
 	if (last_offset == 0)
 		last_offset = (sizeof(struct iv_state) + 15) & ~15;
@@ -82,11 +79,8 @@ void *iv_tls_user_ptr(struct iv_tls_user *itu)
 {
 	struct iv_state *st = iv_get_state();
 
-	if (itu->state_offset == 0) {
-		syslog(LOG_CRIT, "iv_tls_user_ptr: called on "
-				 "unregistered iv_tls_user");
-		abort();
-	}
+	if (itu->state_offset == 0)
+		iv_fatal("iv_tls_user_ptr: called on unregistered iv_tls_user");
 
 	if (st != NULL)
 		return ((void *)st) + itu->state_offset;

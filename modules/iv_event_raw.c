@@ -25,6 +25,7 @@
 #include <iv.h>
 #include <iv_event_raw.h>
 #include <inttypes.h>
+#include <string.h>
 #include <unistd.h>
 #include "config.h"
 
@@ -72,10 +73,13 @@ static void iv_event_raw_got_event(void *_this)
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret <= 0) {
-		if (ret == 0 || errno != EAGAIN) {
-			if (ret < 0)
-				perror("read");
-			abort();
+		if (ret == 0) {
+			iv_fatal("iv_event_raw: reading from event fd "
+				 "returned zero");
+		} else if (errno != EAGAIN) {
+			iv_fatal("iv_event_raw: reading from event fd "
+				 "returned error %d[%s]", errno,
+				 strerror(errno));
 		}
 		return;
 	}

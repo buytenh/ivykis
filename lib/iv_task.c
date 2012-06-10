@@ -20,7 +20,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 void iv_task_init(struct iv_state *st)
@@ -64,11 +63,8 @@ void iv_task_register(struct iv_task *_t)
 	struct iv_state *st = iv_get_state();
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	if (!iv_list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_task_register: called with task still "
-				 "on a list");
-		abort();
-	}
+	if (!iv_list_empty(&t->list))
+		iv_fatal("iv_task_register: called with task still on a list");
 
 	iv_list_add_tail(&t->list, &st->tasks);
 }
@@ -77,11 +73,8 @@ void iv_task_unregister(struct iv_task *_t)
 {
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
-	if (iv_list_empty(&t->list)) {
-		syslog(LOG_CRIT, "iv_task_unregister: called with task not "
-				 "on a list");
-		abort();
-	}
+	if (iv_list_empty(&t->list))
+		iv_fatal("iv_task_unregister: called with task not on a list");
 
 	iv_list_del_init(&t->list);
 }

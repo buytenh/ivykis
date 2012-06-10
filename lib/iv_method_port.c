@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <port.h>
 #include <string.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 #define PORTEV_NUM	1024
@@ -76,9 +75,8 @@ static int __iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (__iv_port_upload_one(st, fd) < 0) {
-		syslog(LOG_CRIT, "iv_port_upload_one: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+		iv_fatal("iv_port_upload_one: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 }
 
@@ -115,9 +113,8 @@ poll_more:
 		if (errno == EINTR || errno == ETIME)
 			return;
 
-		syslog(LOG_CRIT, "iv_port_poll: got error %d[%s]", errno,
-		       strerror(errno));
-		abort();
+		iv_fatal("iv_port_poll: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 
 	for (i = 0; i < nget; i++) {

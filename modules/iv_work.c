@@ -56,11 +56,8 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
 
-	if (thr->kicked) {
-		syslog(LOG_CRIT, "__iv_work_thread_die: called on "
-				 "kicked thread");
-		abort();
-	}
+	if (thr->kicked)
+		iv_fatal("__iv_work_thread_die: called on kicked thread");
 
 	iv_event_unregister(&thr->kick);
 	free(thr);

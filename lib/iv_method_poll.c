@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/poll.h>
 #include "iv_private.h"
 
@@ -62,9 +61,8 @@ iv_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_poll_poll: got error %d[%s]", errno,
-		       strerror(errno));
-		abort();
+		iv_fatal("iv_poll_poll: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 
 	for (i = 0; i < st->poll.num_registered_fds; i++) {

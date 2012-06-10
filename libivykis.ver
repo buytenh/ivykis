@@ -92,3 +92,9 @@ global:
 local:
 	*;
 };
+
+IVYKIS_0.30 {
+	# lib/iv_main
+	iv_fatal;
+	iv_set_fatal_msg_handler;
+} IVYKIS_0.29;

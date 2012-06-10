@@ -25,6 +25,7 @@
 #include <iv_avl.h>
 #include <iv_inotify.h>
 #include <iv_list.h>
+#include <string.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 
@@ -62,10 +63,13 @@ static void iv_inotify_got_event(void *_this)
 	} while (ret == -1 && errno == EINTR);
 
 	if (ret <= 0) {
-		if (ret == 0 || errno != EAGAIN) {
-			if (ret < 0)
-				perror("read");
-			abort();
+		if (ret == 0) {
+			iv_fatal("iv_inotify: reading from inotify fd "
+				 "returned zero");
+		} else if (errno != EAGAIN) {
+			iv_fatal("iv_inotify: reading from inotify fd "
+				 "returned error %d[%s]", errno,
+				 strerror(errno));
 		}
 		return;
 	}

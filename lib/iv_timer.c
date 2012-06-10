@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/time.h>
 #include <time.h>
 #include "iv_private.h"
@@ -139,11 +138,8 @@ static struct iv_timer_ **get_node(struct iv_state *st, int index)
 
 void iv_timer_init(struct iv_state *st)
 {
-	if (get_node(st, 1) == NULL) {
-		syslog(LOG_CRIT, "iv_timer_init: can't alloc memory for "
-				 "root ratnode");
-		abort();
-	}
+	if (get_node(st, 1) == NULL)
+		iv_fatal("iv_timer_init: can't alloc memory for root ratnode");
 }
 
 int iv_pending_timers(struct iv_state *st)
@@ -230,17 +226,14 @@ void iv_timer_register(struct iv_timer *_t)
 	int index;
 
 	if (t->index != -1) {
-		syslog(LOG_CRIT, "iv_timer_register: called with timer still "
-				 "on the heap");
-		abort();
+		iv_fatal("iv_timer_register: called with timer still "
+			 "on the heap");
 	}
 
 	index = ++st->num_timers;
 	p = get_node(st, index);
-	if (p == NULL) {
-		syslog(LOG_CRIT, "iv_timer_register: timer list overflow");
-		abort();
-	}
+	if (p == NULL)
+		iv_fatal("iv_timer_register: timer list overflow");
 
 	*p = t;
 	t->index = index;
@@ -295,22 +288,19 @@ void iv_timer_unregister(struct iv_timer *_t)
 	struct iv_timer_ **p;
 
 	if (t->index == -1) {
-		syslog(LOG_CRIT, "iv_timer_unregister: called with timer not "
-				 "on the heap");
-		abort();
+		iv_fatal("iv_timer_unregister: called with timer not "
+			 "on the heap");
 	}
 
 	if (t->index > st->num_timers) {
-		syslog(LOG_CRIT, "iv_timer_unregister: timer index %d > %d",
-		       t->index, st->num_timers);
-		abort();
+		iv_fatal("iv_timer_unregister: timer index %d > %d",
+			 t->index, st->num_timers);
 	}
 
 	p = get_node(st, t->index);
 	if (*p != t) {
-		syslog(LOG_CRIT, "iv_timer_unregister: unregistered timer "
-				 "index belonging to other timer");
-		abort();
+		iv_fatal("iv_timer_unregister: unregistered timer "
+			 "index belonging to other timer");
 	}
 
 	m = get_node(st, st->num_timers);

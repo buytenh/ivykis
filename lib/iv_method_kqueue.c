@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
@@ -112,9 +111,8 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 
 			ret = kevent_retry(st->kqueue.kqueue_fd, kev, *num);
 			if (ret < 0) {
-				syslog(LOG_CRIT, "iv_kqueue_upload: got error "
-				       "%d[%s]", errno, strerror(errno));
-				abort();
+				iv_fatal("iv_kqueue_upload: got error %d[%s]",
+					 errno, strerror(errno));
 			}
 
 			*num = 0;
@@ -159,9 +157,8 @@ iv_kqueue_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		if (errno == EINTR)
 			return;
 
-		syslog(LOG_CRIT, "iv_kqueue_poll: got error %d[%s]",
-		       errno, strerror(errno));
-		abort();
+		iv_fatal("iv_kqueue_poll: got error %d[%s]", errno,
+			 strerror(errno));
 	}
 
 	for (i = 0; i < ret; i++) {
@@ -173,9 +170,8 @@ iv_kqueue_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 		} else if (batch[i].filter == EVFILT_WRITE) {
 			iv_fd_make_ready(active, fd, MASKOUT);
 		} else {
-			syslog(LOG_CRIT, "iv_kqueue_poll: got message from "
-					 "filter %d", batch[i].filter);
-			abort();
+			iv_fatal("iv_kqueue_poll: got message from filter %d",
+				 batch[i].filter);
 		}
 	}
 }
@@ -192,9 +188,8 @@ static void iv_kqueue_upload_all(struct iv_state *st)
 
 		ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
 		if (ret < 0) {
-			syslog(LOG_CRIT, "iv_kqueue_upload_all: got error "
-			       "%d[%s]", errno, strerror(errno));
-			abort();
+			iv_fatal("iv_kqueue_upload_all: got error %d[%s]",
+				 errno, strerror(errno));
 		}
 	}
 }
