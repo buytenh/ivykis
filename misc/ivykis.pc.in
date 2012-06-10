@@ -8,4 +8,4 @@ Name: ivykis
 Version: @VERSION@
 Description: event handling library
 Cflags: -I${includedir}
-Libs: -L${libdir} -livykis -lrt -lpthread
+Libs: -L${libdir} -livykis
