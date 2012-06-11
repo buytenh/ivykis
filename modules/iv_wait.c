@@ -25,6 +25,7 @@
 #include <iv_tls.h>
 #include <iv_wait.h>
 #include <pthread.h>
+#include "iv_private.h"
 #include "config.h"
 
 #ifndef WCONTINUED
@@ -195,25 +196,27 @@ static void iv_wait_completion(void *_this)
 {
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 	struct iv_wait_interest *this = _this;
+	struct iv_list_head events;
 
 	pthread_mutex_lock(&iv_wait_lock);
+	__iv_list_steal_elements(&this->events, &events);
+	pthread_mutex_unlock(&iv_wait_lock);
 
 	tinfo->handled_wait_interest = this;
 
-	while (!iv_list_empty(&this->events)) {
+	while (!iv_list_empty(&events)) {
 		struct wait_event *we;
 
-		we = iv_container_of(this->events.next,
-				     struct wait_event, list);
+		we = iv_container_of(events.next, struct wait_event, list);
 		iv_list_del(&we->list);
 
-		pthread_mutex_unlock(&iv_wait_lock);
+		if (tinfo->handled_wait_interest != NULL) {
 #ifdef HAVE_WAIT4
-		this->handler(this->cookie, we->status, &we->rusage);
+			this->handler(this->cookie, we->status, &we->rusage);
 #else
-		this->handler(this->cookie, we->status, NULL);
+			this->handler(this->cookie, we->status, NULL);
 #endif
-		pthread_mutex_lock(&iv_wait_lock);
+		}
 
 		free(we);
 
@@ -222,8 +225,6 @@ static void iv_wait_completion(void *_this)
 	}
 
 	tinfo->handled_wait_interest = NULL;
-
-	pthread_mutex_unlock(&iv_wait_lock);
 }
 
 static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
