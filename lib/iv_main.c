@@ -31,13 +31,12 @@
 int			maxfd;
 struct iv_poll_method	*method;
 
-static int sanitise_nofile_rlimit(int euid)
+static void sanitise_nofile_rlimit(int euid)
 {
 	struct rlimit lim;
-	int max_files;
 
 	getrlimit(RLIMIT_NOFILE, &lim);
-	max_files = lim.rlim_cur;
+	maxfd = lim.rlim_cur;
 
 	if (euid) {
 		if (lim.rlim_cur < lim.rlim_max) {
@@ -46,14 +45,14 @@ static int sanitise_nofile_rlimit(int euid)
 				lim.rlim_cur = 131072;
 
 			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0)
-				max_files = lim.rlim_cur;
+				maxfd = lim.rlim_cur;
 		}
 	} else {
 		lim.rlim_cur = 131072;
 		lim.rlim_max = 131072;
-		while (lim.rlim_cur > max_files) {
+		while (lim.rlim_cur > maxfd) {
 			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
-				max_files = lim.rlim_cur;
+				maxfd = lim.rlim_cur;
 				break;
 			}
 
@@ -61,8 +60,6 @@ static int sanitise_nofile_rlimit(int euid)
 			lim.rlim_max /= 2;
 		}
 	}
-
-	return max_files;
 }
 
 static int method_is_excluded(char *exclude, char *name)
@@ -100,7 +97,7 @@ static void iv_init_first_thread(struct iv_state *st)
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGURG, SIG_IGN);
 
-	maxfd = sanitise_nofile_rlimit(euid);
+	sanitise_nofile_rlimit(euid);
 	method = NULL;
 
 	exclude = getenv("IV_EXCLUDE_POLL_METHOD");
