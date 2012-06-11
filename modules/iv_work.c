@@ -26,6 +26,7 @@
 #include <iv_tls.h>
 #include <iv_work.h>
 #include <pthread.h>
+#include <syslog.h>
 
 /* data structures **********************************************************/
 struct work_pool_priv {
@@ -54,6 +55,12 @@ struct work_pool_thread {
 static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
+
+	if (thr->kicked) {
+		syslog(LOG_CRIT, "__iv_work_thread_die: called on "
+				 "kicked thread");
+		abort();
+	}
 
 	iv_list_del(&thr->list);
 	iv_event_unregister(&thr->kick);
