@@ -182,31 +182,32 @@ static void iv_work_thread(void *_thr)
 static void iv_work_event(void *_pool)
 {
 	struct work_pool_priv *pool = _pool;
+	struct iv_list_head items;
 
 	pthread_mutex_lock(&pool->lock);
+	__iv_list_steal_elements(&pool->work_done, &items);
+	pthread_mutex_unlock(&pool->lock);
 
-	while (!iv_list_empty(&pool->work_done)) {
+	while (!iv_list_empty(&items)) {
 		struct iv_work_item *work;
 
-		work = iv_container_of(pool->work_done.next,
-				       struct iv_work_item, list);
-
+		work = iv_container_of(items.next, struct iv_work_item, list);
 		iv_list_del(&work->list);
 
-		pthread_mutex_unlock(&pool->lock);
 		work->completion(work->cookie);
+	}
+
+	if (pool->shutting_down) {
 		pthread_mutex_lock(&pool->lock);
-	}
-
-	if (pool->shutting_down && !pool->started_threads) {
+		if (!pool->started_threads && iv_list_empty(&pool->work_done)) {
+			pthread_mutex_unlock(&pool->lock);
+			pthread_mutex_destroy(&pool->lock);
+			iv_event_unregister(&pool->ev);
+			free(pool);
+			return;
+		}
 		pthread_mutex_unlock(&pool->lock);
-		pthread_mutex_destroy(&pool->lock);
-		iv_event_unregister(&pool->ev);
-		free(pool);
-		return;
 	}
-
-	pthread_mutex_unlock(&pool->lock);
 }
 
 int iv_work_pool_create(struct iv_work_pool *this)
