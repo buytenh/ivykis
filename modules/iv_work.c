@@ -367,13 +367,11 @@ static void iv_work_handle_local(void *_tinfo)
 static void iv_work_submit_local(struct iv_work_item *work)
 {
 	struct iv_work_thr_info *tinfo = iv_tls_user_ptr(&iv_work_tls_user);
-	int was_empty;
 
-	was_empty = iv_list_empty(&tinfo->work_items);
+	if (iv_list_empty(&tinfo->work_items))
+		iv_task_register(&tinfo->task);
 
 	iv_list_add_tail(&work->list, &tinfo->work_items);
-	if (was_empty)
-		iv_task_register(&tinfo->task);
 }
 
 void
