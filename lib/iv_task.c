@@ -34,21 +34,17 @@ int iv_pending_tasks(struct iv_state *st)
 
 void iv_run_tasks(struct iv_state *st)
 {
-	struct iv_list_head last;
+	struct iv_list_head tasks;
 
-	if (iv_list_empty(&st->tasks))
-		return;
-
-	iv_list_add_tail(&last, &st->tasks);
-	while (st->tasks.next != &last) {
+	__iv_list_steal_elements(&st->tasks, &tasks);
+	while (!iv_list_empty(&tasks)) {
 		struct iv_task_ *t;
 
-		t = iv_list_entry(st->tasks.next, struct iv_task_, list);
+		t = iv_list_entry(tasks.next, struct iv_task_, list);
 		iv_list_del_init(&t->list);
 
 		t->handler(t->cookie);
 	}
-	iv_list_del(&last);
 }
 
 void IV_TASK_INIT(struct iv_task *_t)
