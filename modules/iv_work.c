@@ -31,7 +31,7 @@
 struct work_pool_priv {
 	pthread_mutex_t		lock;
 	struct iv_event		ev;
-	struct iv_work_pool	*public;
+	int			shutting_down;
 	void			*cookie;
 	void			(*thread_start)(void *cookie);
 	void			(*thread_stop)(void *cookie);
@@ -66,7 +66,7 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 	if (pool->thread_stop != NULL)
 		pool->thread_stop(pool->cookie);
 
-	if (pool->public == NULL && !pool->started_threads)
+	if (pool->shutting_down && !pool->started_threads)
 		iv_event_post(&pool->ev);
 }
 
@@ -107,7 +107,7 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_event_post(&pool->ev);
 	}
 
-	if (pool->public == NULL)
+	if (pool->shutting_down)
 		__iv_work_thread_die(thr);
 
 	pthread_mutex_unlock(&pool->lock);
@@ -192,7 +192,7 @@ static void iv_work_event(void *_pool)
 		pthread_mutex_lock(&pool->lock);
 	}
 
-	if (pool->public == NULL && !pool->started_threads) {
+	if (pool->shutting_down && !pool->started_threads) {
 		pthread_mutex_unlock(&pool->lock);
 		pthread_mutex_destroy(&pool->lock);
 		iv_event_unregister(&pool->ev);
@@ -223,7 +223,7 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	pool->ev.handler = iv_work_event;
 	iv_event_register(&pool->ev);
 
-	pool->public = this;
+	pool->shutting_down = 0;
 	pool->cookie = this->cookie;
 	pool->thread_start = this->thread_start;
 	pool->thread_stop = this->thread_stop;
@@ -245,7 +245,7 @@ void iv_work_pool_put(struct iv_work_pool *this)
 	pthread_mutex_lock(&pool->lock);
 
 	this->priv = NULL;
-	pool->public = NULL;
+	pool->shutting_down = 1;
 
 	if (!pool->started_threads) {
 		pthread_mutex_unlock(&pool->lock);
