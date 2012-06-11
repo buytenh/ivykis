@@ -32,11 +32,11 @@ struct work_pool_priv {
 	pthread_mutex_t		lock;
 	struct iv_event		ev;
 	int			shutting_down;
+	int			started_threads;
+	struct iv_list_head	idle_threads;
 	void			*cookie;
 	void			(*thread_start)(void *cookie);
 	void			(*thread_stop)(void *cookie);
-	int			started_threads;
-	struct iv_list_head	idle_threads;
 	struct iv_list_head	work_items;
 	struct iv_list_head	work_done;
 };
@@ -224,11 +224,11 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	iv_event_register(&pool->ev);
 
 	pool->shutting_down = 0;
+	pool->started_threads = 0;
+	INIT_IV_LIST_HEAD(&pool->idle_threads);
 	pool->cookie = this->cookie;
 	pool->thread_start = this->thread_start;
 	pool->thread_stop = this->thread_stop;
-	pool->started_threads = 0;
-	INIT_IV_LIST_HEAD(&pool->idle_threads);
 	INIT_IV_LIST_HEAD(&pool->work_items);
 	INIT_IV_LIST_HEAD(&pool->work_done);
 
