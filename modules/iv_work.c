@@ -353,13 +353,13 @@ static void iv_work_tls_init(void)
 static void iv_work_handle_local(void *_tinfo)
 {
 	struct iv_work_thr_info *tinfo = _tinfo;
+	struct iv_list_head items;
 
-	while (!iv_list_empty(&tinfo->work_items)) {
+	__iv_list_steal_elements(&tinfo->work_items, &items);
+	while (!iv_list_empty(&items)) {
 		struct iv_work_item *work;
 
-		work = iv_container_of(tinfo->work_items.next,
-				       struct iv_work_item, list);
-
+		work = iv_container_of(items.next, struct iv_work_item, list);
 		iv_list_del(&work->list);
 
 		work->work(work->cookie);
