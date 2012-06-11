@@ -101,8 +101,9 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_invalidate_now();
 		pthread_mutex_lock(&pool->lock);
 
+		if (iv_list_empty(&pool->work_done))
+			iv_event_post(&pool->ev);
 		iv_list_add_tail(&work->list, &pool->work_done);
-		iv_event_post(&pool->ev);
 	}
 
 	if (!pool->shutting_down) {
