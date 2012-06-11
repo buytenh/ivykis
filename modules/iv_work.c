@@ -62,10 +62,7 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 		abort();
 	}
 
-	iv_list_del(&thr->list);
 	iv_event_unregister(&thr->kick);
-	if (iv_timer_registered(&thr->idle_timer))
-		iv_timer_unregister(&thr->idle_timer);
 	free(thr);
 
 	pool->started_threads--;
@@ -86,6 +83,9 @@ static void iv_work_thread_got_event(void *_thr)
 
 	thr->kicked = 0;
 
+	iv_list_del(&thr->list);
+	iv_timer_unregister(&thr->idle_timer);
+
 	while (1) {
 		struct iv_work_item *work;
 
@@ -96,26 +96,24 @@ static void iv_work_thread_got_event(void *_thr)
 				       struct iv_work_item, list);
 		iv_list_del(&work->list);
 
-		iv_list_del(&thr->list);
-		iv_timer_unregister(&thr->idle_timer);
-
 		pthread_mutex_unlock(&pool->lock);
 		work->work(work->cookie);
 		iv_invalidate_now();
 		pthread_mutex_lock(&pool->lock);
 
+		iv_list_add_tail(&work->list, &pool->work_done);
+		iv_event_post(&pool->ev);
+	}
+
+	if (!pool->shutting_down) {
 		iv_list_add(&thr->list, &pool->idle_threads);
 		iv_validate_now();
 		thr->idle_timer.expires = iv_now;
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
-
-		iv_list_add_tail(&work->list, &pool->work_done);
-		iv_event_post(&pool->ev);
-	}
-
-	if (pool->shutting_down)
+	} else {
 		__iv_work_thread_die(thr);
+	}
 
 	pthread_mutex_unlock(&pool->lock);
 }
@@ -137,6 +135,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 		return;
 	}
 
+	iv_list_del(&thr->list);
 	__iv_work_thread_die(thr);
 
 	pthread_mutex_unlock(&pool->lock);
