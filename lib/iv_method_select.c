@@ -171,8 +171,10 @@ static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	FD_SET(fd->fd, st->select.readfds);
 	FD_SET(fd->fd, st->select.writefds);
 
-	ret = select(fd->fd + 1, st->select.readfds,
-		     st->select.writefds, NULL, &to);
+	do {
+		ret = select(fd->fd + 1, st->select.readfds,
+			     st->select.writefds, NULL, &to);
+	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0)
 		return -1;
