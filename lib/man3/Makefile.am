@@ -1,5 +1,6 @@
 man3_MANS	= iv_deinit.3				\
 		  iv_examples.3				\
+		  iv_fatal.3				\
 		  iv_fd.3				\
 		  iv_fd_register.3			\
 		  iv_fd_register_try.3			\
@@ -12,6 +13,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_invalidate_now.3			\
 		  iv_main.3				\
 		  iv_quit.3				\
+		  iv_set_fatal_msg_handler.3		\
 		  iv_task.3				\
 		  iv_task_register.3			\
 		  iv_task_unregister.3			\

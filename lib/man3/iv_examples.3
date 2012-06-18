@@ -92,7 +92,6 @@ connection, a message is printed to standard out.
 #include <stdlib.h>
 #include <iv.h>
 #include <netinet/in.h>
-#include <syslog.h>
 
 struct connection
 {
@@ -145,7 +144,7 @@ static void listening_socket_handler(void *_sock)
 
         conn = malloc(sizeof(*conn));
         if (conn == NULL) {
-                syslog(LOG_ALERT, "listening_socket_handler: memory allocation error, dropping connection");
+                fprintf(stderr, "listening_socket_handler: memory allocation error, dropping connection");
                 close(fd);
                 return;
         }
@@ -217,7 +216,6 @@ in example 2 are indicated by '//XXXX' in the right-hand margin.
 #include <stdlib.h>
 #include <iv.h>
 #include <netinet/in.h>
-#include <syslog.h>
 
 #define CONNECTION_TIMEOUT      (10)
 
@@ -288,7 +286,7 @@ static void listening_socket_handler(void *_sock)
 
         conn = malloc(sizeof(*conn));
         if (conn == NULL) {
-                syslog(LOG_ALERT, "listening_socket_handler: memory allocation error, dropping connection");
+                fprintf(stderr, "listening_socket_handler: memory allocation error, dropping connection");
                 close(fd);
                 return;
         }
@@ -354,8 +352,38 @@ However, it is updated lazily, and its contents might be stale at
 any given time.  Before using it,
 .BR iv_validate_now (3)
 must be called.
+.SH "EXAMPLE 4"
+The fourth example demonstrates how to use a custom fatal error
+handler that does not write the message to syslog.
+.PP
+.nf
+#include <stdio.h>
+#include <iv.h>
+
+static void fatal_error(const char *msg)
+{
+        fprintf(stderr, "ivykis: FATAL ERROR: %s\\n", msg);
+}
+
+int main()
+{
+        iv_init();
+        iv_set_fatal_msg_handler(fatal_error);
+
+        iv_fatal("Programmatically triggered fatal error %d.", 42);
+        printf("This code is never reached.\\n");
+
+        iv_deinit();
+
+        return 0;
+}
+.fi
+.PP
+This program will abort immediately, with the error message printed to
+the standard error stream.
 .SH "SEE ALSO"
 .BR ivykis (3),
+.BR iv_fatal (3),
 .BR iv_fd (3),
 .BR iv_timer (3),
 .BR iv_task (3),

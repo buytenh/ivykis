@@ -59,16 +59,13 @@ on a read, registering a timer instead of calling
 etc.
 .PP
 In case of an internal error, ivykis will use
-.BR syslog (3)
-to report the error, and subsequently call
-.BR abort (3)
-to abort the execution of the current application.  If the application
-wishes to make such errors go to standard error, or set any other relevant
-syslog options, it should call
-.BR openlog (3)
-before initialising ivykis.
+.BR iv_fatal (3)
+to report the error.  The application can provide a custom fatal
+error handler by calling
+.BR iv_set_fatal_msg_handler (3).
 .SH "SEE ALSO"
 .BR iv_examples (3),
+.BR iv_fatal (3),
 .BR iv_fd (3),
 .BR iv_timer (3),
 .BR iv_task (3),

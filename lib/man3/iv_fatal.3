@@ -1,0 +1,47 @@
+.\" This man page is Copyright (C) 2012 Lennert Buytenhek.
+.\" Permission is granted to distribute possibly modified copies
+.\" of this page provided the header is included verbatim,
+.\" and in case of nontrivial modification author and date
+.\" of the modification is added to the header.
+.TH iv_fatal 3 2012-06-18 "ivykis" "ivykis programmer's manual"
+.SH NAME
+iv_fatal, iv_set_fatal_msg_handler \- ivykis fatal error condition handling
+.SH SYNOPSIS
+.B #include <iv.h>
+.sp
+.BI "void iv_fatal(const char *" "fmt" ", ...);"
+.br
+.BI "void iv_set_fatal_msg_handler(void (*" "handler" ")(const char *" "msg" "));"
+.br
+.SH DESCRIPTION
+.B iv_fatal
+aborts the running program, after possibly emitting an error
+message. The
+.B fmt
+parameter is a
+.BR printf (3)-style
+format string, the message to be logged.
+.PP
+If no handler is set (the default), the formatted message will be sent
+to
+.BR syslog ,
+with critical severity. Otherwise the
+.B handler
+as set by
+.B iv_set_fatal_msg_handler
+will be used instead.
+.PP
+.B iv_fatal
+is also used internally by ivykis, whenever a fatal situation is
+detected.
+.PP
+.B iv_set_fatal_msg_handler
+can be used to set an alternative (as opposed to
+.BR syslog )
+function to call from
+.BR iv_fatal ,
+and its argument should be a function that does not return, and takes
+a single string as argument \- the formatted error message.
+.SH "SEE ALSO"
+.BR ivykis (3),
+.BR iv_examples (3)
