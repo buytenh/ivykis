@@ -145,7 +145,10 @@ static int iv_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 	pfd.fd = fd->fd;
 	pfd.events = POLLIN | POLLOUT | POLLHUP;
-	ret = poll(&pfd, 1, 0);
+
+	do {
+		ret = poll(&pfd, 1, 0);
+	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0 || (pfd.revents & POLLNVAL))
 		return -1;
