@@ -87,11 +87,21 @@ iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 	*_num = num;
 }
 
+static int kevent_retry(int kq, const struct kevent *changelist, int nchanges)
+{
+	struct timespec to = { 0, 0 };
+	int ret;
+
+	do {
+		ret = kevent(kq, changelist, nchanges, NULL, 0, &to);
+	} while (ret < 0 && errno == EINTR);
+
+	return ret;
+}
+
 static void
 iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 {
-	struct timespec to = { 0, 0 };
-
 	*num = 0;
 
 	while (!iv_list_empty(&st->kqueue.notify)) {
@@ -100,8 +110,7 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 		if (*num > size - 2) {
 			int ret;
 
-			ret = kevent(st->kqueue.kqueue_fd, kev, *num,
-				     NULL, 0, &to);
+			ret = kevent_retry(st->kqueue.kqueue_fd, kev, *num);
 			if (ret < 0) {
 				syslog(LOG_CRIT, "iv_kqueue_upload: got error "
 				       "%d[%s]", errno, strerror(errno));
@@ -179,10 +188,9 @@ static void iv_kqueue_upload_all(struct iv_state *st)
 	iv_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
 	if (num) {
-		struct timespec to = { 0, 0 };
 		int ret;
 
-		ret = kevent(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
+		ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
 		if (ret < 0) {
 			syslog(LOG_CRIT, "iv_kqueue_upload_all: got error "
 			       "%d[%s]", errno, strerror(errno));
@@ -208,14 +216,13 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct kevent kev[2];
 	int num;
-	struct timespec to = { 0, 0 };
 	int ret;
 
 	iv_kqueue_queue_one(kev, &num, fd);
 	if (num == 0)
 		return 0;
 
-	ret = kevent(st->kqueue.kqueue_fd, kev, num, NULL, 0, &to);
+	ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
 	if (ret == 0)
 		fd->registered_bands = fd->wanted_bands;
 
