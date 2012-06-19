@@ -73,6 +73,7 @@ AC_CHECK_FUNCS([inotify_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([poll])
 AC_CHECK_FUNCS([port_create])
+AC_CHECK_FUNCS([pthread_spin_lock])
 AC_CHECK_FUNCS([splice])
 AC_CHECK_FUNCS([wait4])
 

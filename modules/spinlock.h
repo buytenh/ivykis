@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#ifdef HAVE_PTHREAD_SPIN_LOCK
 #define spinlock_t		pthread_spinlock_t
 
 static inline void spin_init(spinlock_t *lock)
@@ -36,6 +37,25 @@ static inline void spin_unlock(spinlock_t *lock)
 {
 	pthread_spin_unlock(lock);
 }
+#else
+typedef unsigned long spinlock_t;
+
+static inline void spin_init(spinlock_t *lock)
+{
+	*lock = 0;
+}
+
+static inline void spin_lock(spinlock_t *lock)
+{
+	while (__sync_lock_test_and_set(lock, 1) == 1)
+		;
+}
+
+static inline void spin_unlock(spinlock_t *lock)
+{
+	__sync_lock_release(lock);
+}
+#endif
 
 static inline void spin_lock_sigmask(spinlock_t *lock, sigset_t *mask)
 {
