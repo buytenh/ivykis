@@ -26,6 +26,7 @@
 #include <iv_event_raw.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include "config.h"
 
 /* eventfd syscall **********************************************************/
 #ifdef HAVE_SYS_EVENTFD_H
