@@ -90,12 +90,9 @@ struct iv_state {
 #ifdef NEED_SELECT
 		struct {
 			struct iv_avl_tree	fds;
+			void			*sets;
 			int			setsize;
 			int			fd_max;
-			fd_set			*readfds_master;
-			fd_set			*writefds_master;
-			fd_set			*readfds;
-			fd_set			*writefds;
 		} select;
 #endif
 	};
