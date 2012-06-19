@@ -23,7 +23,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
 		  stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
-AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/select.h])
+AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/filio.h sys/select.h])
 
 # Check for <linux/netfilter_ipv4.h> header file.
 AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
@@ -34,6 +34,12 @@ AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
 		#include <linux/netfilter_ipv4.h>
 	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
 	])
+
+# On Solaris 11, we need to define BSD_COMP for sys/ioctl.h to define FIONREAD.
+if test $ac_cv_header_sys_filio_h = yes
+then
+	CFLAGS="$CFLAGS -DBSD_COMP"
+fi
 
 # Check which header file defines 'struct timespec'.
 for hdr in sys/time.h sys/timers.h time.h pthread.h
