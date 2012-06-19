@@ -160,7 +160,7 @@ static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		iv_list_add_tail(&fd->list_notify, &st->port.notify);
 }
 
-static void iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	return __iv_port_upload_one(st, fd);
 }
