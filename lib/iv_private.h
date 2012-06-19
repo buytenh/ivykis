@@ -231,7 +231,7 @@ struct iv_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st);
 	void	(*poll)(struct iv_state *st, 
-			struct iv_list_head *active, int msec);
+			struct iv_list_head *active, struct timespec *to);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);

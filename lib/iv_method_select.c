@@ -71,11 +71,11 @@ static int iv_select_init(struct iv_state *st)
 	return 0;
 }
 
-static void
-iv_select_poll(struct iv_state *st, struct iv_list_head *active, int msec)
+static void iv_select_poll(struct iv_state *st,
+			   struct iv_list_head *active, struct timespec *to)
 {
 	int bytes;
-	struct timeval to;
+	struct timeval tv;
 	int ret;
 	int i;
 
@@ -84,11 +84,11 @@ iv_select_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 	memcpy(readfds(st), readfds_master(st), bytes);
 	memcpy(writefds(st), writefds_master(st), bytes);
 
-	to.tv_sec = msec / 1000;
-	to.tv_usec = 1000 * (msec % 1000);
+	tv.tv_sec = to->tv_sec;
+	tv.tv_usec = (to->tv_nsec + 999) / 1000;
 
 	ret = select(st->select.fd_max + 1, readfds(st),
-		     writefds(st), NULL, &to);
+		     writefds(st), NULL, &tv);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -170,7 +170,7 @@ static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int bytes;
-	struct timeval to = { 0, 0 };
+	struct timeval tv = { 0, 0 };
 	int ret;
 
 	bytes = ((st->select.fd_max + 1) + 7) / 8;
@@ -183,7 +183,7 @@ static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 	do {
 		ret = select(fd->fd + 1, readfds(st),
-			     writefds(st), NULL, &to);
+			     writefds(st), NULL, &tv);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0)

@@ -261,7 +261,6 @@ void iv_main(void)
 	st->quit = 0;
 	while (1) {
 		struct timespec to;
-		int msec;
 
 		iv_run_tasks(st);
 		iv_run_timers(st);
@@ -269,13 +268,11 @@ void iv_main(void)
 		if (should_quit(st))
 			break;
 
-		if (!iv_pending_tasks(st) && !iv_get_soonest_timeout(st, &to)) {
-			msec = 1000 * to.tv_sec;
-			msec += (to.tv_nsec + 999999) / 1000000;
-		} else {
-			msec = 0;
+		if (iv_pending_tasks(st) || iv_get_soonest_timeout(st, &to)) {
+			to.tv_sec = 0;
+			to.tv_nsec = 0;
 		}
-		method->poll(st, &active, msec);
+		method->poll(st, &active, &to);
 
 		__iv_invalidate_now(st);
 

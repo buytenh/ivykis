@@ -42,8 +42,8 @@ static int iv_poll_init(struct iv_state *st)
 	return 0;
 }
 
-static void
-iv_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
+static void iv_poll_poll(struct iv_state *st,
+			 struct iv_list_head *active, struct timespec *to)
 {
 	int ret;
 	int i;
@@ -56,7 +56,8 @@ iv_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 	errno = EINTR;
 #endif
 
-	ret = poll(st->poll.pfds, st->poll.num_registered_fds, msec);
+	ret = poll(st->poll.pfds, st->poll.num_registered_fds,
+		   1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000));
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;

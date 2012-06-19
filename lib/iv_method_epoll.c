@@ -120,14 +120,17 @@ static void iv_epoll_flush_pending(struct iv_state *st)
 	}
 }
 
-static void
-iv_epoll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
+static void iv_epoll_poll(struct iv_state *st,
+			  struct iv_list_head *active, struct timespec *to)
 {
 	struct epoll_event batch[st->numfds ? : 1];
+	int msec;
 	int ret;
 	int i;
 
 	iv_epoll_flush_pending(st);
+
+	msec = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
 	ret = epoll_wait(st->epoll.epoll_fd, batch, st->numfds ? : 1, msec);
 	if (ret < 0) {

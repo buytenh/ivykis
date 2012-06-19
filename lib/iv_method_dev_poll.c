@@ -119,28 +119,19 @@ static void iv_dev_poll_flush_pending(struct iv_state *st)
 		xwrite(poll_fd, pfd, num * sizeof(pfd[0]));
 }
 
-static void
-iv_dev_poll_poll(struct iv_state *st, struct iv_list_head *active, int msec)
+static void iv_dev_poll_poll(struct iv_state *st,
+			     struct iv_list_head *active, struct timespec *to)
 {
 	struct pollfd batch[st->numfds];
 	struct dvpoll dvp;
 	int ret;
 	int i;
 
-#if 0
-	/*
-	 * @@@ Is this necessary?
-	 * @@@ This is ugly and dependent on clock tick granularity.
-	 */
-	if (msec)
-		msec += (1000/100) - 1;
-#endif
-
 	iv_dev_poll_flush_pending(st);
 
 	dvp.dp_fds = batch;
 	dvp.dp_nfds = st->numfds;
-	dvp.dp_timeout = msec;
+	dvp.dp_timeout = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
 	ret = ioctl(st->dev_poll.poll_fd, DP_POLL, &dvp);
 	if (ret < 0) {

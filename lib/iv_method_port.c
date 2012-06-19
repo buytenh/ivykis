@@ -92,10 +92,9 @@ static void iv_port_upload(struct iv_state *st)
 	}
 }
 
-static void
-iv_port_poll(struct iv_state *st, struct iv_list_head *active, int msec)
+static void iv_port_poll(struct iv_state *st,
+			 struct iv_list_head *active, struct timespec *to)
 {
-	struct timespec to;
 	int nget;
 	port_event_t pe[PORTEV_NUM];
 	int ret;
@@ -103,12 +102,9 @@ iv_port_poll(struct iv_state *st, struct iv_list_head *active, int msec)
 
 	iv_port_upload(st);
 
-	to.tv_sec = msec / 1000;
-	to.tv_nsec = 1000000 * (msec % 1000);
-
 poll_more:
 	nget = 1;
-	ret = port_getn(st->port.port_fd, pe, PORTEV_NUM, &nget, &to);
+	ret = port_getn(st->port.port_fd, pe, PORTEV_NUM, &nget, to);
 	if (ret < 0) {
 		if (errno == EINTR || errno == ETIME)
 			return;
@@ -138,8 +134,8 @@ poll_more:
 	}
 
 	if (nget == PORTEV_NUM) {
-		to.tv_sec = 0;
-		to.tv_nsec = 0;
+		to->tv_sec = 0;
+		to->tv_nsec = 0;
 		goto poll_more;
 	}
 }
