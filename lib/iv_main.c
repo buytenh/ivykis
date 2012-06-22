@@ -301,7 +301,7 @@ void iv_fatal(const char *fmt, ...)
 	if (fatal_msg_handler != NULL)
 		fatal_msg_handler(msg);
 	else
-		syslog(LOG_CRIT, msg);
+		syslog(LOG_CRIT, "%s", msg);
 
 	abort();
 }
