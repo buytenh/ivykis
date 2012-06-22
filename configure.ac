@@ -109,8 +109,16 @@ AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([poll])
 AC_CHECK_FUNCS([port_create])
 AC_CHECK_FUNCS([pthread_spin_lock])
-AC_CHECK_FUNCS([splice])
 AC_CHECK_FUNCS([wait4])
+
+# Check for splice(2) on Linux.
+case $host_os in
+linux*)
+	AC_CHECK_FUNCS([splice])
+	;;
+*)
+	;;
+esac
 
 # Check for available clock_gettime() clock sources.
 if test $ac_cv_func_clock_gettime = yes
