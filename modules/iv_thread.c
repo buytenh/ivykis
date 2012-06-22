@@ -26,7 +26,6 @@
 #include <iv_tls.h>
 #include <pthread.h>
 #include <string.h>
-#include <sys/syscall.h>
 
 /* gettid *******************************************************************/
 #ifdef __FreeBSD__
