@@ -96,6 +96,7 @@ int main()
 	struct connector c[1000];
 	int i;
 
+	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(0x7f000001);
 
