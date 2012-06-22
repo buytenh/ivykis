@@ -20,7 +20,7 @@ AC_SEARCH_LIBS([socket], [socket])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stddef.h	\
-		  stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
+		  stdlib.h string.h sys/ioctl.h sys/socket.h		\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
 AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/filio.h sys/select.h])
