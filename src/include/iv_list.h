@@ -26,6 +26,8 @@
 #ifndef __IV_LIST_H
 #define __IV_LIST_H
 
+#include <inttypes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -128,7 +130,7 @@ iv_list_splice_tail_init(struct iv_list_head *ilh, struct iv_list_head *head)
 
 #define iv_container_of(ptr, type, member) ({			\
 	const typeof(((type *)0)->member) *__ptr = (ptr);	\
-	(type *)((char *)__ptr - (unsigned long)(&((type *)0)->member)); })
+	(type *)((char *)__ptr - (intptr_t)(&((type *)0)->member)); })
 
 #define iv_list_entry(ilh, type, member) \
 	iv_container_of(ilh, type, member)
