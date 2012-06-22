@@ -83,7 +83,7 @@ static void got_connection(void *_dummy)
 	conn->pump.to_fd = ret;
 	conn->pump.cookie = conn;
 	conn->pump.set_bands = conn_set_bands;
-	conn->pump.flags = IV_FD_PUMP_FLAG_RELAY_EOF;
+	conn->pump.flags = 0;
 	iv_fd_pump_init(&conn->pump);
 }
 
