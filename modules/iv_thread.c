@@ -184,6 +184,7 @@ int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
 
 out:
 	iv_event_unregister(&thr->dead);
+	free(thr->name);
 	free(thr);
 
 	if (iv_thread_debug)
