@@ -49,7 +49,7 @@ static void __iv_validate_now(struct iv_state *st)
 
 		st->time_valid = 1;
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_MONOTONIC)
 		if (clock_source < 1) {
 			if (clock_gettime(CLOCK_MONOTONIC, &st->time) >= 0)
 				return;
@@ -57,7 +57,7 @@ static void __iv_validate_now(struct iv_state *st)
 		}
 #endif
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_REALTIME)
 		if (clock_source < 2) {
 			if (clock_gettime(CLOCK_REALTIME, &st->time) >= 0)
 				return;

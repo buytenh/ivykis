@@ -112,6 +112,40 @@ AC_CHECK_FUNCS([pthread_spin_lock])
 AC_CHECK_FUNCS([splice])
 AC_CHECK_FUNCS([wait4])
 
+# Check for available clock_gettime() clock sources.
+if test $ac_cv_func_clock_gettime = yes
+then
+	AC_CACHE_CHECK(for CLOCK_MONOTONIC, ac_cv_define_clock_monotonic,
+		[ac_cv_define_clock_monotonic=no
+		 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+			#include <sys/time.h>
+			#include <time.h>
+			int p = CLOCK_MONOTONIC;
+		 )], [ac_cv_define_clock_monotonic=yes], [])
+		])
+
+	if test $ac_cv_define_clock_monotonic = yes
+	then
+		AC_DEFINE(HAVE_CLOCK_MONOTONIC, 1,
+			  Define to 1 if system has CLOCK_MONOTONIC)
+	fi
+
+	AC_CACHE_CHECK(for CLOCK_REALTIME, ac_cv_define_clock_realtime,
+		[ac_cv_define_clock_realtime=no
+		 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+			#include <sys/time.h>
+			#include <time.h>
+			int p = CLOCK_REALTIME;
+		 )], [ac_cv_define_clock_realtime=yes], [])
+		])
+
+	if test $ac_cv_define_clock_realtime = yes
+	then
+		AC_DEFINE(HAVE_CLOCK_REALTIME, 1,
+			  Define to 1 if system has CLOCK_REALTIME)
+	fi
+fi
+
 # Check for __thread.
 AC_MSG_CHECKING([for working __thread])
 case $host_os in
