@@ -116,6 +116,12 @@ static void create_run_handles(int fp, int numhandles)
 }
 
 
+#ifndef __hpux__
+#define NUMPORTS	100
+#else
+#define NUMPORTS	4
+#endif
+
 #ifdef THREAD
 #include <pthread.h>
 
@@ -125,7 +131,7 @@ static void *thr(void *_fp)
 
 	iv_init();
 
-	create_run_handles(fp, 100);
+	create_run_handles(fp, NUMPORTS);
 
 	return NULL;
 }
@@ -137,13 +143,13 @@ int main()
 	iv_init();
 
 	for (i = 1; i < 10; i++) {
-		unsigned long fp = 20000 + i * 100;
+		unsigned long fp = 20000 + i * NUMPORTS;
 		pthread_t id;
 
 		pthread_create(&id, NULL, thr, (void *)fp);
 	}
 
-	create_run_handles(20000, 100);
+	create_run_handles(20000, NUMPORTS);
 
 	return 0;
 }
@@ -152,7 +158,7 @@ int main()
 {
 	iv_init();
 
-	create_run_handles(20000, 1000);
+	create_run_handles(20000, 10 * NUMPORTS);
 
 	return 0;
 }
