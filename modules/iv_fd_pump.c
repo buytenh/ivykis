@@ -70,8 +70,11 @@ static void iv_fd_pump_tls_init(void)
 #define BUF_SIZE		4096
 
 #ifndef HAVE_SPLICE
-#define splice_available	 0
-#define splice(...)		-1
+ #define splice_available	 0
+ #define splice(...)		-1
+ #ifndef FIONREAD
+  #define FIONREAD		0
+ #endif
 #else
 static int splice_available = -1;
 #endif
