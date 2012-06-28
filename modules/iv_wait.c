@@ -110,8 +110,15 @@ static void iv_wait_got_sigchld(void *_dummy)
 #ifdef HAVE_WAIT4
 		struct rusage rusage;
 
+#ifdef __digital__
+		union wait w;
+
+		pid = wait4(-1, &w, WNOHANG | WUNTRACED | WCONTINUED, &rusage);
+		status = w.w_status;
+#else
 		pid = wait4(-1, &status,
 			    WNOHANG | WUNTRACED | WCONTINUED, &rusage);
+#endif
 		if (pid <= 0) {
 			if (pid < 0 && errno != ECHILD)
 				perror("wait4");
