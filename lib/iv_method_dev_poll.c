@@ -122,7 +122,7 @@ static void iv_dev_poll_flush_pending(struct iv_state *st)
 static void iv_dev_poll_poll(struct iv_state *st,
 			     struct iv_list_head *active, struct timespec *to)
 {
-	struct pollfd batch[st->numfds];
+	struct pollfd batch[st->numfds ? : 1];
 	struct dvpoll dvp;
 	int ret;
 	int i;
@@ -130,7 +130,7 @@ static void iv_dev_poll_poll(struct iv_state *st,
 	iv_dev_poll_flush_pending(st);
 
 	dvp.dp_fds = batch;
-	dvp.dp_nfds = st->numfds;
+	dvp.dp_nfds = st->numfds ? : 1;
 	dvp.dp_timeout = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
 	ret = ioctl(st->dev_poll.poll_fd, DP_POLL, &dvp);
