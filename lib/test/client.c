@@ -23,6 +23,7 @@
 #include <iv.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/socket.h>
 
 struct connector {
 	struct sockaddr_in addr;

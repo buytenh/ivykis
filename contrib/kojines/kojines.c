@@ -25,6 +25,7 @@
 #include <limits.h>
 #include <linux/netfilter_ipv4.h>
 #include <string.h>
+#include <sys/socket.h>
 #include "kojines.h"
 
 struct kojine

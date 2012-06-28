@@ -24,6 +24,7 @@
 #include <iv.h>
 #include <iv_fd_pump.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 struct connection {
 	struct iv_fd sock;

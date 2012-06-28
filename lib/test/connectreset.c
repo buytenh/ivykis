@@ -23,6 +23,7 @@
 #include <iv.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/socket.h>
 
 /* SERVER ********************************************************************/
 struct client_connection {

@@ -23,6 +23,7 @@
 #include <iv.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/socket.h>
 
 static struct iv_fd ifd;
 
