@@ -187,8 +187,11 @@ out:
 	free(thr->name);
 	free(thr);
 
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] failed to start\n", name);
+	if (iv_thread_debug) {
+		fprintf(stderr, "iv_thread: pthread_create for [%s] "
+				"failed with error %d[%s]\n", name, ret,
+					strerror(ret));
+	}
 
 	return -1;
 }
