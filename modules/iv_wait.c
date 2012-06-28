@@ -59,7 +59,7 @@ iv_wait_interest_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 	return 0;
 }
 
-static pthread_mutex_t iv_wait_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t iv_wait_lock;
 static struct iv_avl_tree iv_wait_interests =
 	IV_AVL_TREE_INIT(iv_wait_interest_compare);
 
@@ -196,6 +196,8 @@ static struct iv_tls_user iv_wait_tls_user = {
 static void iv_wait_tls_init(void) __attribute__((constructor));
 static void iv_wait_tls_init(void)
 {
+	pthread_mutex_init(&iv_wait_lock, NULL);
+
 	iv_tls_user_register(&iv_wait_tls_user);
 }
 
