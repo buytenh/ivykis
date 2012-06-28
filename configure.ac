@@ -73,6 +73,29 @@ AC_C_INLINE
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 
+# Check for __sync_lock_test_and_set().  We can't use AC_CHECK_FUNCS
+# for this, as autoconf will spit out a dummy definition for the
+# function we are testing for, and call it without any arguments,
+# which will prevent gcc from using the intrinsic.
+AC_CACHE_CHECK(for __sync_lock_test_and_set(),
+	ac_cv_func_sync_lock_test_and_set,
+	[ac_cv_func_sync_lock_test_and_set=no
+	 _AC_LINK_IFELSE([AC_LANG_SOURCE(
+		int main()
+		{
+			unsigned long test;
+			while (__sync_lock_test_and_set(&test, 1) == 1)
+				;
+			return 0;
+		}
+	 )], [ac_cv_func_sync_lock_test_and_set=yes], [])
+	])
+if test $ac_cv_func_sync_lock_test_and_set = yes
+then
+	AC_DEFINE(HAVE_SYNC_LOCK_TEST_AND_SET, 1,
+		  Define to 1 if system has __sync_lock_test_and_set)
+fi
+
 # Checks for library functions.
 AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
 		select socket strdup strerror], [],

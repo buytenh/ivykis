@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#ifdef HAVE_PTHREAD_SPIN_LOCK
+#if defined(HAVE_PTHREAD_SPIN_LOCK)
 #define spinlock_t		pthread_spinlock_t
 
 static inline void spin_init(spinlock_t *lock)
@@ -37,7 +37,7 @@ static inline void spin_unlock(spinlock_t *lock)
 {
 	pthread_spin_unlock(lock);
 }
-#else
+#elif defined(HAVE_SYNC_LOCK_TEST_AND_SET)
 typedef unsigned long spinlock_t;
 
 static inline void spin_init(spinlock_t *lock)
@@ -54,6 +54,22 @@ static inline void spin_lock(spinlock_t *lock)
 static inline void spin_unlock(spinlock_t *lock)
 {
 	__sync_lock_release(lock);
+}
+#else
+#warning USING DUMMY SPINLOCK IMPLEMENTATION
+
+typedef unsigned long spinlock_t;
+
+static inline void spin_init(spinlock_t *lock)
+{
+}
+
+static inline void spin_lock(spinlock_t *lock)
+{
+}
+
+static inline void spin_unlock(spinlock_t *lock)
+{
 }
 #endif
 
