@@ -20,10 +20,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <iv.h>
 #include <iv_fd_pump.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 
 struct connection {
