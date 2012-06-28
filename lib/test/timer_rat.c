@@ -22,7 +22,11 @@
 #include <stdlib.h>
 #include <iv.h>
 
+#ifndef __hppa__
 #define NUM		1048570
+#else
+#define NUM		32768
+#endif
 static struct iv_timer	tim[NUM];
 
 static void handler(void *_t)
