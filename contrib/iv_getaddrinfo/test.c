@@ -141,6 +141,7 @@ static void got_results(void *_ig, int ret, struct addrinfo *res)
 			in = (struct sockaddr_in *)a->ai_addr;
 			inet_ntop(AF_INET, &in->sin_addr, name, sizeof(name));
 			printf("%s\n", name);
+#ifndef __hpux__
 		} else if (a->ai_addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *in;
 			char name[64];
@@ -148,6 +149,7 @@ static void got_results(void *_ig, int ret, struct addrinfo *res)
 			in = (struct sockaddr_in6 *)a->ai_addr;
 			inet_ntop(AF_INET6, &in->sin6_addr, name, sizeof(name));
 			printf("%s\n", name);
+#endif
 		} else {
 			printf("unknown address family\n");
 		}
