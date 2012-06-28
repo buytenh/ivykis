@@ -36,6 +36,14 @@ AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
 	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
 	])
 
+# On Tru64, we need -D_BSD to get a definition for 'union wait', and
+# -D_POSIX_PII_SOCKET so that sys/socket.h defines 'socklen_t'.
+case $host_os in
+osf*)
+	CFLAGS="$CFLAGS -D_BSD -D_POSIX_PII_SOCKET"
+	;;
+esac
+
 # Check which header file defines 'struct timespec'.
 for hdr in sys/time.h sys/timers.h time.h pthread.h
 do
