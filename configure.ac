@@ -37,10 +37,18 @@ AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
 	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
 	])
 
-# On Tru64, we need -D_BSD to get a definition for 'union wait', and
-# -D_POSIX_PII_SOCKET so that sys/socket.h defines 'socklen_t'.
+# OS-specific preprocessor defines.
 case $host_os in
+hpux*)
+	# On HP-UX, we need -D_XOPEN_SOURCE=500 so that the
+	# Berkeley socket API uses 'socklen_t' instead of int.
+	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"
+	;;
+
 osf*)
+	# On Tru64, we need -D_BSD to get a definition for 'union
+	# wait', and -D_POSIX_PII_SOCKET so that sys/socket.h defines
+	# 'socklen_t'.
 	CFLAGS="$CFLAGS -D_BSD -D_POSIX_PII_SOCKET"
 	;;
 esac
