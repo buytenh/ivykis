@@ -119,6 +119,17 @@ static void iv_work_thread_got_event(void *_thr)
 		} else {
 			__iv_work_thread_die(thr);
 		}
+	} else {
+		/*
+		 * If we're already at the maximum number of pool
+		 * threads, and none of those threads were idle when
+		 * more work arrived, then there may have been no
+		 * kick sent for the new work item(s) (and no new
+		 * pool thread started either), so if we're leaving
+		 * with work items still pending, kick ourselves by
+		 * hand, to make sure we don't deadlock.
+		 */
+		iv_event_post(&thr->kick);
 	}
 
 	pthread_mutex_unlock(&pool->lock);
