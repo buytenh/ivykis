@@ -206,7 +206,7 @@ static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct kevent kev[2];
-	int num;
+	int num = 0;
 	int ret;
 
 	iv_kqueue_queue_one(kev, &num, fd);
