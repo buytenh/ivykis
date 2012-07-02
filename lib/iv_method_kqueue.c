@@ -210,8 +210,6 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	int ret;
 
 	iv_kqueue_queue_one(kev, &num, fd);
-	if (num == 0)
-		return 0;
 
 	ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
 	if (ret == 0)

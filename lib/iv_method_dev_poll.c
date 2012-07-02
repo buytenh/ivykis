@@ -196,9 +196,6 @@ static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	struct pollfd pfd;
 	int ret;
 
-	if (!fd->wanted_bands)
-		return 0;
-
 	pfd.fd = fd->fd;
 	pfd.events = bits_to_poll_mask(fd->wanted_bands);
 
