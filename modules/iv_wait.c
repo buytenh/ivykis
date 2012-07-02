@@ -219,9 +219,6 @@ static void iv_wait_completion(void *_this)
 		}
 
 		free(we);
-
-		if (tinfo->handled_wait_interest == NULL)
-			break;
 	}
 
 	tinfo->handled_wait_interest = NULL;
