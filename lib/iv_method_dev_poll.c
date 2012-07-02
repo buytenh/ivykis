@@ -193,39 +193,25 @@ static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
-	int num;
-	struct pollfd pfd[2];
+	struct pollfd pfd;
 	int ret;
 
-	iv_list_del_init(&fd->list_notify);
-
-	if (fd->registered_bands == fd->wanted_bands)
+	if (!fd->wanted_bands)
 		return 0;
 
-	num = 0;
-
-	if (fd->registered_bands & ~fd->wanted_bands) {
-		pfd[num].fd = fd->fd;
-		pfd[num].events = POLLREMOVE;
-		num++;
-	}
-
-	if (fd->wanted_bands) {
-		pfd[num].fd = fd->fd;
-		pfd[num].events = bits_to_poll_mask(fd->wanted_bands);
-		num++;
-	}
+	pfd.fd = fd->fd;
+	pfd.events = bits_to_poll_mask(fd->wanted_bands);
 
 	do {
-		ret = write(st->dev_poll.poll_fd, pfd, num * sizeof(pfd[0]));
+		ret = write(st->dev_poll.poll_fd, &pfd, sizeof(pfd));
 	} while (ret < 0 && errno == EINTR);
 
-	if (ret < 0)
-		return -1;
+	if (ret == sizeof(pfd)) {
+		fd->registered_bands = fd->wanted_bands;
+		return 0;
+	}
 
-	fd->registered_bands = fd->wanted_bands;
-
-	return 0;
+	return -1;
 }
 
 static void iv_dev_poll_deinit(struct iv_state *st)
