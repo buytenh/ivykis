@@ -162,16 +162,26 @@ int iv_fd_register_try(struct iv_fd *_fd)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
+	int orig_wanted_bands;
 	int ret;
 
 	iv_fd_register_prologue(st, fd);
 
 	recompute_wanted_flags(fd);
 
+	orig_wanted_bands = fd->wanted_bands;
+	if (!fd->wanted_bands)
+		fd->wanted_bands = MASKIN | MASKOUT;
+
 	ret = method->notify_fd_sync(st, fd);
 	if (ret) {
 		fd->registered = 0;
 		return ret;
+	}
+
+	if (!orig_wanted_bands) {
+		fd->wanted_bands = 0;
+		method->notify_fd(st, fd);
 	}
 
 	iv_fd_register_epilogue(st, fd);
