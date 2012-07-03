@@ -49,7 +49,6 @@ struct work_pool_priv {
 struct work_pool_thread {
 	struct work_pool_priv	*pool;
 	struct iv_list_head	list;
-	int			kicked;
 	struct iv_event		kick;
 	struct iv_timer		idle_timer;
 };
@@ -60,7 +59,7 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
 
-	if (thr->kicked)
+	if (iv_event_is_active(&thr->kick))
 		iv_fatal("__iv_work_thread_die: called on kicked thread");
 
 	if (!iv_list_empty(&thr->list))
@@ -85,8 +84,6 @@ static void iv_work_thread_got_event(void *_thr)
 	uint32_t last_seq;
 
 	mutex_lock(&pool->lock);
-
-	thr->kicked = 0;
 
 	if (!iv_list_empty(&thr->list)) {
 		iv_list_del_init(&thr->list);
@@ -145,7 +142,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 
 	mutex_lock(&pool->lock);
 	
-	if (thr->kicked) {
+	if (iv_event_is_active(&thr->kick)) {
 		thr->idle_timer.expires = iv_now;
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
@@ -165,8 +162,6 @@ static void iv_work_thread(void *_thr)
 	iv_init();
 
 	INIT_IV_LIST_HEAD(&thr->list);
-
-	thr->kicked = 0;
 
 	IV_EVENT_INIT(&thr->kick);
 	thr->kick.cookie = thr;
@@ -322,7 +317,6 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 
 		thr = iv_container_of(pool->idle_threads.next,
 				      struct work_pool_thread, list);
-		thr->kicked = 1;
 		iv_event_post(&thr->kick);
 	} else if (pool->started_threads < this->max_threads) {
 		iv_work_start_thread(pool);
