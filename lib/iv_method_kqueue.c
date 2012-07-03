@@ -160,6 +160,14 @@ static void iv_kqueue_poll(struct iv_state *st,
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
 
+		if (batch[i].flags & EV_ERROR) {
+			int err = batch[i].data;
+			int fd = batch[i].ident;
+
+			iv_fatal("iv_kqueue_poll: got error %d[%s] "
+				 "polling fd %d", err, strerror(err), fd);
+		}
+
 		fd = (void *)batch[i].udata;
 		if (batch[i].filter == EVFILT_READ) {
 			iv_fd_make_ready(active, fd, MASKIN);
