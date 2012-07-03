@@ -51,17 +51,39 @@ struct work_pool_thread {
 	struct iv_list_head	list;
 	int			kicked;
 	struct iv_event		kick;
+	struct iv_task		work_task;
 	struct iv_timer		idle_timer;
 };
 
 
 /* worker thread ************************************************************/
+static void iv_work_thread_got_event(void *_thr)
+{
+	struct work_pool_thread *thr = _thr;
+	struct work_pool_priv *pool = thr->pool;
+
+	pthread_mutex_lock(&pool->lock);
+
+	thr->kicked = 0;
+
+	if (!iv_list_empty(&thr->list)) {
+		iv_list_del_init(&thr->list);
+		iv_task_register(&thr->work_task);
+		iv_timer_unregister(&thr->idle_timer);
+	}
+
+	pthread_mutex_unlock(&pool->lock);
+}
+
 static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
 
 	if (thr->kicked)
 		iv_fatal("__iv_work_thread_die: called on kicked thread");
+
+	if (!iv_list_empty(&thr->list))
+		iv_fatal("__iv_work_thread_die: thread still on list");
 
 	iv_event_unregister(&thr->kick);
 	free(thr);
@@ -75,20 +97,13 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 		iv_event_post(&pool->ev);
 }
 
-static void iv_work_thread_got_event(void *_thr)
+static void iv_work_thread_do_work(void *_thr)
 {
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
 	uint32_t last_seq;
 
 	pthread_mutex_lock(&pool->lock);
-
-	thr->kicked = 0;
-
-	if (!iv_list_empty(&thr->list)) {
-		iv_list_del_init(&thr->list);
-		iv_timer_unregister(&thr->idle_timer);
-	}
 
 	last_seq = pool->seq_tail;
 	while ((int32_t)(last_seq - pool->seq_head) > 0) {
@@ -126,10 +141,10 @@ static void iv_work_thread_got_event(void *_thr)
 		 * more work arrived, then there may have been no
 		 * kick sent for the new work item(s) (and no new
 		 * pool thread started either), so if we're leaving
-		 * with work items still pending, kick ourselves by
-		 * hand, to make sure we don't deadlock.
+		 * with work items still pending, make sure we get
+		 * called again, so that we don't deadlock.
 		 */
-		iv_event_post(&thr->kick);
+		iv_task_register(&thr->work_task);
 	}
 
 	pthread_mutex_unlock(&pool->lock);
@@ -146,14 +161,10 @@ static void iv_work_thread_idle_timeout(void *_thr)
 		thr->idle_timer.expires = iv_now;
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
-
-		pthread_mutex_unlock(&pool->lock);
-
-		return;
+	} else {
+		iv_list_del(&thr->list);
+		__iv_work_thread_die(thr);
 	}
-
-	iv_list_del(&thr->list);
-	__iv_work_thread_die(thr);
 
 	pthread_mutex_unlock(&pool->lock);
 }
@@ -174,14 +185,17 @@ static void iv_work_thread(void *_thr)
 	thr->kick.handler = iv_work_thread_got_event;
 	iv_event_register(&thr->kick);
 
+	IV_TASK_INIT(&thr->work_task);
+	thr->work_task.cookie = thr;
+	thr->work_task.handler = iv_work_thread_do_work;
+	iv_task_register(&thr->work_task);
+
 	IV_TIMER_INIT(&thr->idle_timer);
 	thr->idle_timer.cookie = thr;
 	thr->idle_timer.handler = iv_work_thread_idle_timeout;
 
 	if (pool->thread_start != NULL)
 		pool->thread_start(pool->cookie);
-
-	iv_event_post(&thr->kick);
 
 	iv_main();
 
