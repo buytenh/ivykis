@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_event 3 2010-09-03 "ivykis" "ivykis programmer's manual"
 .SH NAME
-IV_EVENT_INIT, iv_event_register, iv_event_unregister, iv_event_post \- manage ivykis objects for event notification
+IV_EVENT_INIT, iv_event_register, iv_event_unregister, iv_event_post, iv_event_is_active \- manage ivykis objects for event notification
 .SH SYNOPSIS
 .B #include <iv_event.h>
 .sp
@@ -23,6 +23,8 @@ struct iv_event {
 .BI "void iv_event_unregister(struct iv_event *" this ");"
 .br
 .BI "void iv_event_post(struct iv_event *" this ");"
+.br
+.BI "int iv_event_is_active(struct iv_event *" this ");"
 .br
 .SH DESCRIPTION
 .B iv_event
@@ -61,6 +63,17 @@ object, call
 from the same thread that
 .B iv_event_register
 was called from on that object.
+.PP
+The return value of
+.B iv_event_is_active
+indicates whether a
+.B struct iv_event
+is currently scheduled for execution.  Note that this primitive is
+racy unless you take additional measures to serialise calls to
+.B iv_event_is_active
+with calls to
+.B iv_event_post
+on the same object.
 .PP
 It is permitted to unregister a
 .B struct iv_event

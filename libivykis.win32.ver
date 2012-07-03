@@ -13,6 +13,7 @@ global:
 	iv_event_post;
 	iv_event_set_active;
 	iv_event_set_inactive;
+	iv_event_is_active;
 
 	# iv_event_raw
 	iv_event_raw_register;

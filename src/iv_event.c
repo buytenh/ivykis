@@ -300,3 +300,8 @@ void iv_event_set_inactive(struct iv_event *this)
 		iv_list_del_init(&this->list);
 	mutex_unlock(&tinfo->list_mutex);
 }
+
+int iv_event_is_active(struct iv_event *this)
+{
+	return !iv_list_empty(&this->list);
+}

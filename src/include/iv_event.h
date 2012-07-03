@@ -46,6 +46,7 @@ void iv_event_set_handler(struct iv_event *this, void (*handler)(void *));
 void iv_event_post(struct iv_event *this);
 void iv_event_set_active(struct iv_event *this);
 void iv_event_set_inactive(struct iv_event *this);
+int iv_event_is_active(struct iv_event *this);
 
 #ifdef __cplusplus
 }
