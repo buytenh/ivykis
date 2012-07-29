@@ -61,15 +61,34 @@ static void handler(void *cookie, int status, struct rusage *rusage)
 
 static void dosleep(int msec)
 {
-	struct timespec ts;
-	int ret;
+	struct timeval curtime;
+	struct timeval until;
 
-	ts.tv_sec = msec / 1000;
-	ts.tv_nsec = (msec % 1000) * 1000000;
+	gettimeofday(&curtime, NULL);
 
-	do {
-		ret = nanosleep(&ts, &ts);
-	} while (ret);
+	until = curtime;
+	until.tv_sec += msec / 1000;
+	until.tv_usec += (msec % 1000) * 1000;
+	if (until.tv_usec >= 1000000) {
+		until.tv_sec++;
+		until.tv_usec -= 1000000;
+	}
+
+	while (1) {
+		struct timeval tv;
+
+		tv.tv_sec = until.tv_sec - curtime.tv_sec;
+		tv.tv_usec = until.tv_usec - curtime.tv_usec;
+		if (tv.tv_usec < 0) {
+			tv.tv_sec--;
+			tv.tv_usec += 1000000;
+		}
+
+		if (tv.tv_sec < 0 || select(0, NULL, NULL, NULL, &tv) == 0)
+			break;
+
+		gettimeofday(&curtime, NULL);
+	}
 }
 
 static void thr(void *cookie)
