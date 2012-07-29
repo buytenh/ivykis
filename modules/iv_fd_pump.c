@@ -84,7 +84,7 @@ struct iv_fd_pump_buf {
 	union {
 		unsigned char	buf[0];
 		int		pfd[2];
-	};
+	} u;
 };
 
 static struct iv_fd_pump_buf *buf_alloc(void)
@@ -99,7 +99,7 @@ static struct iv_fd_pump_buf *buf_alloc(void)
 
 	buf = malloc(size);
 
-	if (buf != NULL && splice_available && pipe(buf->pfd) < 0) {
+	if (buf != NULL && splice_available && pipe(buf->u.pfd) < 0) {
 		free(buf);
 		buf = NULL;
 	}
@@ -110,8 +110,8 @@ static struct iv_fd_pump_buf *buf_alloc(void)
 static void __buf_free(struct iv_fd_pump_buf *buf)
 {
 	if (splice_available) {
-		close(buf->pfd[0]);
-		close(buf->pfd[1]);
+		close(buf->u.pfd[0]);
+		close(buf->u.pfd[1]);
 	}
 	free(buf);
 }
@@ -156,7 +156,8 @@ static void check_splice_available(void)
 		return;
 	}
 
-	ret = splice(b0->pfd[0], NULL, b1->pfd[1], NULL, 1, SPLICE_F_NONBLOCK);
+	ret = splice(b0->u.pfd[0], NULL, b1->u.pfd[1], NULL,
+		     1, SPLICE_F_NONBLOCK);
 	if (ret < 0 && errno == EAGAIN) {
 		buf_put(b1, 0);
 		buf_put(b0, 0);
@@ -253,10 +254,10 @@ static int iv_fd_pump_try_input(struct iv_fd_pump *ip)
 
 	do {
 		if (!splice_available) {
-			ret = read(ip->from_fd, buf->buf + ip->bytes,
+			ret = read(ip->from_fd, buf->u.buf + ip->bytes,
 				   BUF_SIZE - ip->bytes);
 		} else {
-			ret = splice(ip->from_fd, NULL, buf->pfd[1], NULL,
+			ret = splice(ip->from_fd, NULL, buf->u.pfd[1], NULL,
 				     1048576, SPLICE_F_NONBLOCK);
 		}
 	} while (ret < 0 && errno == EINTR);
@@ -300,9 +301,9 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 
 	do {
 		if (!splice_available) {
-			ret = write(ip->to_fd, buf->buf, ip->bytes);
+			ret = write(ip->to_fd, buf->u.buf, ip->bytes);
 		} else {
-			ret = splice(buf->pfd[0], NULL, ip->to_fd, NULL,
+			ret = splice(buf->u.pfd[0], NULL, ip->to_fd, NULL,
 				     ip->bytes, 0);
 		}
 	} while (ret < 0 && errno == EINTR);
@@ -314,7 +315,7 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 
 	ip->bytes -= ret;
 	if (!splice_available)
-		memmove(buf->buf, buf->buf + ret, ip->bytes);
+		memmove(buf->u.buf, buf->u.buf + ret, ip->bytes);
 
 	if (!ip->bytes && ip->saw_fin == 1) {
 		if (ip->flags & IV_FD_PUMP_FLAG_RELAY_EOF)

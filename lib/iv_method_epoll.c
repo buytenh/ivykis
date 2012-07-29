@@ -30,12 +30,12 @@ static int iv_epoll_init(struct iv_state *st)
 	int fd;
 	int flags;
 
-	INIT_IV_LIST_HEAD(&st->epoll.notify);
+	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
 
 #ifdef HAVE_EPOLL_CREATE1
 	fd = epoll_create1(EPOLL_CLOEXEC);
 	if (fd >= 0) {
-		st->epoll.epoll_fd = fd;
+		st->u.epoll.epoll_fd = fd;
 		return 0;
 	} else if (errno != ENOSYS) {
 		return -1;
@@ -52,7 +52,7 @@ static int iv_epoll_init(struct iv_state *st)
 		fcntl(fd, F_SETFD, flags);
 	}
 
-	st->epoll.epoll_fd = fd;
+	st->u.epoll.epoll_fd = fd;
 
 	return 0;
 }
@@ -91,7 +91,7 @@ static int __iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 	event.data.ptr = fd;
 	event.events = bits_to_poll_mask(fd->wanted_bands);
 	do {
-		ret = epoll_ctl(st->epoll.epoll_fd, op, fd->fd, &event);
+		ret = epoll_ctl(st->u.epoll.epoll_fd, op, fd->fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret == 0)
@@ -110,10 +110,10 @@ static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_epoll_flush_pending(struct iv_state *st)
 {
-	while (!iv_list_empty(&st->epoll.notify)) {
+	while (!iv_list_empty(&st->u.epoll.notify)) {
 		struct iv_fd_ *fd;
 
-		fd = iv_list_entry(st->epoll.notify.next,
+		fd = iv_list_entry(st->u.epoll.notify.next,
 				   struct iv_fd_, list_notify);
 
 		iv_epoll_flush_one(st, fd);
@@ -132,7 +132,7 @@ static void iv_epoll_poll(struct iv_state *st,
 
 	msec = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
-	ret = epoll_wait(st->epoll.epoll_fd, batch, st->numfds ? : 1, msec);
+	ret = epoll_wait(st->u.epoll.epoll_fd, batch, st->numfds ? : 1, msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -169,7 +169,7 @@ static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		iv_list_add_tail(&fd->list_notify, &st->epoll.notify);
+		iv_list_add_tail(&fd->list_notify, &st->u.epoll.notify);
 }
 
 static int iv_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
@@ -179,7 +179,7 @@ static int iv_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_epoll_deinit(struct iv_state *st)
 {
-	close(st->epoll.epoll_fd);
+	close(st->u.epoll.epoll_fd);
 }
 
 

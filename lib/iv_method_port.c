@@ -34,9 +34,9 @@ static int iv_port_init(struct iv_state *st)
 	if (fd < 0)
 		return -1;
 
-	st->port.port_fd = fd;
+	st->u.port.port_fd = fd;
 
-	INIT_IV_LIST_HEAD(&st->port.notify);
+	INIT_IV_LIST_HEAD(&st->u.port.notify);
 
 	return 0;
 }
@@ -60,11 +60,13 @@ static int __iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 
 	iv_list_del_init(&fd->list_notify);
 
-	if (fd->wanted_bands)
-		ret = port_associate(st->port.port_fd, PORT_SOURCE_FD, fd->fd,
+	if (fd->wanted_bands) {
+		ret = port_associate(st->u.port.port_fd, PORT_SOURCE_FD, fd->fd,
 				     bits_to_poll_mask(fd->wanted_bands), fd);
-	else
-		ret = port_dissociate(st->port.port_fd, PORT_SOURCE_FD, fd->fd);
+	} else {
+		ret = port_dissociate(st->u.port.port_fd, PORT_SOURCE_FD,
+				      fd->fd);
+	}
 
 	if (ret == 0)
 		fd->registered_bands = fd->wanted_bands;
@@ -82,10 +84,10 @@ static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_port_upload(struct iv_state *st)
 {
-	while (!iv_list_empty(&st->port.notify)) {
+	while (!iv_list_empty(&st->u.port.notify)) {
 		struct iv_fd_ *fd;
 
-		fd = iv_list_entry(st->port.notify.next,
+		fd = iv_list_entry(st->u.port.notify.next,
 				   struct iv_fd_, list_notify);
 
 		iv_port_upload_one(st, fd);
@@ -104,7 +106,7 @@ static void iv_port_poll(struct iv_state *st,
 
 poll_more:
 	nget = 1;
-	ret = port_getn(st->port.port_fd, pe, PORTEV_NUM, &nget, to);
+	ret = port_getn(st->u.port.port_fd, pe, PORTEV_NUM, &nget, to);
 	if (ret < 0) {
 		if (errno == EINTR || errno == ETIME)
 			return;
@@ -130,7 +132,7 @@ poll_more:
 		iv_list_del_init(&fd->list_notify);
 
 		if (fd->wanted_bands)
-			iv_list_add_tail(&fd->list_notify, &st->port.notify);
+			iv_list_add_tail(&fd->list_notify, &st->u.port.notify);
 	}
 
 	if (nget == PORTEV_NUM) {
@@ -150,7 +152,7 @@ static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		iv_list_add_tail(&fd->list_notify, &st->port.notify);
+		iv_list_add_tail(&fd->list_notify, &st->u.port.notify);
 }
 
 static int iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
@@ -160,7 +162,7 @@ static int iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_port_deinit(struct iv_state *st)
 {
-	close(st->port.port_fd);
+	close(st->u.port.port_fd);
 }
 
 

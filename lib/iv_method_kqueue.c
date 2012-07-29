@@ -44,8 +44,8 @@ static int iv_kqueue_init(struct iv_state *st)
 		fcntl(kqueue_fd, F_SETFD, flags);
 	}
 
-	st->kqueue.kqueue_fd = kqueue_fd;
-	INIT_IV_LIST_HEAD(&st->kqueue.notify);
+	st->u.kqueue.kqueue_fd = kqueue_fd;
+	INIT_IV_LIST_HEAD(&st->u.kqueue.notify);
 
 	return 0;
 }
@@ -103,13 +103,13 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 {
 	*num = 0;
 
-	while (!iv_list_empty(&st->kqueue.notify)) {
+	while (!iv_list_empty(&st->u.kqueue.notify)) {
 		struct iv_fd_ *fd;
 
 		if (*num > size - 2) {
 			int ret;
 
-			ret = kevent_retry(st->kqueue.kqueue_fd, kev, *num);
+			ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, *num);
 			if (ret < 0) {
 				iv_fatal("iv_kqueue_upload: got error %d[%s]",
 					 errno, strerror(errno));
@@ -118,7 +118,7 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 			*num = 0;
 		}
 
-		fd = iv_list_entry(st->kqueue.notify.next,
+		fd = iv_list_entry(st->u.kqueue.notify.next,
 				   struct iv_fd_, list_notify);
 
 		iv_kqueue_queue_one(kev, num, fd);
@@ -147,7 +147,7 @@ static void iv_kqueue_poll(struct iv_state *st,
 	for (i = 0; i < (st->numfds ? : 1); i++)
 		batch[i].udata = 0;
 
-	ret = kevent(st->kqueue.kqueue_fd, kev, num,
+	ret = kevent(st->u.kqueue.kqueue_fd, kev, num,
 		     batch, st->numfds ? : 1, to);
 	if (ret < 0) {
 		if (errno == EINTR)
@@ -190,7 +190,7 @@ static void iv_kqueue_upload_all(struct iv_state *st)
 	if (num) {
 		int ret;
 
-		ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
+		ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
 		if (ret < 0) {
 			iv_fatal("iv_kqueue_upload_all: got error %d[%s]",
 				 errno, strerror(errno));
@@ -208,7 +208,7 @@ static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		iv_list_add_tail(&fd->list_notify, &st->kqueue.notify);
+		iv_list_add_tail(&fd->list_notify, &st->u.kqueue.notify);
 }
 
 static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
@@ -219,7 +219,7 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 	iv_kqueue_queue_one(kev, &num, fd);
 
-	ret = kevent_retry(st->kqueue.kqueue_fd, kev, num);
+	ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
 	if (ret == 0)
 		fd->registered_bands = fd->wanted_bands;
 
@@ -228,7 +228,7 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_kqueue_deinit(struct iv_state *st)
 {
-	close(st->kqueue.kqueue_fd);
+	close(st->u.kqueue.kqueue_fd);
 }
 
 

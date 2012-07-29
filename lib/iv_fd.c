@@ -33,7 +33,7 @@ struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 	while (an != NULL) {
 		struct iv_fd_ *p;
 
-		p = iv_container_of(an, struct iv_fd_, avl_node);
+		p = iv_container_of(an, struct iv_fd_, u.avl_node);
 		if (fd == p->fd)
 			return p;
 
@@ -48,8 +48,8 @@ struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
 {
-	struct iv_fd_ *a = iv_container_of(_a, struct iv_fd_, avl_node);
-	struct iv_fd_ *b = iv_container_of(_b, struct iv_fd_, avl_node);
+	struct iv_fd_ *a = iv_container_of(_a, struct iv_fd_, u.avl_node);
+	struct iv_fd_ *b = iv_container_of(_b, struct iv_fd_, u.avl_node);
 
 	if (a->fd < b->fd)
 		return -1;

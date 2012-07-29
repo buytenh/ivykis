@@ -59,16 +59,12 @@ void iv_invalidate_now(void);
  * File descriptor handling.
  */
 struct iv_fd {
-	union {
-		struct {
-			int	fd;
-			void	*cookie;
-			void	(*handler_in)(void *);
-			void	(*handler_out)(void *);
-			void	(*handler_err)(void *);
-		};
-		void	*pad[16];
-	};
+	int	fd;
+	void	*cookie;
+	void	(*handler_in)(void *);
+	void	(*handler_out)(void *);
+	void	(*handler_err)(void *);
+	void	*pad[11];
 };
 
 void IV_FD_INIT(struct iv_fd *);
@@ -85,13 +81,9 @@ void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
  * Task handling.
  */
 struct iv_task {
-	union {
-		struct {
-			void	*cookie;
-			void	(*handler)(void *);
-		};
-		void	*pad[8];
-	};
+	void	*cookie;
+	void	(*handler)(void *);
+	void	*pad[6];
 };
 
 void IV_TASK_INIT(struct iv_task *);
@@ -104,14 +96,10 @@ int iv_task_registered(struct iv_task *);
  * Timer handling.
  */
 struct iv_timer {
-	union {
-		struct {
-			struct timespec	expires;
-			void		*cookie;
-			void		(*handler)(void *);
-		};
-		void	*pad[8];
-	};
+	struct timespec	expires;
+	void		*cookie;
+	void		(*handler)(void *);
+	void		*pad[4];
 };
 
 void IV_TIMER_INIT(struct iv_timer *);

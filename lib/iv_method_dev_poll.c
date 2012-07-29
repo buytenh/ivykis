@@ -38,9 +38,9 @@ static int iv_dev_poll_init(struct iv_state *st)
 	if (poll_fd < 0)
 		return -1;
 
-	INIT_IV_AVL_TREE(&st->dev_poll.fds, iv_fd_avl_compare);
-	st->dev_poll.poll_fd = poll_fd;
-	INIT_IV_LIST_HEAD(&st->dev_poll.notify);
+	INIT_IV_AVL_TREE(&st->u.dev_poll.fds, iv_fd_avl_compare);
+	st->u.dev_poll.poll_fd = poll_fd;
+	INIT_IV_LIST_HEAD(&st->u.dev_poll.notify);
 
 	return 0;
 }
@@ -83,10 +83,10 @@ static void iv_dev_poll_flush_pending(struct iv_state *st)
 	struct pollfd pfd[UPLOAD_BATCH];
 	int num;
 
-	poll_fd = st->dev_poll.poll_fd;
+	poll_fd = st->u.dev_poll.poll_fd;
 	num = 0;
 
-	while (!iv_list_empty(&st->dev_poll.notify)) {
+	while (!iv_list_empty(&st->u.dev_poll.notify)) {
 		struct iv_list_head *ilh;
 		struct iv_fd_ *fd;
 
@@ -95,7 +95,7 @@ static void iv_dev_poll_flush_pending(struct iv_state *st)
 			num = 0;
 		}
 
-		ilh = st->dev_poll.notify.next;
+		ilh = st->u.dev_poll.notify.next;
 		iv_list_del_init(ilh);
 
 		fd = iv_list_entry(ilh, struct iv_fd_, list_notify);
@@ -133,7 +133,7 @@ static void iv_dev_poll_poll(struct iv_state *st,
 	dvp.dp_nfds = st->numfds ? : 1;
 	dvp.dp_timeout = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
-	ret = ioctl(st->dev_poll.poll_fd, DP_POLL, &dvp);
+	ret = ioctl(st->u.dev_poll.poll_fd, DP_POLL, &dvp);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
@@ -146,7 +146,7 @@ static void iv_dev_poll_poll(struct iv_state *st,
 		struct iv_fd_ *fd;
 		int revents;
 
-		fd = iv_fd_avl_find(&st->dev_poll.fds, batch[i].fd);
+		fd = iv_fd_avl_find(&st->u.dev_poll.fds, batch[i].fd);
 		if (fd == NULL) {
 			iv_fatal("iv_dev_poll_poll: got event for "
 				 "unknown fd %d", batch[i].fd);
@@ -169,7 +169,7 @@ static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
-	ret = iv_avl_tree_insert(&st->dev_poll.fds, &fd->avl_node);
+	ret = iv_avl_tree_insert(&st->u.dev_poll.fds, &fd->u.avl_node);
 	if (ret) {
 		iv_fatal("iv_dev_poll_register_fd: got error %d[%s]",
 			 ret, strerror(ret));
@@ -178,7 +178,7 @@ static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	iv_avl_tree_delete(&st->dev_poll.fds, &fd->avl_node);
+	iv_avl_tree_delete(&st->u.dev_poll.fds, &fd->u.avl_node);
 
 	if (!iv_list_empty(&fd->list_notify))
 		iv_dev_poll_flush_pending(st);
@@ -188,7 +188,7 @@ static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
-		iv_list_add_tail(&fd->list_notify, &st->dev_poll.notify);
+		iv_list_add_tail(&fd->list_notify, &st->u.dev_poll.notify);
 }
 
 static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
@@ -200,7 +200,7 @@ static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	pfd.events = bits_to_poll_mask(fd->wanted_bands);
 
 	do {
-		ret = write(st->dev_poll.poll_fd, &pfd, sizeof(pfd));
+		ret = write(st->u.dev_poll.poll_fd, &pfd, sizeof(pfd));
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret == sizeof(pfd)) {
@@ -213,7 +213,7 @@ static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_dev_poll_deinit(struct iv_state *st)
 {
-	close(st->dev_poll.poll_fd);
+	close(st->u.dev_poll.poll_fd);
 }
 
 

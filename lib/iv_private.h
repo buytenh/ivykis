@@ -75,7 +75,7 @@ struct iv_state {
 		struct {
 			struct pollfd		*pfds;
 			struct iv_fd_		**fds;
-			int			num_registered_fds;
+			int			num_regd_fds;
 		} poll;
 #endif
 
@@ -95,7 +95,7 @@ struct iv_state {
 			int			fd_max;
 		} select;
 #endif
-	};
+	} u;
 };
 
 #ifdef HAVE_THREAD
@@ -189,7 +189,7 @@ struct iv_fd_ {
 #ifdef HAVE_POLL
 		int			index;
 #endif
-	};
+	} u;
 };
 
 struct iv_task_ {
