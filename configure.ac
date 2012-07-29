@@ -185,8 +185,22 @@ AC_CACHE_CHECK(whether $LD supports symbol version scripts,
 LDFLAGS=$ac_save_LDFLAGS
 AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
 
-# Check for -pthread.
+# Check for -Wall.
 ac_c_werror_flag=yes
+ac_save_CFLAGS=$CFLAGS
+AC_CACHE_CHECK(whether $CC accepts -Wall, ac_cv_prog_cc_wall,
+	[ac_cv_prog_cc_wall=no
+	 CFLAGS="-Wall"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()], [ac_cv_prog_cc_wall=yes], [])
+	])
+if test $ac_cv_prog_cc_wall = yes
+then
+	CFLAGS="$ac_save_CFLAGS -Wall"
+else
+	CFLAGS=$ac_save_CFLAGS
+fi
+
+# Check for -pthread.
 ac_save_CFLAGS=$CFLAGS
 AC_CACHE_CHECK(whether $CC accepts -pthread, ac_cv_prog_cc_pthread,
 	[ac_cv_prog_cc_pthread=no

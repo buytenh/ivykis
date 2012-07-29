@@ -2,8 +2,6 @@ SUBDIRS = . man3
 
 AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include -I$(top_builddir)/lib/include
 
-AM_CFLAGS		= -Wall
-
 noinst_LTLIBRARIES	= libivykis.la
 
 if HAVE_DEV_POLL
