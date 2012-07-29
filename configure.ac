@@ -156,8 +156,11 @@ fi
 
 # Check for __thread.
 AC_MSG_CHECKING([for working __thread])
-case $host_os in
+case $host_os-$host_cpu in
 netbsd*)
+	AC_MSG_RESULT([no])
+	;;
+solaris*-sparc)
 	AC_MSG_RESULT([no])
 	;;
 *)
