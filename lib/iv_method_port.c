@@ -97,7 +97,7 @@ static void iv_port_upload(struct iv_state *st)
 static void iv_port_poll(struct iv_state *st,
 			 struct iv_list_head *active, struct timespec *to)
 {
-	int nget;
+	unsigned int nget;
 	port_event_t pe[PORTEV_NUM];
 	int ret;
 	int i;
