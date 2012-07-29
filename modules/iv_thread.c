@@ -27,14 +27,14 @@
 #include <pthread.h>
 #include <string.h>
 
-/* gettid *******************************************************************/
+/* thread ID ****************************************************************/
 #ifdef __FreeBSD__
 /* Older FreeBSDs (6.1) don't include ucontext.h in thr.h.  */
 #include <sys/ucontext.h>
 #include <sys/thr.h>
 #endif
 
-static pid_t gettid(void)
+static pid_t get_thread_id(void)
 {
 	pid_t tid;
 
@@ -118,7 +118,7 @@ static void *iv_thread_handler(void *_thr)
 {
 	struct iv_thread *thr = _thr;
 
-	thr->tid = gettid();
+	thr->tid = get_thread_id();
 
 	pthread_cleanup_push(iv_thread_cleanup_handler, thr);
 	thr->start_routine(thr->arg);
@@ -206,7 +206,7 @@ void iv_thread_list_children(void)
 	struct iv_list_head *ilh;
 
 	fprintf(stderr, "tid\tname\n");
-	fprintf(stderr, "%d\tself\n", (int)gettid());
+	fprintf(stderr, "%d\tself\n", (int)get_thread_id());
 
 	iv_list_for_each (ilh, &tinfo->child_threads) {
 		struct iv_thread *thr;
