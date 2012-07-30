@@ -157,6 +157,9 @@ fi
 # Check for __thread.
 AC_MSG_CHECKING([for working __thread])
 case $host_os-$host_cpu in
+aix5.*)
+	AC_MSG_RESULT([no])
+	;;
 netbsd*)
 	AC_MSG_RESULT([no])
 	;;
