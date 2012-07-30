@@ -123,6 +123,8 @@ esac
 case $host_os in
 aix5.*)
 	;;
+solaris*)
+	;;
 *)
 	AC_CHECK_FUNCS([wait4])
 	;;
