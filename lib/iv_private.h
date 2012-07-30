@@ -112,7 +112,7 @@ extern pthread_key_t iv_state_key;
 
 static inline struct iv_state *iv_get_state(void)
 {
-        return pthread_getspecific(iv_state_key);
+	return pthread_getspecific(iv_state_key);
 }
 #endif
 
@@ -172,7 +172,7 @@ struct iv_fd_ {
 	/*
 	 * ->list_notify is used by poll methods that defer updating
 	 * kernel registrations to ->poll() time.
-         */
+	 */
 	struct iv_list_head	list_notify;
 #endif
 
