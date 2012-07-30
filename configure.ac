@@ -22,33 +22,43 @@ LT_INIT
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
-# Checks for libraries.
-AC_SEARCH_LIBS([clock_gettime], [rt])
-AC_SEARCH_LIBS([inet_ntop], [nsl])
-AC_SEARCH_LIBS([pthread_atfork], [pthread thread], [],
-	AC_MSG_ERROR(pthreads support is required to build ivykis.))
-AC_SEARCH_LIBS([pthread_create], [pthread], [],
-	AC_SEARCH_LIBS([__pthread_create], [pthread], [],
-	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
-		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
-AC_SEARCH_LIBS([socket], [socket])
-
-# Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h	\
-		  stddef.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
-		  sys/time.h sys/wait.h syslog.h unistd.h], [],
-	AC_MSG_ERROR(some required header files not installed.))
-AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/select.h])
-
-# Check for <linux/netfilter_ipv4.h> header file.
-AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
-	[ac_cv_header_linux_netfilter_ipv4_h=no
-	 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
-		#include <arpa/inet.h>
-		#include <limits.h>
-		#include <linux/netfilter_ipv4.h>
-	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
+# Check for -Wall.
+ac_save_CFLAGS=$CFLAGS
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
+AC_CACHE_CHECK(whether $CC accepts -Wall, ac_cv_prog_cc_wall,
+	[ac_cv_prog_cc_wall=no
+	 CFLAGS="-Wall"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()], [ac_cv_prog_cc_wall=yes], [])
 	])
+if test $ac_cv_prog_cc_wall = yes
+then
+	CFLAGS="$ac_save_CFLAGS -Wall"
+else
+	CFLAGS=$ac_save_CFLAGS
+fi
+ac_c_werror_flag=$ac_save_c_werror_flag
+
+# Check for __thread.
+AC_MSG_CHECKING([for working __thread])
+case $host_os-$host_cpu in
+aix*)
+	AC_MSG_RESULT([no])
+	;;
+netbsd*)
+	AC_MSG_RESULT([no])
+	;;
+solaris*-sparc)
+	AC_MSG_RESULT([no])
+	;;
+*)
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
+		[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler
+					   supports __thread.)
+		 AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no])])
+	;;
+esac
 
 # OS-specific preprocessor defines.
 case $host_os in
@@ -66,25 +76,47 @@ osf*)
 	;;
 esac
 
-# Check which header file defines 'struct timespec'.
-for hdr in sys/time.h sys/timers.h time.h pthread.h
-do
-	AC_CHECK_MEMBER(struct timespec.tv_sec,
-			[ac_cv_timespec_hdr=$hdr; break],
-			[unset ac_cv_member_struct_timespec_tv_sec],
-			[#include <$hdr>])
-done
-if test x$ac_cv_timespec_hdr = x
+# Check for pthreads support.
+ac_save_CFLAGS=$CFLAGS
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
+AC_CACHE_CHECK(whether $CC accepts -pthread, ac_cv_prog_cc_pthread,
+	[ac_cv_prog_cc_pthread=no
+	 CFLAGS="-pthread"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
+		[ac_cv_prog_cc_pthread=yes], [])
+	])
+if test $ac_cv_prog_cc_pthread = yes
 then
-	AC_MSG_ERROR(Can't find definition of struct timespec.)
+	CFLAGS="$ac_save_CFLAGS -pthread"
+else
+	CFLAGS=$ac_save_CFLAGS
 fi
-AC_SUBST(ac_cv_timespec_hdr)
+ac_c_werror_flag=$ac_save_c_werror_flag
 
-# Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_C_INLINE
-AC_TYPE_PID_T
-AC_TYPE_SIZE_T
+ac_save_CFLAGS=$CFLAGS
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
+AC_CACHE_CHECK(whether $CC accepts -pthreads, ac_cv_prog_cc_pthreads,
+	[ac_cv_prog_cc_pthreads=no
+	 CFLAGS="-pthreads"
+	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
+		[ac_cv_prog_cc_pthreads=yes], [])
+	])
+if test $ac_cv_prog_cc_pthreads = yes
+then
+	CFLAGS="$ac_save_CFLAGS -pthreads"
+else
+	CFLAGS=$ac_save_CFLAGS
+fi
+ac_c_werror_flag=$ac_save_c_werror_flag
+
+AC_SEARCH_LIBS([pthread_atfork], [pthread thread], [],
+	AC_MSG_ERROR(pthreads support is required to build ivykis.))
+AC_SEARCH_LIBS([pthread_create], [pthread], [],
+	AC_SEARCH_LIBS([__pthread_create], [pthread], [],
+	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
+		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
 
 # Check for __sync_lock_test_and_set().  We can't use AC_CHECK_FUNCS
 # for this, as autoconf will spit out a dummy definition for the
@@ -109,41 +141,40 @@ then
 		  Define to 1 if system has __sync_lock_test_and_set)
 fi
 
-# Checks for library functions.
-AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
-		select socket strdup strerror], [],
-	AC_MSG_ERROR(some required library functions not available.))
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h	\
+		  stddef.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
+		  sys/time.h sys/wait.h syslog.h unistd.h], [],
+	AC_MSG_ERROR(some required header files not installed.))
+AC_CHECK_HEADERS([sys/devpoll.h sys/eventfd.h sys/select.h])
+
+# Check for <linux/netfilter_ipv4.h> header file.
+AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
+	[ac_cv_header_linux_netfilter_ipv4_h=no
+	 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+		#include <arpa/inet.h>
+		#include <limits.h>
+		#include <linux/netfilter_ipv4.h>
+	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
+	])
+
+# Check which header file defines 'struct timespec'.
+for hdr in sys/time.h sys/timers.h time.h pthread.h
+do
+	AC_CHECK_MEMBER(struct timespec.tv_sec,
+			[ac_cv_timespec_hdr=$hdr; break],
+			[unset ac_cv_member_struct_timespec_tv_sec],
+			[#include <$hdr>])
+done
+if test x$ac_cv_timespec_hdr = x
+then
+	AC_MSG_ERROR(Can't find definition of struct timespec.)
+fi
+AC_SUBST(ac_cv_timespec_hdr)
+
+# Check for clock_gettime() and available time sources.
+AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_CHECK_FUNCS([clock_gettime])
-AC_CHECK_FUNCS([epoll_create])
-AC_CHECK_FUNCS([epoll_create1])
-AC_CHECK_FUNCS([eventfd])
-AC_CHECK_FUNCS([inotify_init])
-AC_CHECK_FUNCS([kqueue])
-AC_CHECK_FUNCS([poll])
-AC_CHECK_FUNCS([port_create])
-AC_CHECK_FUNCS([pthread_spin_lock])
-
-# Check for splice(2) on Linux.
-case $host_os in
-linux*)
-	AC_CHECK_FUNCS([splice])
-	;;
-*)
-	;;
-esac
-
-# Check for wait4(2) support.
-case $host_os in
-aix*)
-	;;
-solaris*)
-	;;
-*)
-	AC_CHECK_FUNCS([wait4])
-	;;
-esac
-
-# Check for available clock_gettime() clock sources.
 if test $ac_cv_func_clock_gettime = yes
 then
 	AC_CACHE_CHECK(for CLOCK_MONOTONIC, ac_cv_define_clock_monotonic,
@@ -177,24 +208,38 @@ then
 	fi
 fi
 
-# Check for __thread.
-AC_MSG_CHECKING([for working __thread])
-case $host_os-$host_cpu in
-aix*)
-	AC_MSG_RESULT([no])
-	;;
-netbsd*)
-	AC_MSG_RESULT([no])
-	;;
-solaris*-sparc)
-	AC_MSG_RESULT([no])
+# Checks for libraries.
+AC_SEARCH_LIBS([inet_ntop], [nsl])
+AC_SEARCH_LIBS([socket], [socket])
+
+# Checks for library functions.
+AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
+		select socket strdup strerror], [],
+	AC_MSG_ERROR(some required library functions not available.))
+AC_CHECK_FUNCS([epoll_create])
+AC_CHECK_FUNCS([epoll_create1])
+AC_CHECK_FUNCS([eventfd])
+AC_CHECK_FUNCS([inotify_init])
+AC_CHECK_FUNCS([kqueue])
+AC_CHECK_FUNCS([poll])
+AC_CHECK_FUNCS([port_create])
+AC_CHECK_FUNCS([pthread_spin_lock])
+
+case $host_os in
+linux*)
+	AC_CHECK_FUNCS([splice])
 	;;
 *)
-	AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
-		[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler
-					   supports __thread.)
-		 AC_MSG_RESULT([yes])],
-		[AC_MSG_RESULT([no])])
+	;;
+esac
+
+case $host_os in
+aix*)
+	;;
+solaris*)
+	;;
+*)
+	AC_CHECK_FUNCS([wait4])
 	;;
 esac
 
@@ -209,52 +254,7 @@ AC_CACHE_CHECK(whether $LD supports symbol version scripts,
 		[ac_cv_prog_ld_version_script=yes], [])
 	])
 LDFLAGS=$ac_save_LDFLAGS
-AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
 
-# Check for -Wall.
-ac_c_werror_flag=yes
-ac_save_CFLAGS=$CFLAGS
-AC_CACHE_CHECK(whether $CC accepts -Wall, ac_cv_prog_cc_wall,
-	[ac_cv_prog_cc_wall=no
-	 CFLAGS="-Wall"
-	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()], [ac_cv_prog_cc_wall=yes], [])
-	])
-if test $ac_cv_prog_cc_wall = yes
-then
-	CFLAGS="$ac_save_CFLAGS -Wall"
-else
-	CFLAGS=$ac_save_CFLAGS
-fi
-
-# Check for -pthread.
-ac_save_CFLAGS=$CFLAGS
-AC_CACHE_CHECK(whether $CC accepts -pthread, ac_cv_prog_cc_pthread,
-	[ac_cv_prog_cc_pthread=no
-	 CFLAGS="-pthread"
-	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
-		[ac_cv_prog_cc_pthread=yes], [])
-	])
-if test $ac_cv_prog_cc_pthread = yes
-then
-	CFLAGS="$ac_save_CFLAGS -pthread"
-else
-	CFLAGS=$ac_save_CFLAGS
-fi
-
-# Check for -pthreads.
-ac_save_CFLAGS=$CFLAGS
-AC_CACHE_CHECK(whether $CC accepts -pthreads, ac_cv_prog_cc_pthreads,
-	[ac_cv_prog_cc_pthreads=no
-	 CFLAGS="-pthreads"
-	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],
-		[ac_cv_prog_cc_pthreads=yes], [])
-	])
-if test $ac_cv_prog_cc_pthreads = yes
-then
-	CFLAGS="$ac_save_CFLAGS -pthreads"
-else
-	CFLAGS=$ac_save_CFLAGS
-fi
 
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
@@ -273,6 +273,7 @@ AM_CONDITIONAL([NEED_SELECT],
 AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
+AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
