@@ -4,6 +4,19 @@ AC_CONFIG_SRCDIR([lib/iv_main.c])
 AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
 
+# On AIX 7.1, prevent AC_PROG_CC from adding -g to CFLAGS, as that
+# leads to the following linker error: "The symbol refers to a csect
+# with symbol number 0, which was not found. The new symbol cannot
+# be associated with a csect and is being ignored."
+AC_CANONICAL_HOST
+case $host_os in
+aix7.*)
+	ac_cv_prog_cc_g=no 
+	;;
+*)
+	;;
+esac
+
 # Checks for programs.
 LT_INIT
 AC_PROG_CC
@@ -121,7 +134,7 @@ esac
 
 # Check for wait4(2) support.
 case $host_os in
-aix5.*)
+aix*)
 	;;
 solaris*)
 	;;
@@ -167,7 +180,7 @@ fi
 # Check for __thread.
 AC_MSG_CHECKING([for working __thread])
 case $host_os-$host_cpu in
-aix5.*)
+aix*)
 	AC_MSG_RESULT([no])
 	;;
 netbsd*)
