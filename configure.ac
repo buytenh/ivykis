@@ -4,10 +4,12 @@ AC_CONFIG_SRCDIR([lib/iv_main.c])
 AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
 
+#
 # On AIX 7.1, prevent AC_PROG_CC from adding -g to CFLAGS, as that
 # leads to the following linker error: "The symbol refers to a csect
 # with symbol number 0, which was not found. The new symbol cannot
 # be associated with a csect and is being ignored."
+#
 AC_CANONICAL_HOST
 case $host_os in
 aix7.*)
@@ -43,12 +45,26 @@ ac_c_werror_flag=$ac_save_c_werror_flag
 AC_MSG_CHECKING([for working __thread])
 case $host_os-$host_cpu in
 aix*)
+	#
+	# On at least AIX 5.1 and 7.1, __thread seems to be silently
+	# ignored, and different threads get the same storage location
+	# for __thread variables.
+	#
 	AC_MSG_RESULT([no])
 	;;
 netbsd*)
+	#
+	# Unspecified brokenness on NetBSD 5.1.
+	#
 	AC_MSG_RESULT([no])
 	;;
 solaris*-sparc)
+	#
+	# On at least Solaris 10 for SPARC, use of __thread produces
+	# the following linker error: "ld: fatal: relocation error:
+	# R_SPARC_TLS_DTPOFF32: file lib/.libs/libivykis.a(iv_main.o):
+	# symbol __st: offset 0xfeee01e5 is non-aligned".
+	#
 	AC_MSG_RESULT([no])
 	;;
 *)
@@ -63,20 +79,32 @@ esac
 # OS-specific preprocessor defines.
 case $host_os in
 hpux*)
+	#
 	# On HP-UX, we need -D_XOPEN_SOURCE=500 so that the
 	# Berkeley socket API uses 'socklen_t' instead of int.
+	#
 	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"
 	;;
 
 osf*)
+	#
 	# On Tru64, we need -D_BSD to get a definition for 'union
 	# wait', and -D_POSIX_PII_SOCKET so that sys/socket.h defines
 	# 'socklen_t'.
+	#
 	CFLAGS="$CFLAGS -D_BSD -D_POSIX_PII_SOCKET"
 	;;
 esac
 
+#
 # Check for pthreads support.
+#
+# At least Tru64 needs -pthread, to avoid the following error when
+# including pthread.h:
+#
+#	pthread.h:339:4: error: #error "Please compile the module
+#	including pthread.h with -pthread"
+#
 ac_save_CFLAGS=$CFLAGS
 ac_save_c_werror_flag=$ac_c_werror_flag
 ac_c_werror_flag=yes
@@ -94,6 +122,10 @@ else
 fi
 ac_c_werror_flag=$ac_save_c_werror_flag
 
+#
+# At least Solaris 11 for x86 needs building with -pthreads to
+# avoid run-time breakage in multithreaded applications.
+#
 ac_save_CFLAGS=$CFLAGS
 ac_save_c_werror_flag=$ac_c_werror_flag
 ac_c_werror_flag=yes
@@ -111,6 +143,42 @@ else
 fi
 ac_c_werror_flag=$ac_save_c_werror_flag
 
+#
+# On Linux, linking against libpthread.so.0 doesn't give you
+# pthread_atfork(), as the latter is defined in libpthread_nonshared.a,
+# which doesn't get pulled in if libpthread.so.0 is pulled in
+# indirectly, e.g. via -lrt, but does get pulled in if you link against
+# -lpthread, as libpthread.so is a linker script that references both
+# libpthread.so.0 and libpthread_nonshared.a.  Therefore, we test for
+# pthread_atfork(), to make sure that libpthread.so really does get
+# pulled in explicitly via -lpthread rather than implicitly via another
+# shared library dependency.
+#
+# However, on FreeBSD, pthread_atfork() is provided by libc.so, and
+# so, testing for pthread_atfork() in AC_SEARCH_LIBS() doesn't end up
+# making the other pthreads functions available in the linking stage.
+# Additionally test for pthread_create() to handle this.
+#
+# On SCO OpenServer Release 6 and SCO UnixWare 7.1.4, the pthread
+# functions appear to live in libthread, so check for that in
+# addition to checking for libpthread.
+#
+# Tru64 uses mangled symbol names in its libpthread, and has some
+# preprocessor magic in its pthread.h to do the same mangling, and
+# so, testing for pthreads symbols without including pthread.h
+# doesn't work.  Since AC_SEARCH_LIBS() doesn't allow specifying a
+# header file to be included for tests (and on Tru64, we can't
+# include pthread.h without additionally specifying -pthread), we'll
+# check for __pthread_create if pthread_create does not exist.
+#
+# On HP-UX, libpthread uses mangled symbol names like on Tru64, but
+# what's worse, the HP-UX C library provides stub versions of almost
+# all libpthread functions that return errors instead of doing what
+# they are supposed to, and there's no way to detect this at compile
+# time.  However, there are a number of symbols in libpthread that
+# the C library doesn't define stubs for, and we can test for one of
+# those (pthread_trace_notify_np is one of those symbols).
+#
 AC_SEARCH_LIBS([pthread_atfork], [pthread thread], [],
 	AC_MSG_ERROR(pthreads support is required to build ivykis.))
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
@@ -172,7 +240,11 @@ then
 fi
 AC_SUBST(ac_cv_timespec_hdr)
 
-# Check for clock_gettime() and available time sources.
+#
+# Check for clock_gettime() and available time sources.  (We cannot
+# test for the CLOCK_* constants by using #ifdef, as they are enums
+# and not defines on at least HP-UX 11.)
+#
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_CHECK_FUNCS([clock_gettime])
 if test $ac_cv_func_clock_gettime = yes
@@ -225,6 +297,10 @@ AC_CHECK_FUNCS([poll])
 AC_CHECK_FUNCS([port_create])
 AC_CHECK_FUNCS([pthread_spin_lock])
 
+#
+# Only test for splice(2) on Linux, to avoid confusing it with a
+# system function on AIX 5.1 with the same name.
+#
 case $host_os in
 linux*)
 	AC_CHECK_FUNCS([splice])
@@ -233,10 +309,22 @@ linux*)
 	;;
 esac
 
+# Check whether wait4(2) is usable.
 case $host_os in
 aix*)
+	#
+	# AIX 5.1 and 7.1 have a broken wait4(2) implementation
+	# that sometimes drops events on the floor, so use waitpid(2)
+	# instead.
+	#
 	;;
 solaris*)
+	#
+	# The Solaris version of wait4(2) interprets a pid argument
+	# of -1 as an instruction to wait for processes in process
+	# group ID 1 (instead of waiting for all processes), which
+	# is not what we want, so use waitpid(2) instead.
+	#
 	;;
 *)
 	AC_CHECK_FUNCS([wait4])
