@@ -25,16 +25,13 @@
 #include "iv_private.h"
 
 static int inited;
-static off_t last_offset;
+static off_t last_offset = (sizeof(struct iv_state) + 15) & ~15;
 static struct iv_list_head iv_tls_users = IV_LIST_HEAD_INIT(iv_tls_users);
 
 void iv_tls_user_register(struct iv_tls_user *itu)
 {
 	if (inited)
 		iv_fatal("iv_tls_user_register: called after iv_init");
-
-	if (last_offset == 0)
-		last_offset = (sizeof(struct iv_state) + 15) & ~15;
 
 	itu->state_offset = last_offset;
 	last_offset = (last_offset + itu->sizeof_state + 15) & ~15;
