@@ -176,6 +176,8 @@ int iv_fd_register_try(struct iv_fd *_fd)
 	ret = method->notify_fd_sync(st, fd);
 	if (ret) {
 		fd->registered = 0;
+		if (method->unregister_fd != NULL)
+			method->unregister_fd(st, fd);
 		return ret;
 	}
 
