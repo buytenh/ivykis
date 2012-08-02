@@ -171,7 +171,7 @@ int main()
 		do {
 			f[i]->num = random();
 			ret = iv_avl_tree_insert(&x, &f[i]->an);
-		} while (ret == -EEXIST);
+		} while (ret < 0);
 
 		if (ret) {
 			fprintf(stderr, "error %d\n", ret);

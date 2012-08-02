@@ -283,7 +283,7 @@ int iv_avl_tree_insert(struct iv_avl_tree *tree, struct iv_avl_node *an)
 		else if (ret > 0)
 			pp = &p->right;
 		else
-			return -EEXIST;
+			return -1;
 	}
 
 	/*
