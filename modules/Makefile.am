@@ -1,5 +1,3 @@
-SUBDIRS = . man3
-
 AM_CPPFLAGS		= -D_GNU_SOURCE				\
 			  -I$(top_srcdir)/lib			\
 			  -I$(top_srcdir)/lib/include		\
