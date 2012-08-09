@@ -22,9 +22,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/resource.h>
 #include "iv_private.h"
 
@@ -134,7 +132,6 @@ pthread_key_t			iv_state_key;
 #ifdef HAVE_THREAD
 __thread struct iv_state	*__st;
 #endif
-void				(*fatal_msg_handler)(const char *msg);
 
 static void __iv_deinit(struct iv_state *st)
 {
@@ -285,28 +282,4 @@ void iv_deinit(void)
 	struct iv_state *st = iv_get_state();
 
 	__iv_deinit(st);
-}
-
-void iv_fatal(const char *fmt, ...)
-{
-	va_list ap;
-	char msg[1024];
-
-	va_start(ap, fmt);
-	vsnprintf(msg, sizeof(msg), fmt, ap);
-	va_end(ap);
-
-	msg[sizeof(msg) - 1] = 0;
-
-	if (fatal_msg_handler != NULL)
-		fatal_msg_handler(msg);
-	else
-		syslog(LOG_CRIT, "%s", msg);
-
-	abort();
-}
-
-void iv_set_fatal_msg_handler(void (*handler)(const char *msg))
-{
-	fatal_msg_handler = handler;
 }

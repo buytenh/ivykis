@@ -51,6 +51,7 @@ endif
 libivykis_la_SOURCES	= iv_avl.c			\
 			  iv_event.c			\
 			  iv_event_raw.c		\
+			  iv_fatal.c			\
 			  iv_fd.c			\
 			  iv_fd_pump.c			\
 			  $(INOTIFY_SRC)		\
