@@ -369,10 +369,9 @@ AC_CONFIG_FILES([Makefile			\
 		 contrib/kojines/Makefile	\
 		 lib/Makefile			\
 		 lib/include/iv.h		\
-		 lib/test/Makefile		\
 		 man3/Makefile			\
 		 misc/Makefile			\
 		 misc/ivykis.pc			\
 		 modules/Makefile		\
-		 modules/test/Makefile])
+		 test/Makefile])
 AC_OUTPUT

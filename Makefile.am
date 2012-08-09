@@ -1,4 +1,4 @@
-SUBDIRS = lib modules . contrib lib/test man3 modules/test misc
+SUBDIRS = lib modules . contrib man3 test misc
 
 EXTRA_DIST = DEDICATION
 
