@@ -22,12 +22,12 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <iv.h>
+#include <iv_event.h>
 #include <iv_list.h>
 #include <iv_thread.h>
 #include <iv_tls.h>
 #include <iv_work.h>
 #include <pthread.h>
-#include <syslog.h>
 #include "iv_private.h"
 
 /* data structures **********************************************************/

@@ -21,8 +21,6 @@
 #ifndef __IV_THREAD_H
 #define __IV_THREAD_H
 
-#include <pthread.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

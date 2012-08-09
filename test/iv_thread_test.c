@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <iv_thread.h>
+#include <pthread.h>
 
 static void thr_return(void *cookie)
 {

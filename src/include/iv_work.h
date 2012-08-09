@@ -22,9 +22,7 @@
 #define __IV_WORK_H
 
 #include <iv.h>
-#include <iv_event.h>
 #include <iv_list.h>
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {

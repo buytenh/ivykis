@@ -23,6 +23,7 @@
 #include <iv.h>
 #include <iv_thread.h>
 #include <iv_work.h>
+#include <pthread.h>
 
 static struct iv_work_pool pool;
 static struct iv_work_item item_a;

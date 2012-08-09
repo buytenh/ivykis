@@ -25,7 +25,6 @@
 #include <iv_event_raw.h>
 #include <iv_tls.h>
 #include <pthread.h>
-#include <signal.h>
 #include "iv_private.h"
 
 struct iv_event_thr_info {

@@ -22,7 +22,6 @@
 #define __IV_TLS_H
 
 #include <iv_list.h>
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
