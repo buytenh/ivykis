@@ -1,6 +1,6 @@
 AC_PREREQ(2.59)
 AC_INIT([ivykis], [0.32], [libivykis-discuss@lists.sourceforge.net])
-AC_CONFIG_SRCDIR([lib/iv_main.c])
+AC_CONFIG_SRCDIR([src/iv_main.c])
 AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
 
@@ -367,11 +367,10 @@ AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
 		 contrib/iv_getaddrinfo/Makefile	\
 		 contrib/kojines/Makefile	\
-		 lib/Makefile			\
-		 lib/include/iv.h		\
 		 man3/Makefile			\
 		 misc/Makefile			\
 		 misc/ivykis.pc			\
-		 modules/Makefile		\
+		 src/Makefile			\
+		 src/include/iv.h		\
 		 test/Makefile])
 AC_OUTPUT

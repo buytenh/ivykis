@@ -1,4 +1,4 @@
-AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/lib/include -I$(top_builddir)/lib/include -I$(top_srcdir)/modules/include
+AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/src/include -I$(top_builddir)/src/include
 
 LDADD			= $(top_builddir)/libivykis.la
 

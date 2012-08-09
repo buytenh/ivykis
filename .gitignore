@@ -32,8 +32,8 @@ ltmain.sh
 config.h
 config.status
 config.log
-lib/include/iv.h
 misc/ivykis.pc
+src/include/iv.h
 stamp-h1
 Makefile
 
