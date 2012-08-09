@@ -5,37 +5,37 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 lib_LTLIBRARIES		= libivykis.la
 
 if HAVE_DEV_POLL
-DEV_POLL_SRC = iv_method_dev_poll.c
+DEV_POLL_SRC = iv_fd_dev_poll.c
 else
 DEV_POLL_SRC =
 endif
 
 if HAVE_EPOLL
-EPOLL_SRC = iv_method_epoll.c
+EPOLL_SRC = iv_fd_epoll.c
 else
 EPOLL_SRC =
 endif
 
 if HAVE_KQUEUE
-KQUEUE_SRC = iv_method_kqueue.c
+KQUEUE_SRC = iv_fd_kqueue.c
 else
 KQUEUE_SRC =
 endif
 
 if HAVE_POLL
-POLL_SRC = iv_method_poll.c
+POLL_SRC = iv_fd_poll.c
 else
 POLL_SRC =
 endif
 
 if HAVE_PORT
-PORT_SRC = iv_method_port.c
+PORT_SRC = iv_fd_port.c
 else
 PORT_SRC =
 endif
 
 if NEED_SELECT
-SELECT_SRC = iv_method_select.c
+SELECT_SRC = iv_fd_select.c
 else
 SELECT_SRC =
 endif
