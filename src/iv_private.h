@@ -179,8 +179,8 @@ struct iv_fd_ {
 	/*
 	 * This is for state internal to some of the poll methods:
 	 * ->avl_node is used by poll methods that maintain an
-	 * internal fd tree, and ->index is used by iv_method_poll
-	 * to maintain the index of this fd in the list of pollfds.
+	 * internal fd tree, and ->index is used by iv_fd_poll to
+	 * maintain the index of this fd in the list of pollfds.
 	 */
 	union {
 #if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
@@ -227,7 +227,7 @@ struct iv_timer_ {
 #define MASKOUT		2
 #define MASKERR		4
 
-struct iv_poll_method {
+struct iv_fd_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st);
 	void	(*poll)(struct iv_state *st, 
@@ -257,15 +257,15 @@ __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 
 /* iv_main.c */
 extern int maxfd;
-extern struct iv_poll_method *method;
+extern struct iv_fd_poll_method *method;
 
 /* poll methods */
-extern struct iv_poll_method iv_method_dev_poll;
-extern struct iv_poll_method iv_method_epoll;
-extern struct iv_poll_method iv_method_kqueue;
-extern struct iv_poll_method iv_method_poll;
-extern struct iv_poll_method iv_method_port;
-extern struct iv_poll_method iv_method_select;
+extern struct iv_fd_poll_method iv_fd_poll_method_dev_poll;
+extern struct iv_fd_poll_method iv_fd_poll_method_epoll;
+extern struct iv_fd_poll_method iv_fd_poll_method_kqueue;
+extern struct iv_fd_poll_method iv_fd_poll_method_poll;
+extern struct iv_fd_poll_method iv_fd_poll_method_port;
+extern struct iv_fd_poll_method iv_fd_poll_method_select;
 
 
 /* iv_fd.c */

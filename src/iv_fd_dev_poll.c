@@ -30,7 +30,7 @@
 
 #define UPLOAD_BATCH		1024
 
-static int iv_dev_poll_init(struct iv_state *st)
+static int iv_fd_dev_poll_init(struct iv_state *st)
 {
 	int poll_fd;
 
@@ -55,7 +55,7 @@ static void xwrite(int fd, const void *buf, size_t count)
 		} while (ret < 0 && errno == EINTR);
 
 		if (ret < 0) {
-			iv_fatal("iv_dev_poll_flush_pending: got error "
+			iv_fatal("iv_fd_dev_poll_flush_pending: got error "
 				 "%d[%s]", errno, strerror(errno));
 		}
 
@@ -77,7 +77,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_dev_poll_flush_pending(struct iv_state *st)
+static void iv_fd_dev_poll_flush_pending(struct iv_state *st)
 {
 	int poll_fd;
 	struct pollfd pfd[UPLOAD_BATCH];
@@ -119,15 +119,16 @@ static void iv_dev_poll_flush_pending(struct iv_state *st)
 		xwrite(poll_fd, pfd, num * sizeof(pfd[0]));
 }
 
-static void iv_dev_poll_poll(struct iv_state *st,
-			     struct iv_list_head *active, struct timespec *to)
+static void
+iv_fd_dev_poll_poll(struct iv_state *st,
+		    struct iv_list_head *active, struct timespec *to)
 {
 	struct pollfd batch[st->numfds ? : 1];
 	struct dvpoll dvp;
 	int ret;
 	int i;
 
-	iv_dev_poll_flush_pending(st);
+	iv_fd_dev_poll_flush_pending(st);
 
 	dvp.dp_fds = batch;
 	dvp.dp_nfds = st->numfds ? : 1;
@@ -138,7 +139,7 @@ static void iv_dev_poll_poll(struct iv_state *st,
 		if (errno == EINTR)
 			return;
 
-		iv_fatal("iv_dev_poll_poll: got error %d[%s]",
+		iv_fatal("iv_fd_dev_poll_poll: got error %d[%s]",
 			 errno, strerror(errno));
 	}
 
@@ -148,7 +149,7 @@ static void iv_dev_poll_poll(struct iv_state *st,
 
 		fd = iv_fd_avl_find(&st->u.dev_poll.fds, batch[i].fd);
 		if (fd == NULL) {
-			iv_fatal("iv_dev_poll_poll: got event for "
+			iv_fatal("iv_fd_dev_poll_poll: got event for "
 				 "unknown fd %d", batch[i].fd);
 		}
 
@@ -165,33 +166,33 @@ static void iv_dev_poll_poll(struct iv_state *st,
 	}
 }
 
-static void iv_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
 	ret = iv_avl_tree_insert(&st->u.dev_poll.fds, &fd->u.avl_node);
 	if (ret) {
-		iv_fatal("iv_dev_poll_register_fd: got error %d[%s]",
+		iv_fatal("iv_fd_dev_poll_register_fd: got error %d[%s]",
 			 ret, strerror(ret));
 	}
 }
 
-static void iv_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_dev_poll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&st->u.dev_poll.fds, &fd->u.avl_node);
 
 	if (!iv_list_empty(&fd->list_notify))
-		iv_dev_poll_flush_pending(st);
+		iv_fd_dev_poll_flush_pending(st);
 }
 
-static void iv_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_dev_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
 		iv_list_add_tail(&fd->list_notify, &st->u.dev_poll.notify);
 }
 
-static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct pollfd pfd;
 	int ret;
@@ -211,19 +212,19 @@ static int iv_dev_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	return -1;
 }
 
-static void iv_dev_poll_deinit(struct iv_state *st)
+static void iv_fd_dev_poll_deinit(struct iv_state *st)
 {
 	close(st->u.dev_poll.poll_fd);
 }
 
 
-struct iv_poll_method iv_method_dev_poll = {
+struct iv_fd_poll_method iv_fd_poll_method_dev_poll = {
 	.name		= "dev_poll",
-	.init		= iv_dev_poll_init,
-	.poll		= iv_dev_poll_poll,
-	.register_fd	= iv_dev_poll_register_fd,
-	.unregister_fd	= iv_dev_poll_unregister_fd,
-	.notify_fd	= iv_dev_poll_notify_fd,
-	.notify_fd_sync	= iv_dev_poll_notify_fd_sync,
-	.deinit		= iv_dev_poll_deinit,
+	.init		= iv_fd_dev_poll_init,
+	.poll		= iv_fd_dev_poll_poll,
+	.register_fd	= iv_fd_dev_poll_register_fd,
+	.unregister_fd	= iv_fd_dev_poll_unregister_fd,
+	.notify_fd	= iv_fd_dev_poll_notify_fd,
+	.notify_fd_sync	= iv_fd_dev_poll_notify_fd_sync,
+	.deinit		= iv_fd_dev_poll_deinit,
 };

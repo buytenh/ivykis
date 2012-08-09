@@ -25,7 +25,7 @@
 #include <sys/poll.h>
 #include "iv_private.h"
 
-static int iv_poll_init(struct iv_state *st)
+static int iv_fd_poll_init(struct iv_state *st)
 {
 	st->u.poll.pfds = malloc(maxfd * sizeof(struct pollfd));
 	if (st->u.poll.pfds == NULL)
@@ -42,8 +42,8 @@ static int iv_poll_init(struct iv_state *st)
 	return 0;
 }
 
-static void iv_poll_poll(struct iv_state *st,
-			 struct iv_list_head *active, struct timespec *to)
+static void iv_fd_poll_poll(struct iv_state *st,
+			    struct iv_list_head *active, struct timespec *to)
 {
 	int ret;
 	int i;
@@ -62,7 +62,7 @@ static void iv_poll_poll(struct iv_state *st,
 		if (errno == EINTR)
 			return;
 
-		iv_fatal("iv_poll_poll: got error %d[%s]", errno,
+		iv_fatal("iv_fd_poll_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
@@ -84,7 +84,7 @@ static void iv_poll_poll(struct iv_state *st,
 	}
 }
 
-static void iv_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	fd->u.index = -1;
 }
@@ -104,7 +104,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static void iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (fd->registered_bands == fd->wanted_bands)
 		return;
@@ -137,7 +137,7 @@ static void iv_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	fd->registered_bands = fd->wanted_bands;
 }
 
-static int iv_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct pollfd pfd;
 	int ret;
@@ -152,24 +152,24 @@ static int iv_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	if (ret < 0 || (pfd.revents & POLLNVAL))
 		return -1;
 
-	iv_poll_notify_fd(st, fd);
+	iv_fd_poll_notify_fd(st, fd);
 
 	return 0;
 }
 
-static void iv_poll_deinit(struct iv_state *st)
+static void iv_fd_poll_deinit(struct iv_state *st)
 {
 	free(st->u.poll.fds);
 	free(st->u.poll.pfds);
 }
 
 
-struct iv_poll_method iv_method_poll = {
+struct iv_fd_poll_method iv_fd_poll_method_poll = {
 	.name		= "poll",
-	.init		= iv_poll_init,
-	.poll		= iv_poll_poll,
-	.register_fd	= iv_poll_register_fd,
-	.notify_fd	= iv_poll_notify_fd,
-	.notify_fd_sync	= iv_poll_notify_fd_sync,
-	.deinit		= iv_poll_deinit,
+	.init		= iv_fd_poll_init,
+	.poll		= iv_fd_poll_poll,
+	.register_fd	= iv_fd_poll_register_fd,
+	.notify_fd	= iv_fd_poll_notify_fd,
+	.notify_fd_sync	= iv_fd_poll_notify_fd_sync,
+	.deinit		= iv_fd_poll_deinit,
 };

@@ -26,7 +26,7 @@
 
 #define PORTEV_NUM	1024
 
-static int iv_port_init(struct iv_state *st)
+static int iv_fd_port_init(struct iv_state *st)
 {
 	int fd;
 
@@ -54,7 +54,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static int __iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
+static int __iv_fd_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
@@ -74,15 +74,15 @@ static int __iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 	return ret;
 }
 
-static void iv_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_port_upload_one(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (__iv_port_upload_one(st, fd) < 0) {
-		iv_fatal("iv_port_upload_one: got error %d[%s]", errno,
+	if (__iv_fd_port_upload_one(st, fd) < 0) {
+		iv_fatal("iv_fd_port_upload_one: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 }
 
-static void iv_port_upload(struct iv_state *st)
+static void iv_fd_port_upload(struct iv_state *st)
 {
 	while (!iv_list_empty(&st->u.port.notify)) {
 		struct iv_fd_ *fd;
@@ -90,19 +90,19 @@ static void iv_port_upload(struct iv_state *st)
 		fd = iv_list_entry(st->u.port.notify.next,
 				   struct iv_fd_, list_notify);
 
-		iv_port_upload_one(st, fd);
+		iv_fd_port_upload_one(st, fd);
 	}
 }
 
-static void iv_port_poll(struct iv_state *st,
-			 struct iv_list_head *active, struct timespec *to)
+static void iv_fd_port_poll(struct iv_state *st,
+			    struct iv_list_head *active, struct timespec *to)
 {
 	unsigned int nget;
 	port_event_t pe[PORTEV_NUM];
 	int ret;
 	int i;
 
-	iv_port_upload(st);
+	iv_fd_port_upload(st);
 
 poll_more:
 	nget = 1;
@@ -111,7 +111,7 @@ poll_more:
 		if (errno == EINTR || errno == ETIME)
 			return;
 
-		iv_fatal("iv_port_poll: got error %d[%s]", errno,
+		iv_fatal("iv_fd_port_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
@@ -142,36 +142,36 @@ poll_more:
 	}
 }
 
-static void iv_port_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_port_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (!iv_list_empty(&fd->list_notify))
-		iv_port_upload_one(st, fd);
+		iv_fd_port_upload_one(st, fd);
 }
 
-static void iv_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_port_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
 		iv_list_add_tail(&fd->list_notify, &st->u.port.notify);
 }
 
-static int iv_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
-	return __iv_port_upload_one(st, fd);
+	return __iv_fd_port_upload_one(st, fd);
 }
 
-static void iv_port_deinit(struct iv_state *st)
+static void iv_fd_port_deinit(struct iv_state *st)
 {
 	close(st->u.port.port_fd);
 }
 
 
-struct iv_poll_method iv_method_port = {
+struct iv_fd_poll_method iv_fd_poll_method_port = {
 	.name		= "port",
-	.init		= iv_port_init,
-	.poll		= iv_port_poll,
-	.unregister_fd	= iv_port_unregister_fd,
-	.notify_fd	= iv_port_notify_fd,
-	.notify_fd_sync	= iv_port_notify_fd_sync,
-	.deinit		= iv_port_deinit,
+	.init		= iv_fd_port_init,
+	.poll		= iv_fd_port_poll,
+	.unregister_fd	= iv_fd_port_unregister_fd,
+	.notify_fd	= iv_fd_port_notify_fd,
+	.notify_fd_sync	= iv_fd_port_notify_fd_sync,
+	.deinit		= iv_fd_port_deinit,
 };

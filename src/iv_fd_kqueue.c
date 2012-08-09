@@ -29,7 +29,7 @@
 
 #define UPLOAD_BATCH	1024
 
-static int iv_kqueue_init(struct iv_state *st)
+static int iv_fd_kqueue_init(struct iv_state *st)
 {
 	int kqueue_fd;
 	int flags;
@@ -51,7 +51,7 @@ static int iv_kqueue_init(struct iv_state *st)
 }
 
 static void
-iv_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
+iv_fd_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 {
 	int num;
 	int wanted;
@@ -99,7 +99,7 @@ static int kevent_retry(int kq, const struct kevent *changelist, int nchanges)
 }
 
 static void
-iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
+iv_fd_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 {
 	*num = 0;
 
@@ -111,8 +111,8 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 
 			ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, *num);
 			if (ret < 0) {
-				iv_fatal("iv_kqueue_upload: got error %d[%s]",
-					 errno, strerror(errno));
+				iv_fatal("iv_fd_kqueue_upload: got error "
+					 "%d[%s]", errno, strerror(errno));
 			}
 
 			*num = 0;
@@ -121,13 +121,13 @@ iv_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 		fd = iv_list_entry(st->u.kqueue.notify.next,
 				   struct iv_fd_, list_notify);
 
-		iv_kqueue_queue_one(kev, num, fd);
+		iv_fd_kqueue_queue_one(kev, num, fd);
 		fd->registered_bands = fd->wanted_bands;
 	}
 }
 
-static void iv_kqueue_poll(struct iv_state *st,
-			   struct iv_list_head *active, struct timespec *to)
+static void iv_fd_kqueue_poll(struct iv_state *st,
+			      struct iv_list_head *active, struct timespec *to)
 {
 	struct kevent kev[UPLOAD_BATCH];
 	int num;
@@ -135,7 +135,7 @@ static void iv_kqueue_poll(struct iv_state *st,
 	int ret;
 	int i;
 
-	iv_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
+	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
 	/*
 	 * Valgrind 3.5.0 as supplied with FreeBSD 8.1-RELEASE ports
@@ -153,7 +153,7 @@ static void iv_kqueue_poll(struct iv_state *st,
 		if (errno == EINTR)
 			return;
 
-		iv_fatal("iv_kqueue_poll: got error %d[%s]", errno,
+		iv_fatal("iv_fd_kqueue_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
@@ -164,7 +164,7 @@ static void iv_kqueue_poll(struct iv_state *st,
 			int err = batch[i].data;
 			int fd = batch[i].ident;
 
-			iv_fatal("iv_kqueue_poll: got error %d[%s] "
+			iv_fatal("iv_fd_kqueue_poll: got error %d[%s] "
 				 "polling fd %d", err, strerror(err), fd);
 		}
 
@@ -174,50 +174,50 @@ static void iv_kqueue_poll(struct iv_state *st,
 		} else if (batch[i].filter == EVFILT_WRITE) {
 			iv_fd_make_ready(active, fd, MASKOUT);
 		} else {
-			iv_fatal("iv_kqueue_poll: got message from filter %d",
-				 batch[i].filter);
+			iv_fatal("iv_fd_kqueue_poll: got message from "
+				 "filter %d", batch[i].filter);
 		}
 	}
 }
 
-static void iv_kqueue_upload_all(struct iv_state *st)
+static void iv_fd_kqueue_upload_all(struct iv_state *st)
 {
 	struct kevent kev[UPLOAD_BATCH];
 	int num;
 
-	iv_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
+	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
 	if (num) {
 		int ret;
 
 		ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
 		if (ret < 0) {
-			iv_fatal("iv_kqueue_upload_all: got error %d[%s]",
+			iv_fatal("iv_fd_kqueue_upload_all: got error %d[%s]",
 				 errno, strerror(errno));
 		}
 	}
 }
 
-static void iv_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (!iv_list_empty(&fd->list_notify))
-		iv_kqueue_upload_all(st);
+		iv_fd_kqueue_upload_all(st);
 }
 
-static void iv_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
 		iv_list_add_tail(&fd->list_notify, &st->u.kqueue.notify);
 }
 
-static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct kevent kev[2];
 	int num = 0;
 	int ret;
 
-	iv_kqueue_queue_one(kev, &num, fd);
+	iv_fd_kqueue_queue_one(kev, &num, fd);
 
 	ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
 	if (ret == 0)
@@ -226,18 +226,18 @@ static int iv_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	return ret;
 }
 
-static void iv_kqueue_deinit(struct iv_state *st)
+static void iv_fd_kqueue_deinit(struct iv_state *st)
 {
 	close(st->u.kqueue.kqueue_fd);
 }
 
 
-struct iv_poll_method iv_method_kqueue = {
+struct iv_fd_poll_method iv_fd_poll_method_kqueue = {
 	.name		= "kqueue",
-	.init		= iv_kqueue_init,
-	.poll		= iv_kqueue_poll,
-	.unregister_fd	= iv_kqueue_unregister_fd,
-	.notify_fd	= iv_kqueue_notify_fd,
-	.notify_fd_sync	= iv_kqueue_notify_fd_sync,
-	.deinit		= iv_kqueue_deinit,
+	.init		= iv_fd_kqueue_init,
+	.poll		= iv_fd_kqueue_poll,
+	.unregister_fd	= iv_fd_kqueue_unregister_fd,
+	.notify_fd	= iv_fd_kqueue_notify_fd,
+	.notify_fd_sync	= iv_fd_kqueue_notify_fd_sync,
+	.deinit		= iv_fd_kqueue_deinit,
 };

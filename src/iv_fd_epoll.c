@@ -25,7 +25,7 @@
 #include <sys/epoll.h>
 #include "iv_private.h"
 
-static int iv_epoll_init(struct iv_state *st)
+static int iv_fd_epoll_init(struct iv_state *st)
 {
 	int fd;
 	int flags;
@@ -70,7 +70,7 @@ static int bits_to_poll_mask(int bits)
 	return mask;
 }
 
-static int __iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
+static int __iv_fd_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int op;
 	struct epoll_event event;
@@ -100,15 +100,15 @@ static int __iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 	return ret;
 }
 
-static void iv_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_epoll_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (__iv_epoll_flush_one(st, fd) < 0) {
-		iv_fatal("iv_epoll_flush_one: got error %d[%s]",
+	if (__iv_fd_epoll_flush_one(st, fd) < 0) {
+		iv_fatal("iv_fd_epoll_flush_one: got error %d[%s]",
 			 errno, strerror(errno));
 	}
 }
 
-static void iv_epoll_flush_pending(struct iv_state *st)
+static void iv_fd_epoll_flush_pending(struct iv_state *st)
 {
 	while (!iv_list_empty(&st->u.epoll.notify)) {
 		struct iv_fd_ *fd;
@@ -116,19 +116,19 @@ static void iv_epoll_flush_pending(struct iv_state *st)
 		fd = iv_list_entry(st->u.epoll.notify.next,
 				   struct iv_fd_, list_notify);
 
-		iv_epoll_flush_one(st, fd);
+		iv_fd_epoll_flush_one(st, fd);
 	}
 }
 
-static void iv_epoll_poll(struct iv_state *st,
-			  struct iv_list_head *active, struct timespec *to)
+static void iv_fd_epoll_poll(struct iv_state *st,
+			     struct iv_list_head *active, struct timespec *to)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int msec;
 	int ret;
 	int i;
 
-	iv_epoll_flush_pending(st);
+	iv_fd_epoll_flush_pending(st);
 
 	msec = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
@@ -137,7 +137,7 @@ static void iv_epoll_poll(struct iv_state *st,
 		if (errno == EINTR)
 			return;
 
-		iv_fatal("iv_epoll_poll: got error %d[%s]", errno,
+		iv_fatal("iv_fd_epoll_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
@@ -159,36 +159,36 @@ static void iv_epoll_poll(struct iv_state *st,
 	}
 }
 
-static void iv_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (!iv_list_empty(&fd->list_notify))
-		iv_epoll_flush_one(st, fd);
+		iv_fd_epoll_flush_one(st, fd);
 }
 
-static void iv_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_epoll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_list_del_init(&fd->list_notify);
 	if (fd->registered_bands != fd->wanted_bands)
 		iv_list_add_tail(&fd->list_notify, &st->u.epoll.notify);
 }
 
-static int iv_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
-	return __iv_epoll_flush_one(st, fd);
+	return __iv_fd_epoll_flush_one(st, fd);
 }
 
-static void iv_epoll_deinit(struct iv_state *st)
+static void iv_fd_epoll_deinit(struct iv_state *st)
 {
 	close(st->u.epoll.epoll_fd);
 }
 
 
-struct iv_poll_method iv_method_epoll = {
+struct iv_fd_poll_method iv_fd_poll_method_epoll = {
 	.name		= "epoll",
-	.init		= iv_epoll_init,
-	.poll		= iv_epoll_poll,
-	.unregister_fd	= iv_epoll_unregister_fd,
-	.notify_fd	= iv_epoll_notify_fd,
-	.notify_fd_sync	= iv_epoll_notify_fd_sync,
-	.deinit		= iv_epoll_deinit,
+	.init		= iv_fd_epoll_init,
+	.poll		= iv_fd_epoll_poll,
+	.unregister_fd	= iv_fd_epoll_unregister_fd,
+	.notify_fd	= iv_fd_epoll_notify_fd,
+	.notify_fd_sync	= iv_fd_epoll_notify_fd_sync,
+	.deinit		= iv_fd_epoll_deinit,
 };

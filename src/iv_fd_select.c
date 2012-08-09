@@ -50,7 +50,7 @@ static fd_set *writefds(struct iv_state *st)
 	return (fd_set *)(st->u.select.sets + 3 * st->u.select.setsize);
 }
 
-static int iv_select_init(struct iv_state *st)
+static int iv_fd_select_init(struct iv_state *st)
 {
 	int setsize;
 	void *sets;
@@ -71,8 +71,8 @@ static int iv_select_init(struct iv_state *st)
 	return 0;
 }
 
-static void iv_select_poll(struct iv_state *st,
-			   struct iv_list_head *active, struct timespec *to)
+static void iv_fd_select_poll(struct iv_state *st,
+			      struct iv_list_head *active, struct timespec *to)
 {
 	int bytes;
 	struct timeval tv;
@@ -93,7 +93,7 @@ static void iv_select_poll(struct iv_state *st,
 		if (errno == EINTR)
 			return;
 
-		iv_fatal("iv_select_poll: got error %d[%s]", errno,
+		iv_fatal("iv_fd_select_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
@@ -108,7 +108,7 @@ static void iv_select_poll(struct iv_state *st,
 
 			fd = iv_fd_avl_find(&st->u.select.fds, i);
 			if (fd == NULL)
-				iv_fatal("iv_select_poll: can't find fd");
+				iv_fatal("iv_fd_select_poll: can't find fd");
 
 			if (pollin)
 				iv_fd_make_ready(active, fd, MASKIN);
@@ -119,13 +119,13 @@ static void iv_select_poll(struct iv_state *st,
 	}
 }
 
-static void iv_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int ret;
 
 	ret = iv_avl_tree_insert(&st->u.select.fds, &fd->u.avl_node);
 	if (ret) {
-		iv_fatal("iv_select_register_fd: got error %d[%s]", ret,
+		iv_fatal("iv_fd_select_register_fd: got error %d[%s]", ret,
 			 strerror(ret));
 	}
 
@@ -133,7 +133,7 @@ static void iv_select_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 		st->u.select.fd_max = fd->fd;
 }
 
-static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	iv_avl_tree_delete(&st->u.select.fds, &fd->u.avl_node);
 
@@ -152,7 +152,7 @@ static void iv_select_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
 	}
 }
 
-static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
+static void iv_fd_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
 	if (fd->wanted_bands & MASKIN)
 		FD_SET(fd->fd, readfds_master(st));
@@ -167,7 +167,7 @@ static void iv_select_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 	fd->registered_bands = fd->wanted_bands;
 }
 
-static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
+static int iv_fd_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
 	int bytes;
 	struct timeval tv = { 0, 0 };
@@ -189,24 +189,24 @@ static int iv_select_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 	if (ret < 0)
 		return -1;
 
-	iv_select_notify_fd(st, fd);
+	iv_fd_select_notify_fd(st, fd);
 
 	return 0;
 }
 
-static void iv_select_deinit(struct iv_state *st)
+static void iv_fd_select_deinit(struct iv_state *st)
 {
 	free(st->u.select.sets);
 }
 
 
-struct iv_poll_method iv_method_select = {
+struct iv_fd_poll_method iv_fd_poll_method_select = {
 	.name		= "select",
-	.init		= iv_select_init,
-	.poll		= iv_select_poll,
-	.register_fd	= iv_select_register_fd,
-	.unregister_fd	= iv_select_unregister_fd,
-	.notify_fd	= iv_select_notify_fd,
-	.notify_fd_sync	= iv_select_notify_fd_sync,
-	.deinit		= iv_select_deinit,
+	.init		= iv_fd_select_init,
+	.poll		= iv_fd_select_poll,
+	.register_fd	= iv_fd_select_register_fd,
+	.unregister_fd	= iv_fd_select_unregister_fd,
+	.notify_fd	= iv_fd_select_notify_fd,
+	.notify_fd_sync	= iv_fd_select_notify_fd_sync,
+	.deinit		= iv_fd_select_deinit,
 };

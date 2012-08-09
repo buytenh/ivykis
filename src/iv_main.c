@@ -27,8 +27,8 @@
 #include "iv_private.h"
 
 /* process-global state *****************************************************/
-int			maxfd;
-struct iv_poll_method	*method;
+int				maxfd;
+struct iv_fd_poll_method	*method;
 
 static void sanitise_nofile_rlimit(int euid)
 {
@@ -78,7 +78,7 @@ static int method_is_excluded(char *exclude, char *name)
 }
 
 static void consider_poll_method(struct iv_state *st, char *exclude,
-				 struct iv_poll_method *m)
+				 struct iv_fd_poll_method *m)
 {
 	if (method == NULL && !method_is_excluded(exclude, m->name)) {
 		if (m->init(st) >= 0)
@@ -104,22 +104,22 @@ static void iv_init_first_thread(struct iv_state *st)
 		exclude = NULL;
 
 #ifdef HAVE_PORT_CREATE
-	consider_poll_method(st, exclude, &iv_method_port);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_port);
 #endif
 #ifdef HAVE_SYS_DEVPOLL_H
-	consider_poll_method(st, exclude, &iv_method_dev_poll);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_dev_poll);
 #endif
 #ifdef HAVE_EPOLL_CREATE
-	consider_poll_method(st, exclude, &iv_method_epoll);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_epoll);
 #endif
 #ifdef HAVE_KQUEUE
-	consider_poll_method(st, exclude, &iv_method_kqueue);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_kqueue);
 #endif
 #ifdef HAVE_POLL
-	consider_poll_method(st, exclude, &iv_method_poll);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_poll);
 #endif
 #ifdef NEED_SELECT
-	consider_poll_method(st, exclude, &iv_method_select);
+	consider_poll_method(st, exclude, &iv_fd_poll_method_select);
 #endif
 
 	if (method == NULL)
