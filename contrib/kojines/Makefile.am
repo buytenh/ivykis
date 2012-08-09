@@ -1,6 +1,6 @@
 AM_CPPFLAGS		= -I$(top_srcdir)/src/include -I$(top_builddir)/src/include
 
-LDADD			= $(top_builddir)/libivykis.la
+LDADD			= $(top_builddir)/src/libivykis.la
 
 noinst_PROGRAMS		= kojines
 

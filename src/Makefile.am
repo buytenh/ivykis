@@ -2,7 +2,7 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 			  -I$(top_srcdir)/src/include		\
 			  -I$(top_builddir)/src/include
 
-noinst_LTLIBRARIES	= libivykis.la
+lib_LTLIBRARIES		= libivykis.la
 
 if HAVE_DEV_POLL
 DEV_POLL_SRC = iv_method_dev_poll.c
@@ -69,6 +69,11 @@ libivykis_la_SOURCES	= iv_avl.c			\
 			  iv_tls.c			\
 			  iv_wait.c			\
 			  iv_work.c
+
+libivykis_la_LDFLAGS	= -version-info 2:1:2
+if HAVE_VERSIONING
+libivykis_la_LDFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.ver
+endif
 
 include_HEADERS		= include/iv.h			\
 			  include/iv_avl.h		\

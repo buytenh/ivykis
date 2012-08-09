@@ -1,7 +1,7 @@
 AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/src/include	\
 			  -I$(top_builddir)/src/include
 
-LDADD			= $(top_builddir)/libivykis.la
+LDADD			= $(top_builddir)/src/libivykis.la
 
 if HAVE_INOTIFY
 INOTIFY_PROGS = iv_inotify_test
