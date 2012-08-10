@@ -79,6 +79,8 @@ void iv_init(void)
 
 	st = iv_allocate_state();
 
+	st->numobjs = 0;
+
 	iv_poll_init(st);
 	iv_task_init(st);
 	iv_timer_init(st);
@@ -97,17 +99,6 @@ void iv_quit(void)
 	st->quit = 1;
 }
 
-static int should_quit(struct iv_state *st)
-{
-	if (st->quit)
-		return 1;
-
-	if (!st->numfds && !iv_pending_tasks(st) && !iv_pending_timers(st))
-		return 1;
-
-	return 0;
-}
-
 void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
@@ -119,7 +110,7 @@ void iv_main(void)
 		iv_run_tasks(st);
 		iv_run_timers(st);
 
-		if (should_quit(st))
+		if (st->quit || !st->numobjs)
 			break;
 
 		if (iv_pending_tasks(st) || iv_get_soonest_timeout(st, &to)) {

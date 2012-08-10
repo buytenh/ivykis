@@ -294,6 +294,7 @@ static void iv_fd_register_epilogue(struct iv_state *st, struct iv_fd_ *fd)
 	int flags;
 	int yes;
 
+	st->numobjs++;
 	st->numfds++;
 
 	flags = fcntl(fd->fd, F_GETFD);
@@ -374,6 +375,7 @@ void iv_fd_unregister(struct iv_fd *_fd)
 	if (method->unregister_fd != NULL)
 		method->unregister_fd(st, fd);
 
+	st->numobjs--;
 	st->numfds--;
 
 	if (st->handled_fd == fd)

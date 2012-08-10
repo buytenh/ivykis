@@ -112,11 +112,6 @@ void iv_timer_init(struct iv_state *st)
 		iv_fatal("iv_timer_init: can't alloc memory for root ratnode");
 }
 
-int iv_pending_timers(struct iv_state *st)
-{
-	return !!st->num_timers;
-}
-
 int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 {
 	if (st->num_timers) {
@@ -200,6 +195,8 @@ void iv_timer_register(struct iv_timer *_t)
 			 "on the heap");
 	}
 
+	st->numobjs++;
+
 	index = ++st->num_timers;
 	p = get_node(st, index);
 	if (p == NULL)
@@ -272,6 +269,8 @@ void iv_timer_unregister(struct iv_timer *_t)
 		iv_fatal("iv_timer_unregister: unregistered timer "
 			 "index belonging to other timer");
 	}
+
+	st->numobjs--;
 
 	m = get_node(st, st->num_timers);
 	st->num_timers--;

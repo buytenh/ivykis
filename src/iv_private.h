@@ -31,6 +31,7 @@
 struct iv_state {
 	/* iv_main.c  */
 	int			quit;
+	int			numobjs;
 
 	/* iv_fd.c  */
 	int			numfds;
@@ -193,7 +194,6 @@ void iv_get_time(struct timespec *time);
 /* iv_timer.c */
 void __iv_invalidate_now(struct iv_state *st);
 void iv_timer_init(struct iv_state *st);
-int iv_pending_timers(struct iv_state *st);
 int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to);
 void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
