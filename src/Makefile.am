@@ -19,7 +19,7 @@ INC			= include/iv.h			\
 if HAVE_POSIX
 
 SRC			+= iv_event.c			\
-			   iv_event_raw.c		\
+			   iv_event_raw_posix.c		\
 			   iv_fd.c			\
 			   iv_fd_pump.c			\
 			   iv_popen.c			\
