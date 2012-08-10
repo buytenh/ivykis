@@ -5,34 +5,38 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 lib_LTLIBRARIES		= libivykis.la
 
 SRC			= iv_avl.c			\
-			  iv_event.c			\
-			  iv_event_raw.c		\
 			  iv_fatal.c			\
-			  iv_fd.c			\
-			  iv_fd_pump.c			\
 			  iv_main.c			\
-			  iv_popen.c			\
-			  iv_signal.c			\
 			  iv_task.c			\
-			  iv_thread.c			\
-			  iv_time_posix.c		\
 			  iv_timer.c			\
-			  iv_tls.c			\
-			  iv_wait.c			\
-			  iv_work.c
+			  iv_tls.c
 
 INC			= include/iv.h			\
 			  include/iv_avl.h		\
-			  include/iv_event.h		\
-			  include/iv_event_raw.h	\
-			  include/iv_fd_pump.h		\
 			  include/iv_list.h		\
-			  include/iv_popen.h		\
-			  include/iv_signal.h		\
-			  include/iv_thread.h		\
-			  include/iv_tls.h		\
-			  include/iv_wait.h		\
-			  include/iv_work.h
+			  include/iv_tls.h
+
+if HAVE_POSIX
+
+SRC			+= iv_event.c			\
+			   iv_event_raw.c		\
+			   iv_fd.c			\
+			   iv_fd_pump.c			\
+			   iv_popen.c			\
+			   iv_signal.c			\
+			   iv_thread.c			\
+			   iv_time_posix.c		\
+			   iv_wait.c			\
+			   iv_work.c
+
+INC			+= include/iv_event.h		\
+			   include/iv_event_raw.h	\
+			   include/iv_fd_pump.h		\
+			   include/iv_popen.h		\
+			   include/iv_signal.h		\
+			   include/iv_thread.h		\
+			   include/iv_wait.h		\
+			   include/iv_work.h
 
 if HAVE_DEV_POLL
 SRC			+= iv_fd_dev_poll.c
@@ -63,11 +67,26 @@ SRC			+= iv_inotify.c
 INC			+= include/iv_inotify.h
 endif
 
-libivykis_la_SOURCES	= $(SRC)
-libivykis_la_LDFLAGS	= -version-info 2:1:2
+LINKFLAGS	= -version-info 2:1:2
 if HAVE_VERSIONING
-libivykis_la_LDFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver
+LINKFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver
 endif
+
+endif
+
+if HAVE_WIN32
+
+SRC			+= iv_handle.c			\
+			   iv_time_win32.c
+
+LINKFLAGS = -version-info 0:0:0						\
+	    -Wl,--version-script,$(top_srcdir)/libivykis.win32.ver	\
+	    -no-undefined
+
+endif
+
+libivykis_la_SOURCES	= $(SRC)
+libivykis_la_LDFLAGS	= $(LINKFLAGS)
 
 include_HEADERS		= $(INC)
 
