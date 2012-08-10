@@ -39,6 +39,15 @@ struct iv_state {
 	struct iv_fd_		*handled_fd;
 #endif
 
+#ifdef _WIN32
+	/* iv_handle.c  */
+	HANDLE			wait;
+	CRITICAL_SECTION	active_handle_list_lock;
+	struct iv_list_head	active_handle_list;
+	int			numhandles;
+	HANDLE			handled_handle;
+#endif
+
 	/* iv_task.c  */
 	struct iv_list_head	tasks;
 
@@ -182,7 +191,7 @@ __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 }
 
 
-/* iv_fd.c */
+/* iv_{fd,handle}.c */
 void iv_poll_init(struct iv_state *st);
 void iv_poll_deinit(struct iv_state *st);
 void iv_poll_and_run(struct iv_state *st, struct timespec *to);

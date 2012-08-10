@@ -84,6 +84,24 @@ void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
 #endif
 
 
+#ifdef _WIN32
+/*
+ * Handle handling.
+ */
+struct iv_handle {
+	HANDLE	handle;
+	void	*cookie;
+	void	(*handler)(void *);
+	void	*pad[13];
+};
+
+void IV_HANDLE_INIT(struct iv_handle *);
+void iv_handle_register(struct iv_handle *);
+void iv_handle_unregister(struct iv_handle *);
+void iv_handle_set_handler(struct iv_handle *, void (*)(void *));
+#endif
+
+
 /*
  * Task handling.
  */
