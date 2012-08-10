@@ -13,6 +13,7 @@ SRC			= iv_avl.c			\
 
 INC			= include/iv.h			\
 			  include/iv_avl.h		\
+			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
 			  include/iv_tls.h
 
@@ -30,7 +31,6 @@ SRC			+= iv_event.c			\
 			   iv_work.c
 
 INC			+= include/iv_event.h		\
-			   include/iv_event_raw.h	\
 			   include/iv_fd_pump.h		\
 			   include/iv_popen.h		\
 			   include/iv_signal.h		\
@@ -76,7 +76,8 @@ endif
 
 if HAVE_WIN32
 
-SRC			+= iv_handle.c			\
+SRC			+= iv_event_raw_win32.c		\
+			   iv_handle.c			\
 			   iv_time_win32.c
 
 LINKFLAGS = -version-info 0:0:0						\

@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010, 2012 Lennert Buytenhek
+ * Copyright (C) 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -18,38 +18,37 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __IV_EVENT_RAW_H
-#define __IV_EVENT_RAW_H
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <iv.h>
+#include <iv_event_raw.h>
+#include <unistd.h>
+#include "config.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct iv_event_raw {
-	void			*cookie;
-	void			(*handler)(void *);
-
-#ifndef _WIN32
-	struct iv_fd		event_rfd;
-	int			event_wfd;
-#else
-	struct iv_handle	h;
-#endif
-};
-
-static inline void IV_EVENT_RAW_INIT(struct iv_event_raw *this)
+int iv_event_raw_register(struct iv_event_raw *this)
 {
+	HANDLE h;
+
+	h = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (h == NULL)
+		return -1;
+
+	IV_HANDLE_INIT(&this->h);
+	this->h.handle = h;
+	this->h.cookie = this->cookie;
+	this->h.handler = this->handler;
+	iv_handle_register(&this->h);
+
+	return 0;
 }
 
-int iv_event_raw_register(struct iv_event_raw *this);
-void iv_event_raw_unregister(struct iv_event_raw *this);
-void iv_event_raw_post(struct iv_event_raw *this);
-
-#ifdef __cplusplus
+void iv_event_raw_unregister(struct iv_event_raw *this)
+{
+	iv_handle_unregister(&this->h);
+	CloseHandle(this->h.handle);
 }
-#endif
 
-
-#endif
+void iv_event_raw_post(struct iv_event_raw *this)
+{
+	SetEvent(this->h.handle);
+}
