@@ -18,6 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef _WIN32
 #include <pthread.h>
 
 typedef pthread_mutex_t mutex_t;
@@ -41,3 +42,28 @@ static inline void mutex_unlock(mutex_t *mutex)
 {
 	pthread_mutex_unlock(mutex);
 }
+#else
+typedef CRITICAL_SECTION mutex_t;
+
+static inline int mutex_init(mutex_t *mutex)
+{
+	InitializeCriticalSection(mutex);
+
+	return 0;
+}
+
+static inline void mutex_destroy(mutex_t *mutex)
+{
+	DeleteCriticalSection(mutex);
+}
+
+static inline void mutex_lock(mutex_t *mutex)
+{
+	EnterCriticalSection(mutex);
+}
+
+static inline void mutex_unlock(mutex_t *mutex)
+{
+	LeaveCriticalSection(mutex);
+}
+#endif
