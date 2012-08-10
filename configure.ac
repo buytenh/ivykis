@@ -76,6 +76,29 @@ solaris*-sparc)
 	;;
 esac
 
+# Check the host operating system type: posix or win32.
+AC_MSG_CHECKING([host operating system type])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+	#include <unistd.h>
+	#ifndef _POSIX_VERSION
+	#error not POSIX
+	#endif
+	)],
+	[ac_cv_host_system=posix
+	 AC_MSG_RESULT([posix])],
+	[AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+		#ifndef _WIN32
+		#error not WIN32
+		#endif
+		)],
+		[ac_cv_host_system=win32
+		 AC_MSG_RESULT([win32])],
+		[AC_MSG_RESULT([unknown])
+		 AC_MSG_ERROR(Can't determine host system type.)])])
+
+if test $ac_cv_host_system = posix
+then
+
 # OS-specific preprocessor defines.
 case $host_os in
 hpux*)
@@ -343,6 +366,17 @@ AC_CACHE_CHECK(whether $LD supports symbol version scripts,
 	])
 LDFLAGS=$ac_save_LDFLAGS
 
+else
+
+# Build a libivykis DLL.
+AC_LIBTOOL_WIN32_DLL
+
+fi
+
+
+# Conditionals for OS type.
+AM_CONDITIONAL([HAVE_POSIX], [test $ac_cv_host_system = posix])
+AM_CONDITIONAL([HAVE_WIN32], [test $ac_cv_host_system = win32])
 
 # Conditionals for poll methods.
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
@@ -361,7 +395,7 @@ AM_CONDITIONAL([NEED_SELECT],
 AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
-AM_CONDITIONAL([HAVE_VERSIONING], [test $ac_cv_prog_ld_version_script = yes])
+AM_CONDITIONAL([HAVE_VERSIONING], [test x$ac_cv_prog_ld_version_script = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
