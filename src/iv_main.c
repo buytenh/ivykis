@@ -140,3 +140,18 @@ void iv_deinit(void)
 
 	__iv_deinit(st);
 }
+
+#ifdef _WIN32
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+	if (fdwReason == DLL_PROCESS_DETACH || fdwReason == DLL_THREAD_DETACH) {
+		struct iv_state *st;
+
+		st = iv_get_state();
+		if (st != NULL)
+			__iv_deinit(st);
+	}
+
+	return TRUE;
+}
+#endif
