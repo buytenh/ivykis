@@ -17,6 +17,7 @@ INC			= include/iv.h			\
 			  include/iv_event.h		\
 			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
+			  include/iv_thread.h		\
 			  include/iv_tls.h
 
 if HAVE_POSIX
@@ -34,7 +35,6 @@ SRC			+= iv_event_raw_posix.c		\
 INC			+= include/iv_fd_pump.h		\
 			   include/iv_popen.h		\
 			   include/iv_signal.h		\
-			   include/iv_thread.h		\
 			   include/iv_wait.h		\
 			   include/iv_work.h
 
@@ -78,6 +78,7 @@ if HAVE_WIN32
 
 SRC			+= iv_event_raw_win32.c		\
 			   iv_handle.c			\
+			   iv_thread_win32.c		\
 			   iv_time_win32.c
 
 LINKFLAGS = -version-info 0:0:0						\
