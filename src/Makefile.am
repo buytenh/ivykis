@@ -10,7 +10,8 @@ SRC			= iv_avl.c			\
 			  iv_main.c			\
 			  iv_task.c			\
 			  iv_timer.c			\
-			  iv_tls.c
+			  iv_tls.c			\
+			  iv_work.c
 
 INC			= include/iv.h			\
 			  include/iv_avl.h		\
@@ -18,7 +19,8 @@ INC			= include/iv.h			\
 			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
 			  include/iv_thread.h		\
-			  include/iv_tls.h
+			  include/iv_tls.h		\
+			  include/iv_work.h
 
 if HAVE_POSIX
 
@@ -29,14 +31,12 @@ SRC			+= iv_event_raw_posix.c		\
 			   iv_signal.c			\
 			   iv_thread_posix.c		\
 			   iv_time_posix.c		\
-			   iv_wait.c			\
-			   iv_work.c
+			   iv_wait.c
 
 INC			+= include/iv_fd_pump.h		\
 			   include/iv_popen.h		\
 			   include/iv_signal.h		\
-			   include/iv_wait.h		\
-			   include/iv_work.h
+			   include/iv_wait.h
 
 if HAVE_DEV_POLL
 SRC			+= iv_fd_dev_poll.c
