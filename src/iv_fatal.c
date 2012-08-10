@@ -21,7 +21,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+
+#ifndef _WIN32
 #include <syslog.h>
+
+static void iv_fatal_default_handler(const char *msg)
+{
+	syslog(LOG_CRIT, "%s", msg);
+}
+#else
+static void iv_fatal_default_handler(const char *msg)
+{
+	fprintf(stderr, "%s\n", msg);
+}
+#endif
 
 static void (*fatal_msg_handler)(const char *msg);
 
@@ -39,7 +52,7 @@ void iv_fatal(const char *fmt, ...)
 	if (fatal_msg_handler != NULL)
 		fatal_msg_handler(msg);
 	else
-		syslog(LOG_CRIT, "%s", msg);
+		iv_fatal_default_handler(msg);
 
 	abort();
 }
