@@ -30,7 +30,7 @@
 struct iv_event_thr_info {
 	int			event_count;
 	struct iv_event_raw	ier;
-	mutex_t			list_mutex;
+	__mutex_t		list_mutex;
 	struct iv_list_head	pending_events;
 };
 

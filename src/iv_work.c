@@ -32,7 +32,7 @@
 
 /* data structures **********************************************************/
 struct work_pool_priv {
-	mutex_t			lock;
+	__mutex_t		lock;
 	struct iv_event		ev;
 	int			shutting_down;
 	int			started_threads;
