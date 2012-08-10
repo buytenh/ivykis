@@ -201,7 +201,7 @@ void iv_task_init(struct iv_state *st);
 int iv_pending_tasks(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
-/* iv_time.c */
+/* iv_time_posix.c */
 void iv_get_time(struct timespec *time);
 
 /* iv_timer.c */
