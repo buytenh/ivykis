@@ -392,6 +392,7 @@ AM_CONDITIONAL([NEED_SELECT],
 		 test x$ac_cv_func_port_create != xyes])
 
 # Other conditionals.
+AM_CONDITIONAL([BUILD_ON_CYGWIN], [test $build_os = cygwin])
 AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
