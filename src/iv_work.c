@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -27,12 +27,12 @@
 #include <iv_thread.h>
 #include <iv_tls.h>
 #include <iv_work.h>
-#include <pthread.h>
 #include "iv_private.h"
+#include "mutex.h"
 
 /* data structures **********************************************************/
 struct work_pool_priv {
-	pthread_mutex_t		lock;
+	mutex_t			lock;
 	struct iv_event		ev;
 	int			shutting_down;
 	int			started_threads;
@@ -62,7 +62,7 @@ static void iv_work_thread_got_event(void *_thr)
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 
 	thr->kicked = 0;
 
@@ -72,7 +72,7 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_timer_unregister(&thr->idle_timer);
 	}
 
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 }
 
 static void __iv_work_thread_die(struct work_pool_thread *thr)
@@ -103,7 +103,7 @@ static void iv_work_thread_do_work(void *_thr)
 	struct work_pool_priv *pool = thr->pool;
 	uint32_t last_seq;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 
 	last_seq = pool->seq_tail;
 	while ((int32_t)(last_seq - pool->seq_head) > 0) {
@@ -114,10 +114,10 @@ static void iv_work_thread_do_work(void *_thr)
 				       struct iv_work_item, list);
 		iv_list_del(&work->list);
 
-		pthread_mutex_unlock(&pool->lock);
+		mutex_unlock(&pool->lock);
 		work->work(work->cookie);
 		iv_invalidate_now();
-		pthread_mutex_lock(&pool->lock);
+		mutex_lock(&pool->lock);
 
 		if (iv_list_empty(&pool->work_done))
 			iv_event_post(&pool->ev);
@@ -147,7 +147,7 @@ static void iv_work_thread_do_work(void *_thr)
 		iv_task_register(&thr->work_task);
 	}
 
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 }
 
 static void iv_work_thread_idle_timeout(void *_thr)
@@ -155,7 +155,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 	
 	if (thr->kicked) {
 		thr->idle_timer.expires = iv_now;
@@ -166,7 +166,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 		__iv_work_thread_die(thr);
 	}
 
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 }
 
 static void iv_work_thread(void *_thr)
@@ -209,9 +209,9 @@ static void iv_work_event(void *_pool)
 	struct work_pool_priv *pool = _pool;
 	struct iv_list_head items;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 	__iv_list_steal_elements(&pool->work_done, &items);
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 
 	while (!iv_list_empty(&items)) {
 		struct iv_work_item *work;
@@ -223,15 +223,15 @@ static void iv_work_event(void *_pool)
 	}
 
 	if (pool->shutting_down) {
-		pthread_mutex_lock(&pool->lock);
+		mutex_lock(&pool->lock);
 		if (!pool->started_threads && iv_list_empty(&pool->work_done)) {
-			pthread_mutex_unlock(&pool->lock);
-			pthread_mutex_destroy(&pool->lock);
+			mutex_unlock(&pool->lock);
+			mutex_destroy(&pool->lock);
 			iv_event_unregister(&pool->ev);
 			free(pool);
 			return;
 		}
-		pthread_mutex_unlock(&pool->lock);
+		mutex_unlock(&pool->lock);
 	}
 }
 
@@ -244,7 +244,7 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	if (pool == NULL)
 		return -1;
 
-	ret = pthread_mutex_init(&pool->lock, NULL);
+	ret = mutex_init(&pool->lock);
 	if (ret) {
 		free(pool);
 		return -1;
@@ -276,13 +276,13 @@ void iv_work_pool_put(struct iv_work_pool *this)
 	struct work_pool_priv *pool = this->priv;
 	struct iv_list_head *ilh;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 
 	this->priv = NULL;
 	pool->shutting_down = 1;
 
 	if (!pool->started_threads) {
-		pthread_mutex_unlock(&pool->lock);
+		mutex_unlock(&pool->lock);
 		iv_event_post(&pool->ev);
 		return;
 	}
@@ -294,7 +294,7 @@ void iv_work_pool_put(struct iv_work_pool *this)
 		iv_event_post(&thr->kick);
 	}
 
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 }
 
 static int iv_work_start_thread(struct work_pool_priv *pool)
@@ -327,7 +327,7 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 {
 	struct work_pool_priv *pool = this->priv;
 
-	pthread_mutex_lock(&pool->lock);
+	mutex_lock(&pool->lock);
 
 	pool->seq_tail++;
 	iv_list_add_tail(&work->list, &pool->work_items);
@@ -343,7 +343,7 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 		iv_work_start_thread(pool);
 	}
 
-	pthread_mutex_unlock(&pool->lock);
+	mutex_unlock(&pool->lock);
 }
 
 struct iv_work_thr_info {

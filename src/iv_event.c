@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -24,13 +24,13 @@
 #include <iv_event.h>
 #include <iv_event_raw.h>
 #include <iv_tls.h>
-#include <pthread.h>
 #include "iv_private.h"
+#include "mutex.h"
 
 struct iv_event_thr_info {
 	int			event_count;
 	struct iv_event_raw	ier;
-	pthread_mutex_t		list_mutex;
+	mutex_t			list_mutex;
 	struct iv_list_head	pending_events;
 };
 
@@ -39,9 +39,9 @@ static void iv_event_run_pending_events(void *_tinfo)
 	struct iv_event_thr_info *tinfo = _tinfo;
 	struct iv_list_head events;
 
-	pthread_mutex_lock(&tinfo->list_mutex);
+	mutex_lock(&tinfo->list_mutex);
 	__iv_list_steal_elements(&tinfo->pending_events, &events);
-	pthread_mutex_unlock(&tinfo->list_mutex);
+	mutex_unlock(&tinfo->list_mutex);
 
 	while (!iv_list_empty(&events)) {
 		struct iv_event *ie;
@@ -63,7 +63,7 @@ static void iv_event_tls_init_thread(void *_tinfo)
 	tinfo->ier.cookie = tinfo;
 	tinfo->ier.handler = iv_event_run_pending_events;
 
-	pthread_mutex_init(&tinfo->list_mutex, NULL);
+	mutex_init(&tinfo->list_mutex);
 
 	INIT_IV_LIST_HEAD(&tinfo->pending_events);
 }
@@ -72,7 +72,7 @@ static void iv_event_tls_deinit_thread(void *_tinfo)
 {
 	struct iv_event_thr_info *tinfo = _tinfo;
 
-	pthread_mutex_destroy(&tinfo->list_mutex);
+	mutex_destroy(&tinfo->list_mutex);
 }
 
 static struct iv_tls_user iv_event_tls_user = {
@@ -110,9 +110,9 @@ void iv_event_unregister(struct iv_event *this)
 	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
 
 	if (!iv_list_empty(&this->list)) {
-		pthread_mutex_lock(&tinfo->list_mutex);
+		mutex_lock(&tinfo->list_mutex);
 		iv_list_del(&this->list);
-		pthread_mutex_unlock(&tinfo->list_mutex);
+		mutex_unlock(&tinfo->list_mutex);
 	}
 
 	if (!--tinfo->event_count)
@@ -123,10 +123,10 @@ void iv_event_post(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = this->tinfo;
 
-	pthread_mutex_lock(&tinfo->list_mutex);
+	mutex_lock(&tinfo->list_mutex);
 	if (iv_list_empty(&this->list)) {
 		iv_list_add_tail(&this->list, &tinfo->pending_events);
 		iv_event_raw_post(&tinfo->ier);
 	}
-	pthread_mutex_unlock(&tinfo->list_mutex);
+	mutex_unlock(&tinfo->list_mutex);
 }
