@@ -26,7 +26,7 @@ SRC			+= iv_event_raw_posix.c		\
 			   iv_fd_pump.c			\
 			   iv_popen.c			\
 			   iv_signal.c			\
-			   iv_thread.c			\
+			   iv_thread_posix.c		\
 			   iv_time_posix.c		\
 			   iv_wait.c			\
 			   iv_work.c
