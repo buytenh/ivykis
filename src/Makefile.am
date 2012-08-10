@@ -5,6 +5,7 @@ AM_CPPFLAGS		= -D_GNU_SOURCE				\
 lib_LTLIBRARIES		= libivykis.la
 
 SRC			= iv_avl.c			\
+			  iv_event.c			\
 			  iv_fatal.c			\
 			  iv_main.c			\
 			  iv_task.c			\
@@ -13,14 +14,14 @@ SRC			= iv_avl.c			\
 
 INC			= include/iv.h			\
 			  include/iv_avl.h		\
+			  include/iv_event.h		\
 			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
 			  include/iv_tls.h
 
 if HAVE_POSIX
 
-SRC			+= iv_event.c			\
-			   iv_event_raw_posix.c		\
+SRC			+= iv_event_raw_posix.c		\
 			   iv_fd.c			\
 			   iv_fd_pump.c			\
 			   iv_popen.c			\
@@ -30,8 +31,7 @@ SRC			+= iv_event.c			\
 			   iv_wait.c			\
 			   iv_work.c
 
-INC			+= include/iv_event.h		\
-			   include/iv_fd_pump.h		\
+INC			+= include/iv_fd_pump.h		\
 			   include/iv_popen.h		\
 			   include/iv_signal.h		\
 			   include/iv_thread.h		\
