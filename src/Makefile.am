@@ -66,6 +66,7 @@ libivykis_la_SOURCES	= iv_avl.c			\
 			  iv_signal.c			\
 			  iv_task.c			\
 			  iv_thread.c			\
+			  iv_time.c			\
 			  iv_timer.c			\
 			  iv_tls.c			\
 			  iv_wait.c			\

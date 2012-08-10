@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -38,44 +38,14 @@ void iv_invalidate_now(void)
 	__iv_invalidate_now(st);
 }
 
-#ifdef HAVE_CLOCK_GETTIME
-static int		clock_source;
-#endif
-
-static void __iv_validate_now(struct iv_state *st)
-{
-	if (!st->time_valid) {
-		struct timeval tv;
-
-		st->time_valid = 1;
-
-#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_MONOTONIC)
-		if (clock_source < 1) {
-			if (clock_gettime(CLOCK_MONOTONIC, &st->time) >= 0)
-				return;
-			clock_source = 1;
-		}
-#endif
-
-#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_REALTIME)
-		if (clock_source < 2) {
-			if (clock_gettime(CLOCK_REALTIME, &st->time) >= 0)
-				return;
-			clock_source = 2;
-		}
-#endif
-
-		gettimeofday(&tv, NULL);
-		st->time.tv_sec = tv.tv_sec;
-		st->time.tv_nsec = 1000L * tv.tv_usec;
-	}
-}
-
 void iv_validate_now(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	__iv_validate_now(st);
+	if (!st->time_valid) {
+		st->time_valid = 1;
+		iv_get_time(&st->time);
+	}
 }
 
 struct timespec *__iv_now_location(void)
@@ -322,7 +292,11 @@ void iv_run_timers(struct iv_state *st)
 	while (st->num_timers) {
 		struct iv_timer_ *t = *get_node(st, 1);
 
-		__iv_validate_now(st);
+		if (!st->time_valid) {
+			st->time_valid = 1;
+			iv_get_time(&st->time);
+		}
+
 		if (timespec_gt(&t->expires, &st->time))
 			break;
 		iv_timer_unregister((struct iv_timer *)t);

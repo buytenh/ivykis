@@ -187,6 +187,9 @@ void iv_task_init(struct iv_state *st);
 int iv_pending_tasks(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
+/* iv_time.c */
+void iv_get_time(struct timespec *time);
+
 /* iv_timer.c */
 void __iv_invalidate_now(struct iv_state *st);
 void iv_timer_init(struct iv_state *st);
