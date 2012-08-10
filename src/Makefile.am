@@ -66,7 +66,7 @@ endif
 libivykis_la_SOURCES	= $(SRC)
 libivykis_la_LDFLAGS	= -version-info 2:1:2
 if HAVE_VERSIONING
-libivykis_la_LDFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.ver
+libivykis_la_LDFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver
 endif
 
 include_HEADERS		= $(INC)
