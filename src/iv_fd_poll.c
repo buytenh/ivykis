@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sys/poll.h>
 #include "iv_private.h"
+#include "iv_fd_private.h"
 
 static int iv_fd_poll_init(struct iv_state *st)
 {

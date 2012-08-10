@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <iv.h>
 #include "../iv_private.h"
+#include "../iv_fd_private.h"
 
 int main()
 {

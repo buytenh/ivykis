@@ -23,6 +23,7 @@
 #include <port.h>
 #include <string.h>
 #include "iv_private.h"
+#include "iv_fd_private.h"
 
 #define PORTEV_NUM	1024
 

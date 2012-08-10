@@ -29,6 +29,7 @@
 #endif
 #include <sys/time.h>
 #include "iv_private.h"
+#include "iv_fd_private.h"
 
 static fd_set *readfds_master(struct iv_state *st)
 {

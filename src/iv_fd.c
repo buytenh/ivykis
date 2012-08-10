@@ -25,6 +25,7 @@
 #include <string.h>
 #include <sys/resource.h>
 #include "iv_private.h"
+#include "iv_fd_private.h"
 
 /* internal use *************************************************************/
 int				maxfd;

@@ -27,6 +27,7 @@
 #include <sys/mman.h>
 #include <sys/poll.h>
 #include "iv_private.h"
+#include "iv_fd_private.h"
 
 #define UPLOAD_BATCH		1024
 
