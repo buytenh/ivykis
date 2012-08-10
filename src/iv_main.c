@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -21,113 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/resource.h>
 #include "iv_private.h"
 
-/* process-global state *****************************************************/
-int				maxfd;
-struct iv_fd_poll_method	*method;
-
-static void sanitise_nofile_rlimit(int euid)
-{
-	struct rlimit lim;
-
-	getrlimit(RLIMIT_NOFILE, &lim);
-	maxfd = lim.rlim_cur;
-
-	if (euid) {
-		if (lim.rlim_cur < lim.rlim_max) {
-			lim.rlim_cur = (unsigned int)lim.rlim_max & 0x7FFFFFFF;
-			if (lim.rlim_cur > 131072)
-				lim.rlim_cur = 131072;
-
-			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0)
-				maxfd = lim.rlim_cur;
-		}
-	} else {
-		lim.rlim_cur = 131072;
-		lim.rlim_max = 131072;
-		while (lim.rlim_cur > maxfd) {
-			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
-				maxfd = lim.rlim_cur;
-				break;
-			}
-
-			lim.rlim_cur /= 2;
-			lim.rlim_max /= 2;
-		}
-	}
-}
-
-static int method_is_excluded(char *exclude, char *name)
-{
-	if (exclude != NULL) {
-		char method_name[64];
-		int len;
-
-		while (sscanf(exclude, "%63s%n", method_name, &len) > 0) {
-			if (!strcmp(name, method_name))
-				return 1;
-			exclude += len;
-		}
-	}
-
-	return 0;
-}
-
-static void consider_poll_method(struct iv_state *st, char *exclude,
-				 struct iv_fd_poll_method *m)
-{
-	if (method == NULL && !method_is_excluded(exclude, m->name)) {
-		if (m->init(st) >= 0)
-			method = m;
-	}
-}
-
-static void iv_init_first_thread(struct iv_state *st)
-{
-	int euid;
-	char *exclude;
-
-	euid = geteuid();
-
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGURG, SIG_IGN);
-
-	sanitise_nofile_rlimit(euid);
-	method = NULL;
-
-	exclude = getenv("IV_EXCLUDE_POLL_METHOD");
-	if (exclude != NULL && getuid() != euid)
-		exclude = NULL;
-
-#ifdef HAVE_PORT_CREATE
-	consider_poll_method(st, exclude, &iv_fd_poll_method_port);
-#endif
-#ifdef HAVE_SYS_DEVPOLL_H
-	consider_poll_method(st, exclude, &iv_fd_poll_method_dev_poll);
-#endif
-#ifdef HAVE_EPOLL_CREATE
-	consider_poll_method(st, exclude, &iv_fd_poll_method_epoll);
-#endif
-#ifdef HAVE_KQUEUE
-	consider_poll_method(st, exclude, &iv_fd_poll_method_kqueue);
-#endif
-#ifdef HAVE_POLL
-	consider_poll_method(st, exclude, &iv_fd_poll_method_poll);
-#endif
-#ifdef NEED_SELECT
-	consider_poll_method(st, exclude, &iv_fd_poll_method_select);
-#endif
-
-	if (method == NULL)
-		iv_fatal("iv_init: can't find suitable event dispatcher");
-}
-
-
-/* main loop ****************************************************************/
+int				iv_state_key_allocated;
 pthread_key_t			iv_state_key;
 #ifdef HAVE_THREAD
 __thread struct iv_state	*__st;
@@ -135,8 +31,7 @@ __thread struct iv_state	*__st;
 
 static void __iv_deinit(struct iv_state *st)
 {
-	method->deinit(st);
-
+	iv_poll_deinit(st);
 	iv_timer_deinit(st);
 	iv_tls_thread_deinit(st);
 
@@ -176,21 +71,15 @@ void iv_init(void)
 {
 	struct iv_state *st;
 
-	if (method == NULL) {
+	if (!iv_state_key_allocated) {
 		if (pthread_key_create(&iv_state_key, iv_state_destructor))
 			iv_fatal("iv_init: failed to allocate TLS key");
+		iv_state_key_allocated = 1;
 	}
 
 	st = iv_allocate_state();
 
-	if (method == NULL)
-		iv_init_first_thread(st);
-	else if (method->init(st) < 0)
-		iv_fatal("iv_init: can't initialize event dispatcher");
-
-	st->handled_fd = NULL;
-	st->numfds = 0;
-
+	iv_poll_init(st);
 	iv_task_init(st);
 	iv_timer_init(st);
 	iv_tls_thread_init(st);
@@ -201,40 +90,11 @@ int iv_inited(void)
 	return iv_get_state() != NULL;
 }
 
-const char *iv_poll_method_name(void)
-{
-	return method != NULL ? method->name : NULL;
-}
-
 void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
 
 	st->quit = 1;
-}
-
-static void iv_run_active_list(struct iv_state *st, struct iv_list_head *active)
-{
-	while (!iv_list_empty(active)) {
-		struct iv_fd_ *fd;
-
-		fd = iv_list_entry(active->next, struct iv_fd_, list_active);
-		iv_list_del_init(&fd->list_active);
-
-		st->handled_fd = fd;
-
-		if (fd->ready_bands & MASKERR)
-			if (fd->handler_err != NULL)
-				fd->handler_err(fd->cookie);
-
-		if (st->handled_fd != NULL && fd->ready_bands & MASKIN)
-			if (fd->handler_in != NULL)
-				fd->handler_in(fd->cookie);
-
-		if (st->handled_fd != NULL && fd->ready_bands & MASKOUT)
-			if (fd->handler_out != NULL)
-				fd->handler_out(fd->cookie);
-	}
 }
 
 static int should_quit(struct iv_state *st)
@@ -251,9 +111,6 @@ static int should_quit(struct iv_state *st)
 void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
-	struct iv_list_head active;
-
-	INIT_IV_LIST_HEAD(&active);
 
 	st->quit = 0;
 	while (1) {
@@ -269,11 +126,8 @@ void iv_main(void)
 			to.tv_sec = 0;
 			to.tv_nsec = 0;
 		}
-		method->poll(st, &active, &to);
 
-		__iv_invalidate_now(st);
-
-		iv_run_active_list(st, &active);
+		iv_poll_and_run(st, &to);
 	}
 }
 

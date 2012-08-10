@@ -36,7 +36,6 @@ extern "C" {
  */
 void iv_init(void);
 int iv_inited(void);
-const char *iv_poll_method_name(void);
 void iv_main(void);
 void iv_quit(void);
 void iv_deinit(void);
@@ -67,6 +66,7 @@ struct iv_fd {
 	void	*pad[11];
 };
 
+const char *iv_poll_method_name(void);
 void IV_FD_INIT(struct iv_fd *);
 void iv_fd_register(struct iv_fd *);
 int iv_fd_register_try(struct iv_fd *);

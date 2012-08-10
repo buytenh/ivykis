@@ -30,9 +30,11 @@
 
 struct iv_state {
 	/* iv_main.c  */
-	struct iv_fd_		*handled_fd;
-	int			numfds;
 	int			quit;
+
+	/* iv_fd.c  */
+	int			numfds;
+	struct iv_fd_		*handled_fd;
 
 	/* iv_task.c  */
 	struct iv_list_head	tasks;
@@ -269,6 +271,9 @@ extern struct iv_fd_poll_method iv_fd_poll_method_select;
 
 
 /* iv_fd.c */
+void iv_poll_init(struct iv_state *st);
+void iv_poll_deinit(struct iv_state *st);
+void iv_poll_and_run(struct iv_state *st, struct timespec *to);
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
 void iv_fd_make_ready(struct iv_list_head *active,

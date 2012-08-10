@@ -17,6 +17,7 @@ global:
 	iv_event_raw_post;
 
 	# iv_fd
+	iv_poll_method_name;
 	IV_FD_INIT;
 	iv_fd_register;
 	iv_fd_register_try;
@@ -41,7 +42,6 @@ global:
 	# iv_main
 	iv_init;
 	iv_inited;
-	iv_poll_method_name;
 	iv_quit;
 	iv_main;
 	iv_deinit;
