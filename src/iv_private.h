@@ -33,9 +33,11 @@ struct iv_state {
 	int			quit;
 	int			numobjs;
 
+#ifndef _WIN32
 	/* iv_fd.c  */
 	int			numfds;
 	struct iv_fd_		*handled_fd;
+#endif
 
 	/* iv_task.c  */
 	struct iv_list_head	tasks;
@@ -46,6 +48,7 @@ struct iv_state {
 	int			num_timers;
 	struct ratnode		*timer_root;
 
+#ifndef _WIN32
 	/* poll methods  */
 	union {
 #ifdef HAVE_SYS_DEVPOLL_H
@@ -99,6 +102,7 @@ struct iv_state {
 		} select;
 #endif
 	} u;
+#endif
 };
 
 #ifdef HAVE_THREAD
