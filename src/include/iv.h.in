@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -21,11 +21,16 @@
 #ifndef __IV_H
 #define __IV_H
 
+#ifndef _WIN32
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <@ac_cv_timespec_hdr@>
 #include <unistd.h>
+#else
+#include <sys/time.h>
+#include <windows.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
