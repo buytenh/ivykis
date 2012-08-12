@@ -5,6 +5,7 @@ LDADD			= $(top_builddir)/src/libivykis.la
 
 PROGS			= avl				\
 			  iv_event_raw_test		\
+			  iv_event_test			\
 			  timer				\
 			  timer_rat
 
@@ -12,7 +13,6 @@ if HAVE_POSIX
 PROGS			+= client			\
 			   connectfail			\
 			   connectreset			\
-			   iv_event_test		\
 			   iv_fd_pump_discard		\
 			   iv_fd_pump_echo		\
 			   iv_popen_test		\

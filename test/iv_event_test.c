@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <iv_event.h>
-#include <pthread.h>
+#include <iv_thread.h>
 #include <unistd.h>
 
 static struct iv_event ev0;
@@ -32,7 +32,7 @@ static struct iv_timer tim1;
 
 static void got_ev0(void *_dummy)
 {
-	printf("%p: got ev0, starting tim0\n", (void *)pthread_self());
+	printf("%lu: got ev0, starting tim0\n", iv_thread_get_id());
 
 	iv_validate_now();
 	tim0.expires = iv_now;
@@ -42,14 +42,14 @@ static void got_ev0(void *_dummy)
 
 static void got_tim0(void *_dummy)
 {
-	printf("%p: tim0 expired, signaling ev1\n", (void *)pthread_self());
+	printf("%lu: tim0 expired, signaling ev1\n", iv_thread_get_id());
 
 	iv_event_post(&ev1);
 }
 
 static void got_ev1(void *_dummy)
 {
-	printf("%p: got ev1, starting tim1\n", (void *)pthread_self());
+	printf("%lu: got ev1, starting tim1\n", iv_thread_get_id());
 
 	iv_validate_now();
 	tim1.expires = iv_now;
@@ -59,12 +59,12 @@ static void got_ev1(void *_dummy)
 
 static void got_tim1(void *_dummy)
 {
-	printf("%p: tim1 expired, signaling ev0\n", (void *)pthread_self());
+	printf("%lu: tim1 expired, signaling ev0\n", iv_thread_get_id());
 
 	iv_event_post(&ev0);
 }
 
-static void *thread1(void *_dummy)
+static void thread1(void *_dummy)
 {
 	iv_init();
 
@@ -76,14 +76,10 @@ static void *thread1(void *_dummy)
 	tim1.handler = got_tim1;
 
 	iv_main();
-
-	return NULL;
 }
 
 int main()
 {
-	pthread_t foo;
-
 	iv_init();
 
 	IV_EVENT_INIT(&ev0);
@@ -93,7 +89,7 @@ int main()
 	IV_TIMER_INIT(&tim0);
 	tim0.handler = got_tim0;
 
-	pthread_create(&foo, NULL, thread1, NULL);
+	iv_thread_create("thread1", thread1, NULL);
 
 	iv_validate_now();
 	tim0.expires = iv_now;
