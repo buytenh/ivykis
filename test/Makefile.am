@@ -32,12 +32,17 @@ endif
 
 endif
 
+if HAVE_WIN32
+PROGS			+= handle
+endif
+
 noinst_PROGRAMS		= $(PROGS)
 
 avl_SOURCES			= avl.c
 client_SOURCES			= client.c
 connectfail_SOURCES		= connectfail.c
 connectreset_SOURCES		= connectreset.c
+handle_SOURCES			= handle.c
 iv_event_raw_test_SOURCES	= iv_event_raw_test.c
 iv_event_test_SOURCES		= iv_event_test.c
 iv_fd_pump_discard_SOURCES	= iv_fd_pump_discard.c
