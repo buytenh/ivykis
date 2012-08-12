@@ -25,16 +25,22 @@
 #include <time.h>
 #include "iv_private.h"
 
-static int qpc_unavailable;
+static int method;
+static ULONGLONG (WINAPI *gtc64)(void);
+
+static void tc64_to_timespec(struct timespec *time, ULONGLONG tc64)
+{
+	time->tv_sec = tc64 / 1000;
+	time->tv_nsec = 1000000L * (tc64 % 1000);
+}
 
 void iv_get_time(struct timespec *time)
 {
-	ULONGLONG tc;
+	LARGE_INTEGER _count;
+	LARGE_INTEGER _freq;
 
-	if (!qpc_unavailable) {
-		LARGE_INTEGER _count;
-		LARGE_INTEGER _freq;
-
+	switch (method) {
+	case 0:
 		if (QueryPerformanceFrequency(&_freq) &&
 		    QueryPerformanceCounter(&_count)) {
 			LONGLONG count = _count.QuadPart;
@@ -43,13 +49,32 @@ void iv_get_time(struct timespec *time)
 			time->tv_sec = count / freq;
 			time->tv_nsec = (1000000000ULL * (count % freq)) / freq;
 
-			return;
+			break;
 		}
 
-		qpc_unavailable = 1;
-	}
+		method = 1;
 
-	tc = GetTickCount64();
-	time->tv_sec = tc / 1000;
-	time->tv_nsec = 1000000L * (tc % 1000);
+		/* fall through */
+
+	case 1:
+		if (gtc64 == NULL) {
+			HMODULE kernel32;
+
+			kernel32 = GetModuleHandle(TEXT("kernel32.dll"));
+			gtc64 = (ULONGLONG (WINAPI *)(void))
+				GetProcAddress(kernel32, "GetTickCount64");
+		}
+
+		if (gtc64 != NULL) {
+			tc64_to_timespec(time, gtc64());
+			break;
+		}
+
+		method = 2;
+
+		/* fall through */
+
+	case 2:
+		iv_fatal("iv_time_get: no methods available!");
+	}
 }
