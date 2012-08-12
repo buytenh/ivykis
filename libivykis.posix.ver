@@ -98,3 +98,8 @@ IVYKIS_0.30 {
 	iv_fatal;
 	iv_set_fatal_msg_handler;
 } IVYKIS_0.29;
+
+IVYKIS_0.33 {
+	# iv_thread
+	iv_thread_get_id;
+} IVYKIS_0.30;

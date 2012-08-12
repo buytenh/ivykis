@@ -34,9 +34,9 @@
 #include <sys/thr.h>
 #endif
 
-static pid_t get_thread_id(void)
+static unsigned long get_thread_id(void)
 {
-	pid_t tid;
+	unsigned long tid;
 
 	tid = 0;
 #ifdef __NR_gettid
@@ -44,7 +44,7 @@ static pid_t get_thread_id(void)
 #elif defined(__FreeBSD__)
 	long thr;
 	thr_self(&thr);
-	tid = (pid_t)thr;
+	tid = (unsigned long)thr;
 #endif
 
 	return tid;
@@ -57,7 +57,7 @@ struct iv_thread {
 	pthread_t		thread_id;
 	struct iv_event		dead;
 	char			*name;
-	pid_t			tid;
+	unsigned long		tid;
 	void			(*start_routine)(void *);
 	void			*arg;
 };
@@ -200,18 +200,23 @@ void iv_thread_set_debug_state(int state)
 	iv_thread_debug = !!state;
 }
 
+unsigned long iv_thread_get_id(void)
+{
+	return get_thread_id();
+}
+
 void iv_thread_list_children(void)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_list_head *ilh;
 
 	fprintf(stderr, "tid\tname\n");
-	fprintf(stderr, "%d\tself\n", (int)get_thread_id());
+	fprintf(stderr, "%lu\tself\n", get_thread_id());
 
 	iv_list_for_each (ilh, &tinfo->child_threads) {
 		struct iv_thread *thr;
 
 		thr = iv_list_entry(ilh, struct iv_thread, list);
-		fprintf(stderr, "%d\t%s\n", (int)thr->tid, thr->name);
+		fprintf(stderr, "%lu\t%s\n", thr->tid, thr->name);
 	}
 }

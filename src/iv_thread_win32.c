@@ -152,6 +152,11 @@ void iv_thread_set_debug_state(int state)
 	iv_thread_debug = !!state;
 }
 
+unsigned long iv_thread_get_id(void)
+{
+	return GetCurrentThreadId();
+}
+
 void iv_thread_list_children(void)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);

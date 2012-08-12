@@ -27,6 +27,7 @@ extern "C" {
 
 int iv_thread_create(char *name, void (*start_routine)(void *), void *arg);
 void iv_thread_set_debug_state(int state);
+unsigned long iv_thread_get_id(void);
 void iv_thread_list_children(void);
 
 #ifdef __cplusplus
