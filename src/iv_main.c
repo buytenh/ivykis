@@ -95,6 +95,7 @@ void iv_init(void)
 
 	iv_poll_init(st);
 	iv_task_init(st);
+	iv_time_init(st);
 	iv_timer_init(st);
 	iv_tls_thread_init(st);
 }

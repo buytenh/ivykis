@@ -28,6 +28,10 @@
 static int clock_source;
 #endif
 
+void iv_time_init(struct iv_state *st)
+{
+}
+
 void iv_get_time(struct timespec *time)
 {
 	struct timeval tv;

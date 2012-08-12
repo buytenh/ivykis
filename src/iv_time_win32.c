@@ -27,6 +27,18 @@
 
 static int method;
 static ULONGLONG (WINAPI *gtc64)(void);
+static int tc32_cs_initialized;
+static CRITICAL_SECTION tc32_cs;
+static DWORD tc32_high;
+static DWORD tc32_low;
+
+void iv_time_init(struct iv_state *st)
+{
+	if (!tc32_cs_initialized) {
+		tc32_cs_initialized = 1;
+		InitializeCriticalSection(&tc32_cs);
+	}
+}
 
 static void tc64_to_timespec(struct timespec *time, ULONGLONG tc64)
 {
@@ -38,6 +50,8 @@ void iv_get_time(struct timespec *time)
 {
 	LARGE_INTEGER _count;
 	LARGE_INTEGER _freq;
+	DWORD tc;
+	DWORD tc_high;
 
 	switch (method) {
 	case 0:
@@ -75,6 +89,19 @@ void iv_get_time(struct timespec *time)
 		/* fall through */
 
 	case 2:
-		iv_fatal("iv_time_get: no methods available!");
+		EnterCriticalSection(&tc32_cs);
+
+		tc = GetTickCount();
+		if ((unsigned)tc < (unsigned)tc32_low)
+			tc32_high++;
+		tc32_low = tc;
+
+		tc_high = tc32_high;
+
+		LeaveCriticalSection(&tc32_cs);
+
+		tc64_to_timespec(time, (((ULONGLONG)tc_high) << 32) | tc);
+
+		break;
 	}
 }
