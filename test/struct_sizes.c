@@ -22,7 +22,11 @@
 #include <stdlib.h>
 #include <iv.h>
 #include "../iv_private.h"
+#ifndef _WIN32
 #include "../iv_fd_private.h"
+#else
+#include "../iv_handle_private.h"
+#endif
 
 int main()
 {
@@ -30,6 +34,7 @@ int main()
 
 	fail = 0;
 
+#ifndef _WIN32
 	printf("struct iv_fd: %d\n", (int)sizeof(struct iv_fd));
 	printf("struct iv_fd_: %d\n", (int)sizeof(struct iv_fd_));
 	if (sizeof(struct iv_fd) < sizeof(struct iv_fd_)) {
@@ -37,6 +42,15 @@ int main()
 		fail = 1;
 	}
 	printf("\n");
+#else
+	printf("struct iv_handle: %d\n", (int)sizeof(struct iv_handle));
+	printf("struct iv_handle_: %d\n", (int)sizeof(struct iv_handle_));
+	if (sizeof(struct iv_handle) < sizeof(struct iv_handle_)) {
+		printf("\t=> TOO SMALL\n");
+		fail = 1;
+	}
+	printf("\n");
+#endif
 
 	printf("struct iv_task: %d\n", (int)sizeof(struct iv_task));
 	printf("struct iv_task_: %d\n", (int)sizeof(struct iv_task_));

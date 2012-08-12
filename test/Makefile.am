@@ -8,6 +8,7 @@ PROGS			= avl				\
 			  iv_event_test			\
 			  iv_thread_test		\
 			  iv_work_test			\
+			  struct_sizes			\
 			  timer				\
 			  timer_rat
 
@@ -23,8 +24,7 @@ PROGS			+= client			\
 			   iv_wait_test			\
 			   null				\
 			   server			\
-			   server_thread		\
-			   struct_sizes
+			   server_thread
 
 if HAVE_INOTIFY
 PROGS			+= iv_inotify_test
