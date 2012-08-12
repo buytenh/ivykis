@@ -22,12 +22,15 @@
 #include <stdlib.h>
 #include <iv.h>
 #include <iv_thread.h>
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 
 static void thr_return(void *cookie)
 {
 }
 
+#ifndef _WIN32
 static void thr_selfcancel(void *cookie)
 {
 	pthread_cancel(pthread_self());
@@ -38,6 +41,7 @@ static void thr_exit(void *cookie)
 {
 	pthread_exit(NULL);
 }
+#endif
 
 int main()
 {
@@ -46,8 +50,10 @@ int main()
 	iv_thread_set_debug_state(1);
 
 	iv_thread_create("return", thr_return, NULL);
+#ifndef _WIN32
 	iv_thread_create("selfcancel", thr_selfcancel, NULL);
 	iv_thread_create("exit", thr_exit, NULL);
+#endif
 
 	iv_thread_list_children();
 
