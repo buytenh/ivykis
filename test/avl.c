@@ -151,12 +151,24 @@ static int docomp(struct iv_avl_node *_a, struct iv_avl_node *_b)
 static struct iv_avl_tree x;
 static struct foo *f[NUM];
 
+static int mkrand(void)
+{
+	int r;
+
+	r = rand();
+#if RAND_MAX == 0x7fff
+	r |= rand() << 15;
+#endif
+
+	return r;
+}
+
 int main()
 {
 	struct iv_avl_node *an;
 	int i;
 
-	srandom(time(NULL) ^ getpid());
+	srand(time(NULL) ^ getpid());
 
 	INIT_IV_AVL_TREE(&x, docomp);
 
@@ -169,7 +181,7 @@ int main()
 		f[i] = malloc(sizeof(struct foo));
 
 		do {
-			f[i]->num = random();
+			f[i]->num = mkrand();
 			ret = iv_avl_tree_insert(&x, &f[i]->an);
 		} while (ret < 0);
 
