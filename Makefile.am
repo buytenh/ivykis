@@ -1,6 +1,6 @@
-SUBDIRS = src
+SUBDIRS = src test
 if HAVE_POSIX
-SUBDIRS += contrib misc test
+SUBDIRS += contrib misc
 if !BUILD_ON_CYGWIN
 SUBDIRS += man3
 endif

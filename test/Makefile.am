@@ -3,28 +3,33 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/src/include	\
 
 LDADD			= $(top_builddir)/src/libivykis.la
 
-PROGS			= avl				\
-			  client			\
-			  connectfail			\
-			  connectreset 			\
-			  iv_event_raw_test		\
-			  iv_event_test			\
-			  iv_fd_pump_discard		\
-			  iv_fd_pump_echo		\
-			  iv_popen_test			\
-			  iv_signal_child_test		\
-			  iv_signal_test		\
-			  iv_thread_test		\
-			  iv_wait_test			\
-			  iv_work_test			\
-			  null				\
-			  server			\
-			  server_thread			\
-			  struct_sizes			\
+PROGS			= iv_event_raw_test		\
 			  timer				\
 			  timer_rat
+
+if HAVE_POSIX
+PROGS			+= avl				\
+			   client			\
+			   connectfail			\
+			   connectreset			\
+			   iv_event_test		\
+			   iv_fd_pump_discard		\
+			   iv_fd_pump_echo		\
+			   iv_popen_test		\
+			   iv_signal_child_test		\
+			   iv_signal_test		\
+			   iv_thread_test		\
+			   iv_wait_test			\
+			   iv_work_test			\
+			   null				\
+			   server			\
+			   server_thread		\
+			   struct_sizes
+
 if HAVE_INOTIFY
 PROGS			+= iv_inotify_test
+endif
+
 endif
 
 noinst_PROGRAMS		= $(PROGS)
