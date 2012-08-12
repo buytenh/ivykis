@@ -32,7 +32,7 @@ void iv_time_init(struct iv_state *st)
 {
 }
 
-void iv_get_time(struct timespec *time)
+void iv_time_get(struct timespec *time)
 {
 	struct timeval tv;
 

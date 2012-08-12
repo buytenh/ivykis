@@ -44,7 +44,7 @@ void iv_validate_now(void)
 
 	if (!st->time_valid) {
 		st->time_valid = 1;
-		iv_get_time(&st->time);
+		iv_time_get(&st->time);
 	}
 }
 
@@ -293,7 +293,7 @@ void iv_run_timers(struct iv_state *st)
 
 		if (!st->time_valid) {
 			st->time_valid = 1;
-			iv_get_time(&st->time);
+			iv_time_get(&st->time);
 		}
 
 		if (timespec_gt(&t->expires, &st->time))

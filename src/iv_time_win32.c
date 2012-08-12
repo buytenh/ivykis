@@ -46,7 +46,7 @@ static void tc64_to_timespec(struct timespec *time, ULONGLONG tc64)
 	time->tv_nsec = 1000000L * (tc64 % 1000);
 }
 
-void iv_get_time(struct timespec *time)
+void iv_time_get(struct timespec *time)
 {
 	LARGE_INTEGER _count;
 	LARGE_INTEGER _freq;
