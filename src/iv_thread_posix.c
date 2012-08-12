@@ -26,28 +26,48 @@
 #include <iv_tls.h>
 #include <pthread.h>
 #include <string.h>
+#include "config.h"
 
 /* thread ID ****************************************************************/
-#ifdef __FreeBSD__
+#ifdef HAVE_PROCESS_H
+#include <process.h>
+#endif
+#ifdef HAVE_SYS_SYSCALL_H
+#include <sys/syscall.h>
+#endif
+#ifdef HAVE_SYS_UCONTEXT_H
 /* Older FreeBSDs (6.1) don't include ucontext.h in thr.h.  */
 #include <sys/ucontext.h>
+#endif
+#ifdef HAVE_SYS_THR_H
 #include <sys/thr.h>
+#endif
+#ifdef HAVE_THREAD_H
+#include <thread.h>
 #endif
 
 static unsigned long get_thread_id(void)
 {
-	unsigned long tid;
+	unsigned long thread_id;
 
-	tid = 0;
-#ifdef __NR_gettid
-	tid = syscall(__NR_gettid);
-#elif defined(__FreeBSD__)
+#if defined(__NR_gettid)
+	thread_id = syscall(__NR_gettid);
+#elif defined(HAVE_GETTID) && defined(HAVE_PROCESS_H)
+	thread_id = gettid();
+#elif defined(HAVE_LWP_GETTID)
+	thread_id = lwp_gettid();
+#elif defined(HAVE_THR_SELF) && defined(HAVE_SYS_THR_H)
 	long thr;
 	thr_self(&thr);
-	tid = (unsigned long)thr;
+	thread_id = (unsigned long)thr;
+#elif defined(HAVE_THR_SELF) && defined(HAVE_THREAD_H)
+	thread_id = thr_self();
+#else
+#warning using pthread_self for get_thread_id
+	thread_id = (unsigned long)pthread_self();
 #endif
 
-	return tid;
+	return thread_id;
 }
 
 
