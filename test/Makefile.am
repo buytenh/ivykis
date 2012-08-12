@@ -7,6 +7,7 @@ PROGS			= avl				\
 			  iv_event_raw_test		\
 			  iv_event_test			\
 			  iv_thread_test		\
+			  iv_work_test			\
 			  timer				\
 			  timer_rat
 
@@ -20,7 +21,6 @@ PROGS			+= client			\
 			   iv_signal_child_test		\
 			   iv_signal_test		\
 			   iv_wait_test			\
-			   iv_work_test			\
 			   null				\
 			   server			\
 			   server_thread		\

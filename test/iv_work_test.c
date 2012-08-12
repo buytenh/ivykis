@@ -23,7 +23,6 @@
 #include <iv.h>
 #include <iv_thread.h>
 #include <iv_work.h>
-#include <pthread.h>
 
 static struct iv_work_pool pool;
 static struct iv_work_item item_a;
@@ -36,10 +35,14 @@ static void work(void *cookie)
 {
 	char *task = cookie;
 
-	printf("performing work item %s in thread %p\n",
-	       task, (void *)pthread_self());
+	printf("performing work item %s in thread %lu\n",
+	       task, iv_thread_get_id());
 
+#ifndef _WIN32
 	sleep(1);
+#else
+	Sleep(1000);
+#endif
 }
 
 static void work_complete(void *cookie)
