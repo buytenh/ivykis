@@ -98,6 +98,7 @@ struct iv_handle {
 void IV_HANDLE_INIT(struct iv_handle *);
 void iv_handle_register(struct iv_handle *);
 void iv_handle_unregister(struct iv_handle *);
+int iv_handle_registered(struct iv_handle *);
 void iv_handle_set_handler(struct iv_handle *, void (*)(void *));
 #endif
 

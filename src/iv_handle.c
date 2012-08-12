@@ -214,6 +214,13 @@ void iv_handle_unregister(struct iv_handle *_h)
 		st->handled_handle = INVALID_HANDLE_VALUE;
 }
 
+int iv_handle_registered(struct iv_handle *_h)
+{
+	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+
+	return h->registered;
+}
+
 void iv_handle_set_handler(struct iv_handle *_h, void (*handler)(void *))
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
