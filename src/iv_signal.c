@@ -20,10 +20,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <iv_list.h>
 #include <iv_signal.h>
 #include <pthread.h>
-#include <inttypes.h>
+#include <string.h>
 #include "spinlock.h"
 
 static spinlock_t sig_interests_lock;
@@ -187,8 +188,15 @@ int iv_signal_register(struct iv_signal *this)
 
 		sa.sa_handler = iv_signal_handler;
 		sigfillset(&sa.sa_mask);
+#ifndef __QNX__
 		sa.sa_flags = SA_RESTART;
-		sigaction(this->signum, &sa, NULL);
+#else
+		sa.sa_flags = 0;
+#endif
+		if (sigaction(this->signum, &sa, NULL) < 0) {
+			iv_fatal("iv_signal_register: sigaction got "
+				 "error %d[%s]", errno, strerror(errno));
+		}
 	}
 	iv_avl_tree_insert(&sig_interests, &this->an);
 
