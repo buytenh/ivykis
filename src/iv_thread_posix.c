@@ -35,11 +35,9 @@
 #ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h>
 #endif
-#ifdef HAVE_SYS_UCONTEXT_H
-/* Older FreeBSDs (6.1) don't include ucontext.h in thr.h.  */
-#include <sys/ucontext.h>
-#endif
 #ifdef HAVE_SYS_THR_H
+/* Older FreeBSDs (6.1) don't include sys/ucontext.h in sys/thr.h.  */
+#include <sys/ucontext.h>
 #include <sys/thr.h>
 #endif
 #ifdef HAVE_THREAD_H

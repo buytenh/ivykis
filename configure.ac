@@ -237,8 +237,14 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h	\
 		  stddef.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
 		  sys/time.h sys/wait.h syslog.h unistd.h], [],
 	AC_MSG_ERROR(some required header files not installed.))
-AC_CHECK_HEADERS([process.h sys/devpoll.h sys/eventfd.h sys/select.h	\
-		  sys/syscall.h sys/thr.h sys/ucontext.h thread.h])
+AC_CHECK_HEADERS([process.h])
+AC_CHECK_HEADERS([sys/devpoll.h])
+AC_CHECK_HEADERS([sys/eventfd.h])
+AC_CHECK_HEADERS([sys/select.h])
+AC_CHECK_HEADERS([sys/syscall.h])
+# Older FreeBSDs (6.1) don't include sys/ucontext.h in sys/thr.h.
+AC_CHECK_HEADERS([sys/thr.h], [], [], [#include <sys/ucontext.h>])
+AC_CHECK_HEADERS([thread.h])
 
 # Check for <linux/netfilter_ipv4.h> header file.
 AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
