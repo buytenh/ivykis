@@ -41,6 +41,29 @@ else
 fi
 ac_c_werror_flag=$ac_save_c_werror_flag
 
+# Check the host operating system type: posix or win32.
+AC_MSG_CHECKING([host operating system type])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+	#include <unistd.h>
+	#ifndef _POSIX_VERSION
+	#error not POSIX
+	#endif
+	)],
+	[ac_cv_host_system=posix
+	 AC_MSG_RESULT([posix])],
+	[AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+		#ifndef _WIN32
+		#error not WIN32
+		#endif
+		)],
+		[ac_cv_host_system=win32
+		 AC_MSG_RESULT([win32])],
+		[AC_MSG_RESULT([unknown])
+		 AC_MSG_ERROR(Can't determine host system type.)])])
+
+if test $ac_cv_host_system = posix
+then
+
 # Check for __thread.
 AC_MSG_CHECKING([for working __thread])
 case $host_os-$host_cpu in
@@ -75,29 +98,6 @@ solaris*-sparc)
 		[AC_MSG_RESULT([no])])
 	;;
 esac
-
-# Check the host operating system type: posix or win32.
-AC_MSG_CHECKING([host operating system type])
-AC_COMPILE_IFELSE([AC_LANG_SOURCE(
-	#include <unistd.h>
-	#ifndef _POSIX_VERSION
-	#error not POSIX
-	#endif
-	)],
-	[ac_cv_host_system=posix
-	 AC_MSG_RESULT([posix])],
-	[AC_COMPILE_IFELSE([AC_LANG_SOURCE(
-		#ifndef _WIN32
-		#error not WIN32
-		#endif
-		)],
-		[ac_cv_host_system=win32
-		 AC_MSG_RESULT([win32])],
-		[AC_MSG_RESULT([unknown])
-		 AC_MSG_ERROR(Can't determine host system type.)])])
-
-if test $ac_cv_host_system = posix
-then
 
 # OS-specific preprocessor defines.
 case $host_os in

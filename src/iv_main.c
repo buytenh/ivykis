@@ -28,9 +28,11 @@
 #ifndef _WIN32
 int				iv_state_key_allocated;
 pthread_key_t			iv_state_key;
-#endif
 #ifdef HAVE_THREAD
 __thread struct iv_state	*__st;
+#endif
+#else
+DWORD				iv_state_index = -1;
 #endif
 
 static void __iv_deinit(struct iv_state *st)
@@ -41,9 +43,11 @@ static void __iv_deinit(struct iv_state *st)
 
 #ifndef _WIN32
 	pthread_setspecific(iv_state_key, NULL);
-#endif
 #ifdef HAVE_THREAD
 	__st = NULL;
+#endif
+#else
+	TlsSetValue(iv_state_index, NULL);
 #endif
 
 	barrier();
@@ -69,9 +73,11 @@ static struct iv_state *iv_allocate_state(void)
 
 #ifndef _WIN32
 	pthread_setspecific(iv_state_key, st);
-#endif
 #ifdef HAVE_THREAD
 	__st = st;
+#endif
+#else
+	TlsSetValue(iv_state_index, st);
 #endif
 
 	return st;
@@ -86,6 +92,12 @@ void iv_init(void)
 		if (pthread_key_create(&iv_state_key, iv_state_destructor))
 			iv_fatal("iv_init: failed to allocate TLS key");
 		iv_state_key_allocated = 1;
+	}
+#else
+	if (iv_state_index == -1) {
+		iv_state_index = TlsAlloc();
+		if (iv_state_index == TLS_OUT_OF_INDEXES)
+			iv_fatal("iv_init: failed to allocate TLS key");
 	}
 #endif
 
@@ -104,6 +116,9 @@ int iv_inited(void)
 {
 #if !defined(_WIN32) && !defined(HAVE_THREAD)
 	if (!iv_state_key_allocated)
+		return 0;
+#elif defined(_WIN32)
+	if (iv_state_index == -1)
 		return 0;
 #endif
 
@@ -150,12 +165,20 @@ void iv_deinit(void)
 #ifdef _WIN32
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
+	if (iv_state_index == -1)
+		return TRUE;
+
 	if (fdwReason == DLL_PROCESS_DETACH || fdwReason == DLL_THREAD_DETACH) {
 		struct iv_state *st;
 
 		st = iv_get_state();
 		if (st != NULL)
 			__iv_deinit(st);
+	}
+
+	if (fdwReason == DLL_PROCESS_DETACH) {
+		TlsFree(iv_state_index);
+		iv_state_index = -1;
 	}
 
 	return TRUE;

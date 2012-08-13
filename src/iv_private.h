@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -114,14 +114,14 @@ struct iv_state {
 #endif
 };
 
-#ifdef HAVE_THREAD
+#if !defined(_WIN32) && defined(HAVE_THREAD)
 extern __thread struct iv_state *__st;
 
 static inline struct iv_state *iv_get_state(void)
 {
 	return __st;
 }
-#else
+#elif !defined(_WIN32) && !defined(HAVE_THREAD)
 #include <pthread.h>
 
 extern pthread_key_t iv_state_key;
@@ -129,6 +129,13 @@ extern pthread_key_t iv_state_key;
 static inline struct iv_state *iv_get_state(void)
 {
 	return pthread_getspecific(iv_state_key);
+}
+#else
+extern DWORD iv_state_index;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return TlsGetValue(iv_state_index);
 }
 #endif
 
