@@ -5,13 +5,13 @@ LDADD			= $(top_builddir)/src/libivykis.la
 
 PROGS			= iv_event_test			\
 			  iv_thread_test		\
-			  iv_work_test			\
-			  timer_rat
+			  iv_work_test
 
 TESTS			= avl				\
 			  iv_event_raw_test		\
 			  struct_sizes			\
-			  timer
+			  timer				\
+			  timer_order
 
 if HAVE_POSIX
 PROGS			+= client			\
@@ -59,7 +59,7 @@ null_SOURCES			= null.c
 server_SOURCES			= server.c
 struct_sizes_SOURCES		= struct_sizes.c
 timer_SOURCES			= timer.c
-timer_rat_SOURCES		= timer_rat.c
+timer_order_SOURCES		= timer_order.c
 
 server_thread_CPPFLAGS	= -D_GNU_SOURCE -I$(top_srcdir)/src/include -I$(top_builddir)/src/include -DTHREAD
 server_thread_SOURCES	= server.c

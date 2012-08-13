@@ -27,25 +27,29 @@
 #else
 #define NUM		32768
 #endif
+
 static struct iv_timer	tim[NUM];
+static int expect;
 
 static void handler(void *_t)
 {
 	struct iv_timer *t = (struct iv_timer *)_t;
+	int index;
 
-	printf("%i\n", (int)(t - tim));
+	index = (int)(t - tim);
+	if (expect != index) {
+		fprintf(stderr, "expecting %d, got %d\n", expect, index);
+		exit(1);
+	}
 
-#if 0
-	iv_validate_now();
-	t->expires = iv_now;
-	t->expires.tv_sec += 1;
-	iv_timer_register(t);
-#endif
+	expect++;
 }
 
 int main()
 {
 	int i;
+
+	alarm(30);
 
 	iv_init();
 
@@ -54,8 +58,7 @@ int main()
 	for (i = 0; i < NUM; i++) {
 		IV_TIMER_INIT(tim + i);
 		tim[i].expires = iv_now;
-		tim[i].expires.tv_sec += 1;
-		tim[i].expires.tv_nsec += i;
+		tim[i].expires.tv_nsec += i + 100000000;
 		if (tim[i].expires.tv_nsec >= 1000000000) {
 			tim[i].expires.tv_sec++;
 			tim[i].expires.tv_nsec -= 1000000000;
@@ -68,6 +71,12 @@ int main()
 	iv_main();
 
 	iv_deinit();
+
+	if (expect != NUM) {
+		fprintf(stderr, "only ran %d timer handlers (vs %d)\n",
+			expect, NUM);
+		return 1;
+	}
 
 	return 0;
 }
