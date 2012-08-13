@@ -26,18 +26,17 @@
 static struct iv_event_raw ev0;
 static struct iv_timer ev1;
 static struct iv_event_raw ev2;
+static int success;
 
 static void gotev2(void *_x)
 {
-	printf("got ev2\n");
-
 	iv_event_raw_unregister(&ev2);
+
+	success = 1;
 }
 
 static void gotev1(void *_x)
 {
-	printf("got ev1\n");
-
 	IV_EVENT_RAW_INIT(&ev2);
 	ev2.handler = gotev2;
 	iv_event_raw_register(&ev2);
@@ -47,20 +46,20 @@ static void gotev1(void *_x)
 
 static void gotev0(void *_x)
 {
-	printf("got ev0\n");
-
 	iv_event_raw_unregister(&ev0);
 
 	IV_TIMER_INIT(&ev1);
 	iv_validate_now();
 	ev1.expires = iv_now;
-	ev1.expires.tv_sec++;
+	ev1.expires.tv_nsec += 100000000;
 	ev1.handler = gotev1;
 	iv_timer_register(&ev1);
 }
 
 int main()
 {
+	alarm(5);
+
 	iv_init();
 
 	IV_EVENT_RAW_INIT(&ev0);
@@ -73,5 +72,5 @@ int main()
 
 	iv_deinit();
 
-	return 0;
+	return !success;
 }

@@ -3,15 +3,15 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/src/include	\
 
 LDADD			= $(top_builddir)/src/libivykis.la
 
-PROGS			= iv_event_raw_test		\
-			  iv_event_test			\
+PROGS			= iv_event_test			\
 			  iv_thread_test		\
 			  iv_work_test			\
 			  struct_sizes			\
 			  timer				\
 			  timer_rat
 
-TESTS			= avl
+TESTS			= avl				\
+			  iv_event_raw_test
 
 if HAVE_POSIX
 PROGS			+= client			\
