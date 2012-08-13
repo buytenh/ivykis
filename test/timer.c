@@ -22,35 +22,35 @@
 #include <stdlib.h>
 #include <iv.h>
 
-static struct iv_timer tim;
+static int success;
 
 static void handler(void *_t)
 {
-	struct iv_timer *t = (struct iv_timer *)_t;
-
-	printf("hoihoihoihoihoi!\n");
-
-	iv_validate_now();
-	t->expires = iv_now;
-	t->expires.tv_sec += 1;
-	iv_timer_register(t);
+	success = 1;
 }
 
 int main()
 {
+	struct iv_timer timer;
+
+	alarm(5);
+
 	iv_init();
 
-	IV_TIMER_INIT(&tim);
+	IV_TIMER_INIT(&timer);
 	iv_validate_now();
-	tim.expires = iv_now;
-	tim.expires.tv_sec += 1;
-	tim.cookie = (void *)&tim;
-	tim.handler = handler;
-	iv_timer_register(&tim);
+	timer.expires = iv_now;
+	timer.expires.tv_nsec += 100000000;
+	if (timer.expires.tv_nsec >= 1000000000) {
+		timer.expires.tv_sec++;
+		timer.expires.tv_nsec -= 1000000000;
+	}
+	timer.handler = handler;
+	iv_timer_register(&timer);
 
 	iv_main();
 
 	iv_deinit();
 
-	return 0;
+	return !success;
 }
