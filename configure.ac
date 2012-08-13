@@ -1,6 +1,6 @@
 AC_PREREQ(2.59)
 AC_INIT([ivykis], [0.32], [libivykis-discuss@lists.sourceforge.net])
-AC_CONFIG_SRCDIR([src/iv_main.c])
+AC_CONFIG_SRCDIR([src/iv_avl.c])
 AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
 

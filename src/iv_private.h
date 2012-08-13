@@ -29,7 +29,7 @@
 #define NEED_SELECT
 
 struct iv_state {
-	/* iv_main.c  */
+	/* iv_main_{posix,win32}.c  */
 	int			quit;
 	int			numobjs;
 
@@ -198,10 +198,15 @@ __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 }
 
 
-/* iv_{fd,handle}.c */
-void iv_poll_init(struct iv_state *st);
-void iv_poll_deinit(struct iv_state *st);
-void iv_poll_and_run(struct iv_state *st, struct timespec *to);
+/* iv_fd.c */
+void iv_fd_init(struct iv_state *st);
+void iv_fd_deinit(struct iv_state *st);
+void iv_fd_poll_and_run(struct iv_state *st, struct timespec *to);
+
+/* iv_handle.c */
+void iv_handle_init(struct iv_state *st);
+void iv_handle_deinit(struct iv_state *st);
+void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to);
 
 /* iv_task.c */
 void iv_task_init(struct iv_state *st);
@@ -209,8 +214,10 @@ int iv_pending_tasks(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
 /* iv_time_{posix,win32}.c */
-void iv_time_init(struct iv_state *st);
 void iv_time_get(struct timespec *time);
+
+/* iv_time_win32.c */
+void iv_time_init(struct iv_state *st);
 
 /* iv_timer.c */
 void __iv_invalidate_now(struct iv_state *st);

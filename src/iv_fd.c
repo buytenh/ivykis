@@ -127,7 +127,7 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 		iv_fatal("iv_init: can't find suitable event dispatcher");
 }
 
-void iv_poll_init(struct iv_state *st)
+void iv_fd_init(struct iv_state *st)
 {
 	if (method == NULL)
 		iv_fd_init_first_thread(st);
@@ -138,12 +138,12 @@ void iv_poll_init(struct iv_state *st)
 	st->handled_fd = NULL;
 }
 
-void iv_poll_deinit(struct iv_state *st)
+void iv_fd_deinit(struct iv_state *st)
 {
 	method->deinit(st);
 }
 
-void iv_poll_and_run(struct iv_state *st, struct timespec *to)
+void iv_fd_poll_and_run(struct iv_state *st, struct timespec *to)
 {
 	struct iv_list_head active;
 

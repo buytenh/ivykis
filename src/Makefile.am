@@ -7,7 +7,6 @@ lib_LTLIBRARIES		= libivykis.la
 SRC			= iv_avl.c			\
 			  iv_event.c			\
 			  iv_fatal.c			\
-			  iv_main.c			\
 			  iv_task.c			\
 			  iv_timer.c			\
 			  iv_tls.c			\
@@ -27,6 +26,7 @@ if HAVE_POSIX
 SRC			+= iv_event_raw_posix.c		\
 			   iv_fd.c			\
 			   iv_fd_pump.c			\
+			   iv_main_posix.c		\
 			   iv_popen.c			\
 			   iv_signal.c			\
 			   iv_thread_posix.c		\
@@ -78,6 +78,7 @@ if HAVE_WIN32
 
 SRC			+= iv_event_raw_win32.c		\
 			   iv_handle.c			\
+			   iv_main_win32.c		\
 			   iv_thread_win32.c		\
 			   iv_time_win32.c
 

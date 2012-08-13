@@ -23,7 +23,7 @@
 #include "iv_private.h"
 #include "iv_handle_private.h"
 
-void iv_poll_init(struct iv_state *st)
+void iv_handle_init(struct iv_state *st)
 {
 	st->wait = CreateEvent(NULL, FALSE, FALSE, NULL);
 	InitializeCriticalSection(&st->active_handle_list_lock);
@@ -32,13 +32,13 @@ void iv_poll_init(struct iv_state *st)
 	st->handled_handle = INVALID_HANDLE_VALUE;
 }
 
-void iv_poll_deinit(struct iv_state *st)
+void iv_handle_deinit(struct iv_state *st)
 {
 	CloseHandle(st->wait);
 	DeleteCriticalSection(&st->active_handle_list_lock);
 }
 
-void iv_poll_and_run(struct iv_state *st, struct timespec *to)
+void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 {
 	int msec;
 	int ret;
