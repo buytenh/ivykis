@@ -102,6 +102,11 @@ void iv_init(void)
 
 int iv_inited(void)
 {
+#if !defined(_WIN32) && !defined(HAVE_THREAD)
+	if (!iv_state_key_allocated)
+		return 0;
+#endif
+
 	return iv_get_state() != NULL;
 }
 
