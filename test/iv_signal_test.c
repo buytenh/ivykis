@@ -24,40 +24,32 @@
 #include <iv_signal.h>
 #include <signal.h>
 
-static struct iv_signal is_sigint;
-static struct iv_signal is_sigquit;
+static struct iv_signal is_sigusr1;
+static int success;
 
-static void got_sigint(void *_x)
+static void got_sigusr1(void *_x)
 {
-	printf("got sigint\n");
+	iv_signal_unregister(&is_sigusr1);
 
-	iv_signal_unregister(&is_sigint);
-}
-
-static void got_sigquit(void *_x)
-{
-	printf("got sigquit\n");
-
-	iv_signal_unregister(&is_sigquit);
+	success = 1;
 }
 
 int main()
 {
+	alarm(5);
+
 	iv_init();
 
-	IV_SIGNAL_INIT(&is_sigint);
-	is_sigint.signum = SIGINT;
-	is_sigint.handler = got_sigint;
-	iv_signal_register(&is_sigint);
+	IV_SIGNAL_INIT(&is_sigusr1);
+	is_sigusr1.signum = SIGUSR1;
+	is_sigusr1.handler = got_sigusr1;
+	iv_signal_register(&is_sigusr1);
 
-	IV_SIGNAL_INIT(&is_sigquit);
-	is_sigquit.signum = SIGQUIT;
-	is_sigquit.handler = got_sigquit;
-	iv_signal_register(&is_sigquit);
+	raise(SIGUSR1);
 
 	iv_main();
 
 	iv_deinit();
 
-	return 0;
+	return !success;
 }

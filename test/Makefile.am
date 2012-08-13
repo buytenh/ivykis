@@ -21,7 +21,6 @@ PROGS			+= client			\
 			   iv_fd_pump_echo		\
 			   iv_popen_test		\
 			   iv_signal_child_test		\
-			   iv_signal_test		\
 			   iv_wait_test			\
 			   null				\
 			   server			\
@@ -30,6 +29,8 @@ PROGS			+= client			\
 if HAVE_INOTIFY
 PROGS			+= iv_inotify_test
 endif
+
+TESTS			+= iv_signal_test
 
 endif
 
