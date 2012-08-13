@@ -346,6 +346,14 @@ aix*)
 	# instead.
 	#
 	;;
+nto-qnx*)
+	#
+	# Calls to wait4(2) with pid == -1 don't return any events on
+	# QNX at all for some reason (and there are no man pages on
+	# the QNX machine I have access to, so I can't find out why).
+	# waitpid(2) seems to work, though.
+	#
+	;;
 solaris*)
 	#
 	# The Solaris version of wait4(2) interprets a pid argument
