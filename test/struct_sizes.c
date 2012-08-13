@@ -35,38 +35,46 @@ int main()
 	fail = 0;
 
 #ifndef _WIN32
-	printf("struct iv_fd: %d\n", (int)sizeof(struct iv_fd));
-	printf("struct iv_fd_: %d\n", (int)sizeof(struct iv_fd_));
 	if (sizeof(struct iv_fd) < sizeof(struct iv_fd_)) {
-		printf("\t=> TOO SMALL\n");
+		fprintf(stderr, "struct iv_fd: %d\n",
+			(int)sizeof(struct iv_fd));
+		fprintf(stderr, "struct iv_fd_: %d\n",
+			(int)sizeof(struct iv_fd_));
+		fprintf(stderr, "\t=> TOO SMALL\n");
+		fprintf(stderr, "\n");
 		fail = 1;
 	}
-	printf("\n");
 #else
-	printf("struct iv_handle: %d\n", (int)sizeof(struct iv_handle));
-	printf("struct iv_handle_: %d\n", (int)sizeof(struct iv_handle_));
 	if (sizeof(struct iv_handle) < sizeof(struct iv_handle_)) {
-		printf("\t=> TOO SMALL\n");
+		fprintf(stderr, "struct iv_handle: %d\n",
+			(int)sizeof(struct iv_handle));
+		fprintf(stderr, "struct iv_handle_: %d\n",
+			(int)sizeof(struct iv_handle_));
+		fprintf(stderr, "\t=> TOO SMALL\n");
+		fprintf(stderr, "\n");
 		fail = 1;
 	}
-	printf("\n");
 #endif
 
-	printf("struct iv_task: %d\n", (int)sizeof(struct iv_task));
-	printf("struct iv_task_: %d\n", (int)sizeof(struct iv_task_));
 	if (sizeof(struct iv_task) < sizeof(struct iv_task_)) {
-		printf("\t=> TOO SMALL\n");
+		fprintf(stderr, "struct iv_task: %d\n",
+			(int)sizeof(struct iv_task));
+		fprintf(stderr, "struct iv_task_: %d\n",
+			(int)sizeof(struct iv_task_));
+		fprintf(stderr, "\t=> TOO SMALL\n");
+		fprintf(stderr, "\n");
 		fail = 1;
 	}
-	printf("\n");
 
-	printf("struct iv_timer: %d\n", (int)sizeof(struct iv_timer));
-	printf("struct iv_timer_: %d\n", (int)sizeof(struct iv_timer_));
 	if (sizeof(struct iv_timer) < sizeof(struct iv_timer_)) {
-		printf("\t=> TOO SMALL\n");
+		fprintf(stderr, "struct iv_timer: %d\n",
+			(int)sizeof(struct iv_timer));
+		fprintf(stderr, "struct iv_timer_: %d\n",
+			(int)sizeof(struct iv_timer_));
+		fprintf(stderr, "\t=> TOO SMALL\n");
+		fprintf(stderr, "\n");
 		fail = 1;
 	}
-	printf("\n");
 
 	return fail;
 }

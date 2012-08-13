@@ -6,12 +6,12 @@ LDADD			= $(top_builddir)/src/libivykis.la
 PROGS			= iv_event_test			\
 			  iv_thread_test		\
 			  iv_work_test			\
-			  struct_sizes			\
 			  timer				\
 			  timer_rat
 
 TESTS			= avl				\
-			  iv_event_raw_test
+			  iv_event_raw_test		\
+			  struct_sizes
 
 if HAVE_POSIX
 PROGS			+= client			\
