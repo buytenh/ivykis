@@ -367,8 +367,8 @@ else
 # Build a libivykis DLL.
 AC_LIBTOOL_WIN32_DLL
 
-# Checks for libraries.
-AC_SEARCH_LIBS([WSAEnumNetworkEvents], [ws2_32])
+# The iv_wsa_socket module uses the winsock2 API.
+LIBS="-lws2_32 $LIBS"
 
 fi
 
