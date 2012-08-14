@@ -73,7 +73,10 @@ SRC			+= iv_event_raw_win32.c		\
 			   iv_handle.c			\
 			   iv_main_win32.c		\
 			   iv_thread_win32.c		\
-			   iv_time_win32.c
+			   iv_time_win32.c		\
+			   iv_wsa_socket.c
+
+INC			+= include/iv_wsa_socket.h
 
 LINKFLAGS = -version-info 0:0:0						\
 	    -Wl,--version-script,$(top_srcdir)/libivykis.win32.ver	\

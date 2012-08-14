@@ -64,6 +64,11 @@ global:
 	iv_work_pool_put;
 	iv_work_pool_submit_work;
 
+	# iv_wsa_socket
+	iv_wsa_socket_register;
+	iv_wsa_socket_unregister;
+	iv_wsa_socket_set_handler;
+
 local:
 	*;
 };

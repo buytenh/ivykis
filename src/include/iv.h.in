@@ -29,6 +29,7 @@
 #include <unistd.h>
 #else
 #include <sys/time.h>
+#include <winsock2.h>
 #include <windows.h>
 #endif
 

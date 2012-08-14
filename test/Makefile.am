@@ -35,7 +35,8 @@ TESTS			+= iv_signal_test
 endif
 
 if HAVE_WIN32
-PROGS			+= handle
+PROGS			+= handle			\
+			   iv_wsa_socket_test
 endif
 
 noinst_PROGRAMS		= $(PROGS) $(TESTS)
