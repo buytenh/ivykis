@@ -90,13 +90,16 @@ struct iv_fd_ {
 struct iv_fd_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st);
-	void	(*poll)(struct iv_state *st, 
+	void	(*poll)(struct iv_state *st,
 			struct iv_list_head *active, struct timespec *to);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	int	(*notify_fd_sync)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*deinit)(struct iv_state *st);
+	int	(*event_rx_on)(struct iv_state *st);
+	void	(*event_rx_off)(struct iv_state *st);
+	void	(*event_send)(struct iv_state *dest);
 };
 
 extern int maxfd;
@@ -109,6 +112,10 @@ extern struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern struct iv_fd_poll_method iv_fd_poll_method_port;
 extern struct iv_fd_poll_method iv_fd_poll_method_select;
 
+/* iv_event_posix.c */
+void iv_event_run_pending_events(void);
+
+/* iv_fd.c */
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
 int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
 void iv_fd_make_ready(struct iv_list_head *active,

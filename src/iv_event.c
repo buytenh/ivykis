@@ -25,16 +25,22 @@
 #include <iv_event_raw.h>
 #include <iv_tls.h>
 #include "iv_private.h"
+#include "iv_event_private.h"
 #include "mutex.h"
 
 struct iv_event_thr_info {
 	int			event_count;
-	struct iv_event_raw	ier;
+	union {
+		struct iv_event_raw	ier;
+		struct iv_state		*st;
+	} u;
 	__mutex_t		list_mutex;
 	struct iv_list_head	pending_events;
 };
 
-static void iv_event_run_pending_events(void *_tinfo)
+static int iv_event_use_event_raw;
+
+static void __iv_event_run_pending_events(void *_tinfo)
 {
 	struct iv_event_thr_info *tinfo = _tinfo;
 	struct iv_list_head events;
@@ -59,9 +65,9 @@ static void iv_event_tls_init_thread(void *_tinfo)
 
 	tinfo->event_count = 0;
 
-	IV_EVENT_RAW_INIT(&tinfo->ier);
-	tinfo->ier.cookie = tinfo;
-	tinfo->ier.handler = iv_event_run_pending_events;
+	IV_EVENT_RAW_INIT(&tinfo->u.ier);
+	tinfo->u.ier.cookie = tinfo;
+	tinfo->u.ier.handler = __iv_event_run_pending_events;
 
 	mutex_init(&tinfo->list_mutex);
 
@@ -87,21 +93,38 @@ static void iv_event_tls_init(void)
 	iv_tls_user_register(&iv_event_tls_user);
 }
 
+void iv_event_run_pending_events(void)
+{
+	__iv_event_run_pending_events(iv_tls_user_ptr(&iv_event_tls_user));
+}
+
 int iv_event_register(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
 
 	if (!tinfo->event_count++) {
-		int ret;
+		if (!iv_event_use_event_raw) {
+			struct iv_state *st = iv_get_state();
 
-		ret = iv_event_raw_register(&tinfo->ier);
-		if (ret) {
-			tinfo->event_count--;
-			return ret;
+			if (event_rx_on(st) == 0)
+				tinfo->u.st = st;
+			else
+				iv_event_use_event_raw = 1;
+		}
+
+		if (iv_event_use_event_raw) {
+			int ret;
+
+			ret = iv_event_raw_register(&tinfo->u.ier);
+			if (ret) {
+				tinfo->event_count--;
+				return ret;
+			}
 		}
 	}
 
 	this->tinfo = tinfo;
+
 	INIT_IV_LIST_HEAD(&this->list);
 
 	return 0;
@@ -117,8 +140,14 @@ void iv_event_unregister(struct iv_event *this)
 		mutex_unlock(&tinfo->list_mutex);
 	}
 
-	if (!--tinfo->event_count)
-		iv_event_raw_unregister(&tinfo->ier);
+	if (!--tinfo->event_count) {
+		if (!iv_event_use_event_raw) {
+			event_rx_off(tinfo->u.st);
+			tinfo->u.st = NULL;
+		} else {
+			iv_event_raw_unregister(&tinfo->u.ier);
+		}
+	}
 }
 
 void iv_event_post(struct iv_event *this)
@@ -136,6 +165,10 @@ void iv_event_post(struct iv_event *this)
 	}
 	mutex_unlock(&tinfo->list_mutex);
 
-	if (post)
-		iv_event_raw_post(&tinfo->ier);
+	if (post) {
+		if (!iv_event_use_event_raw)
+			event_send(tinfo->u.st);
+		else
+			iv_event_raw_post(&tinfo->u.ier);
+	}
 }
