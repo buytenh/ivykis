@@ -51,30 +51,11 @@ struct work_pool_thread {
 	struct iv_list_head	list;
 	int			kicked;
 	struct iv_event		kick;
-	struct iv_task		work_task;
 	struct iv_timer		idle_timer;
 };
 
 
 /* worker thread ************************************************************/
-static void iv_work_thread_got_event(void *_thr)
-{
-	struct work_pool_thread *thr = _thr;
-	struct work_pool_priv *pool = thr->pool;
-
-	mutex_lock(&pool->lock);
-
-	thr->kicked = 0;
-
-	if (!iv_list_empty(&thr->list)) {
-		iv_list_del_init(&thr->list);
-		iv_task_register(&thr->work_task);
-		iv_timer_unregister(&thr->idle_timer);
-	}
-
-	mutex_unlock(&pool->lock);
-}
-
 static void __iv_work_thread_die(struct work_pool_thread *thr)
 {
 	struct work_pool_priv *pool = thr->pool;
@@ -97,13 +78,20 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 		iv_event_post(&pool->ev);
 }
 
-static void iv_work_thread_do_work(void *_thr)
+static void iv_work_thread_got_event(void *_thr)
 {
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
 	uint32_t last_seq;
 
 	mutex_lock(&pool->lock);
+
+	thr->kicked = 0;
+
+	if (!iv_list_empty(&thr->list)) {
+		iv_list_del_init(&thr->list);
+		iv_timer_unregister(&thr->idle_timer);
+	}
 
 	last_seq = pool->seq_tail;
 	while ((int32_t)(last_seq - pool->seq_head) > 0) {
@@ -144,7 +132,7 @@ static void iv_work_thread_do_work(void *_thr)
 		 * with work items still pending, make sure we get
 		 * called again, so that we don't deadlock.
 		 */
-		iv_task_register(&thr->work_task);
+		iv_event_post(&thr->kick);
 	}
 
 	mutex_unlock(&pool->lock);
@@ -185,17 +173,14 @@ static void iv_work_thread(void *_thr)
 	thr->kick.handler = iv_work_thread_got_event;
 	iv_event_register(&thr->kick);
 
-	IV_TASK_INIT(&thr->work_task);
-	thr->work_task.cookie = thr;
-	thr->work_task.handler = iv_work_thread_do_work;
-	iv_task_register(&thr->work_task);
-
 	IV_TIMER_INIT(&thr->idle_timer);
 	thr->idle_timer.cookie = thr;
 	thr->idle_timer.handler = iv_work_thread_idle_timeout;
 
 	if (pool->thread_start != NULL)
 		pool->thread_start(pool->cookie);
+
+	iv_event_post(&thr->kick);
 
 	iv_main();
 
