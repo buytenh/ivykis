@@ -23,9 +23,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/devpoll.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/poll.h>
 #include "iv_private.h"
 
 #define UPLOAD_BATCH		1024
@@ -34,9 +31,23 @@ static int iv_dev_poll_init(struct iv_state *st)
 {
 	int poll_fd;
 
+#ifdef O_CLOEXEC
+	poll_fd = open("/dev/poll", O_RDWR | O_CLOEXEC);
+	if (poll_fd < 0)
+		return -1;
+#else
+	int flags;
+
 	poll_fd = open("/dev/poll", O_RDWR);
 	if (poll_fd < 0)
 		return -1;
+
+	flags = fcntl(poll_fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(poll_fd, F_SETFD, flags);
+	}
+#endif
 
 	INIT_IV_AVL_TREE(&st->dev_poll.fds, iv_fd_avl_compare);
 	st->dev_poll.poll_fd = poll_fd;
