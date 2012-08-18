@@ -28,6 +28,15 @@
 #include "iv_private.h"
 #include "iv_fd_private.h"
 
+#ifndef EVFILT_USER
+#define EVFILT_USER	(-11)
+#endif
+
+#ifndef NOTE_TRIGGER
+#define NOTE_TRIGGER	0x01000000
+#endif
+
+
 #define UPLOAD_BATCH	1024
 
 static int iv_fd_kqueue_init(struct iv_state *st)
@@ -87,7 +96,7 @@ iv_fd_kqueue_queue_one(struct kevent *kev, int *_num, struct iv_fd_ *fd)
 	*_num = num;
 }
 
-static int kevent_retry(int kq, const struct kevent *changelist, int nchanges)
+static int __kevent_retry(int kq, const struct kevent *changelist, int nchanges)
 {
 	struct timespec to = { 0, 0 };
 	int ret;
@@ -99,6 +108,13 @@ static int kevent_retry(int kq, const struct kevent *changelist, int nchanges)
 	return ret;
 }
 
+static void kevent_retry(char *name, struct iv_state *st,
+			 const struct kevent *changelist, int nchanges)
+{
+	if (__kevent_retry(st->u.kqueue.kqueue_fd, changelist, nchanges) < 0)
+		iv_fatal("%s: got error %d[%s]", name, errno, strerror(errno));
+}
+
 static void
 iv_fd_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 {
@@ -108,14 +124,7 @@ iv_fd_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 		struct iv_fd_ *fd;
 
 		if (*num > size - 2) {
-			int ret;
-
-			ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, *num);
-			if (ret < 0) {
-				iv_fatal("iv_fd_kqueue_upload: got error "
-					 "%d[%s]", errno, strerror(errno));
-			}
-
+			kevent_retry("iv_fd_kqueue_upload", st, kev, *num);
 			*num = 0;
 		}
 
@@ -161,6 +170,12 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
 
+		if (batch[i].filter == EVFILT_USER) {
+			__iv_invalidate_now(st);
+			iv_event_run_pending_events();
+			continue;
+		}
+
 		if (batch[i].flags & EV_ERROR) {
 			int err = batch[i].data;
 			int fd = batch[i].ident;
@@ -188,15 +203,8 @@ static void iv_fd_kqueue_upload_all(struct iv_state *st)
 
 	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
-	if (num) {
-		int ret;
-
-		ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
-		if (ret < 0) {
-			iv_fatal("iv_fd_kqueue_upload_all: got error %d[%s]",
-				 errno, strerror(errno));
-		}
-	}
+	if (num)
+		kevent_retry("iv_fd_kqueue_upload_all", st, kev, num);
 }
 
 static void iv_fd_kqueue_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
@@ -220,7 +228,7 @@ static int iv_fd_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 	iv_fd_kqueue_queue_one(kev, &num, fd);
 
-	ret = kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
+	ret = __kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
 	if (ret == 0)
 		fd->registered_bands = fd->wanted_bands;
 
@@ -232,6 +240,38 @@ static void iv_fd_kqueue_deinit(struct iv_state *st)
 	close(st->u.kqueue.kqueue_fd);
 }
 
+static int iv_fd_kqueue_event_rx_on(struct iv_state *st)
+{
+	struct kevent add;
+	int ret;
+
+	EV_SET(&add, (intptr_t)st, EVFILT_USER,
+	       EV_ADD | EV_CLEAR | EV_ENABLE, 0, 0, NULL);
+
+	ret = __kevent_retry(st->u.kqueue.kqueue_fd, &add, 1);
+	if (ret == 0)
+		st->numobjs++;
+
+	return ret;
+}
+
+static void iv_fd_kqueue_event_rx_off(struct iv_state *st)
+{
+	struct kevent delete;
+
+	EV_SET(&delete, (intptr_t)st, EVFILT_USER, EV_DELETE, 0, 0, NULL);
+	kevent_retry("iv_fd_kqueue_event_rx_off", st, &delete, 1);
+
+	st->numobjs--;
+}
+
+static void iv_fd_kqueue_event_send(struct iv_state *dest)
+{
+	struct kevent send;
+
+	EV_SET(&send, (intptr_t)dest, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
+	kevent_retry("iv_fd_kqueue_event_send", dest, &send, 1);
+}
 
 struct iv_fd_poll_method iv_fd_poll_method_kqueue = {
 	.name		= "kqueue",
@@ -241,4 +281,7 @@ struct iv_fd_poll_method iv_fd_poll_method_kqueue = {
 	.notify_fd	= iv_fd_kqueue_notify_fd,
 	.notify_fd_sync	= iv_fd_kqueue_notify_fd_sync,
 	.deinit		= iv_fd_kqueue_deinit,
+	.event_rx_on	= iv_fd_kqueue_event_rx_on,
+	.event_rx_off	= iv_fd_kqueue_event_rx_off,
+	.event_send	= iv_fd_kqueue_event_send,
 };
