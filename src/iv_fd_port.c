@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <port.h>
 #include <string.h>
 #include "iv_private.h"
@@ -30,10 +31,17 @@
 static int iv_fd_port_init(struct iv_state *st)
 {
 	int fd;
+	int flags;
 
 	fd = port_create();
 	if (fd < 0)
 		return -1;
+
+	flags = fcntl(fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(fd, F_SETFD, flags);
+	}
 
 	st->u.port.port_fd = fd;
 
