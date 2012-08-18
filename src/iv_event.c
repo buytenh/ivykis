@@ -124,11 +124,18 @@ void iv_event_unregister(struct iv_event *this)
 void iv_event_post(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = this->tinfo;
+	int post;
+
+	post = 0;
 
 	mutex_lock(&tinfo->list_mutex);
 	if (iv_list_empty(&this->list)) {
+		if (iv_list_empty(&tinfo->pending_events))
+			post = 1;
 		iv_list_add_tail(&this->list, &tinfo->pending_events);
-		iv_event_raw_post(&tinfo->ier);
 	}
 	mutex_unlock(&tinfo->list_mutex);
+
+	if (post)
+		iv_event_raw_post(&tinfo->ier);
 }
