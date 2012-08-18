@@ -96,8 +96,10 @@ int iv_event_register(struct iv_event *this)
 		int ret;
 
 		ret = iv_event_raw_register(&tinfo->ier);
-		if (ret)
+		if (ret) {
+			tinfo->event_count--;
 			return ret;
+		}
 	}
 
 	this->tinfo = tinfo;
