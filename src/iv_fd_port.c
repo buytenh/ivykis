@@ -125,8 +125,17 @@ poll_more:
 	}
 
 	for (i = 0; i < nget; i++) {
-		int revents = pe[i].portev_events;
-		struct iv_fd_ *fd = pe[i].portev_user;
+		int revents;
+		struct iv_fd_ *fd;
+
+		if (pe[i].portev_source == PORT_SOURCE_USER) {
+			__iv_invalidate_now(st);
+			iv_event_run_pending_events();
+			continue;
+		}
+
+		revents = pe[i].portev_events;
+		fd = pe[i].portev_user;
 
 		if (revents & (POLLIN | POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKIN);
@@ -174,6 +183,25 @@ static void iv_fd_port_deinit(struct iv_state *st)
 	close(st->u.port.port_fd);
 }
 
+static int iv_fd_port_event_rx_on(struct iv_state *st)
+{
+	st->numobjs++;
+
+	return 0;
+}
+
+static void iv_fd_port_event_rx_off(struct iv_state *st)
+{
+	st->numobjs--;
+}
+
+static void iv_fd_port_event_send(struct iv_state *dest)
+{
+	if (port_send(dest->u.port.port_fd, 0, NULL) < 0) {
+		iv_fatal("iv_fd_port_event_send: port_send got "
+			 "error %d[%s]", errno, strerror(errno));
+	}
+}
 
 struct iv_fd_poll_method iv_fd_poll_method_port = {
 	.name		= "port",
@@ -183,4 +211,7 @@ struct iv_fd_poll_method iv_fd_poll_method_port = {
 	.notify_fd	= iv_fd_port_notify_fd,
 	.notify_fd_sync	= iv_fd_port_notify_fd_sync,
 	.deinit		= iv_fd_port_deinit,
+	.event_rx_on	= iv_fd_port_event_rx_on,
+	.event_rx_off	= iv_fd_port_event_rx_off,
+	.event_send	= iv_fd_port_event_send,
 };
