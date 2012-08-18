@@ -34,6 +34,7 @@ struct iv_event_thr_info {
 		struct iv_event_raw	ier;
 		struct iv_state		*st;
 	} u;
+	struct iv_task		run_locally_queued;
 	__mutex_t		list_mutex;
 	struct iv_list_head	pending_events;
 };
@@ -71,6 +72,10 @@ static void iv_event_tls_init_thread(void *_tinfo)
 	IV_EVENT_RAW_INIT(&tinfo->u.ier);
 	tinfo->u.ier.cookie = tinfo;
 	tinfo->u.ier.handler = __iv_event_run_pending_events;
+
+	IV_TASK_INIT(&tinfo->run_locally_queued);
+	tinfo->run_locally_queued.cookie = tinfo;
+	tinfo->run_locally_queued.handler = __iv_event_run_pending_events;
 
 	mutex_init(&tinfo->list_mutex);
 
@@ -169,9 +174,16 @@ void iv_event_post(struct iv_event *this)
 	mutex_unlock(&tinfo->list_mutex);
 
 	if (post) {
-		if (!iv_event_use_event_raw)
+		struct iv_event_thr_info *me;
+
+		me = iv_tls_user_ptr(&iv_event_tls_user);
+		if (tinfo == me) {
+			if (!iv_task_registered(&me->run_locally_queued))
+				iv_task_register(&me->run_locally_queued);
+		} else if (!iv_event_use_event_raw) {
 			event_send(tinfo->u.st);
-		else
+		} else {
 			iv_event_raw_post(&tinfo->u.ier);
+		}
 	}
 }
