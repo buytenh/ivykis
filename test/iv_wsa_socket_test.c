@@ -55,15 +55,9 @@ static void handler(void *cookie, int event, int error)
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		     LPSTR lpCmdLine, int nCmdShow)
 {
-	WSADATA wsaData;
 	SOCKET s;
 	struct sockaddr_in addr;
 	int ret;
-
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		printf("WSAStartup() failed\n");
-		return 1;
-	}
 
 	iv_init();
 

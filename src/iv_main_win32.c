@@ -29,9 +29,14 @@ void iv_init(void)
 	struct iv_state *st;
 
 	if (iv_state_index == -1) {
+		WSADATA wsaData;
+
 		iv_state_index = TlsAlloc();
 		if (iv_state_index == TLS_OUT_OF_INDEXES)
 			iv_fatal("iv_init: failed to allocate TLS key");
+
+		if (WSAStartup(MAKEWORD(2, 2), &wsaData))
+			iv_fatal("iv_init: WSAStartup() failed");
 	}
 
 	st = calloc(1, iv_tls_total_state_size());
