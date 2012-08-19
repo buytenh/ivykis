@@ -34,6 +34,22 @@ global:
 	iv_main;
 	iv_deinit;
 
+	# iv_sock
+	iv_sock_socket;
+	iv_sock_get_errno;
+	iv_sock_set_cookie;
+	iv_sock_set_handler_in;
+	iv_sock_set_handler_out;
+	iv_sock_close;
+	iv_sock_bind;
+	iv_sock_connect;
+	iv_sock_get_connect_error;
+	iv_sock_recv;
+	iv_sock_recvfrom;
+	iv_sock_send;
+	iv_sock_sendto;
+	iv_sock_shutdown;
+
 	# iv_task
 	IV_TASK_INIT;
 	iv_task_register;

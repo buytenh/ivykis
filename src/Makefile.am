@@ -17,6 +17,7 @@ INC			= include/iv.h			\
 			  include/iv_event.h		\
 			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
+			  include/iv_sock.h		\
 			  include/iv_thread.h		\
 			  include/iv_tls.h		\
 			  include/iv_work.h
@@ -30,6 +31,7 @@ SRC			+= iv_event_raw_posix.c		\
 			   iv_main_posix.c		\
 			   iv_popen.c			\
 			   iv_signal.c			\
+			   iv_sock_posix.c		\
 			   iv_thread_posix.c		\
 			   iv_time_posix.c		\
 			   iv_wait.c
@@ -72,6 +74,7 @@ if HAVE_WIN32
 SRC			+= iv_event_raw_win32.c		\
 			   iv_handle.c			\
 			   iv_main_win32.c		\
+			   iv_sock_win32.c		\
 			   iv_thread_win32.c		\
 			   iv_time_win32.c		\
 			   iv_wsa_socket.c
