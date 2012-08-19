@@ -20,31 +20,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <iv.h>
+#include <iv_sock.h>
 #include <string.h>
-#include <sys/socket.h>
 
 struct connector {
 	struct sockaddr_in addr;
-	struct iv_fd fd;
+	struct iv_sock *sock;
 };
 
 static void create_connector(struct connector *conn);
 
 static int __connect_done(struct connector *conn)
 {
-	socklen_t len;
 	int ret;
 
-	len = sizeof(ret);
-	if (getsockopt(conn->fd.fd, SOL_SOCKET, SO_ERROR, &ret, &len) < 0) {
-		fprintf(stderr, "connect_done: error %d while "
-				"getsockopt(SO_ERROR)\n", errno);
-		abort();
-	}
-
+	ret = iv_sock_get_connect_error(conn->sock);
 	if (ret == EINPROGRESS)
 		return 0;
 
@@ -55,8 +46,7 @@ static int __connect_done(struct connector *conn)
 	fprintf(stderr, ".");
 #endif
 
-	iv_fd_unregister(&conn->fd);
-	close(conn->fd.fd);
+	iv_sock_close(conn->sock);
 
 	return 1;
 }
@@ -71,25 +61,25 @@ static void connect_done(void *c)
 
 static void create_connector(struct connector *conn)
 {
-	int fd;
 	int ret;
 
 again:
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0) {
+	conn->sock = iv_sock_socket(AF_INET, SOCK_STREAM, 0);
+	if (conn->sock == NULL) {
 		perror("socket");
 		exit(1);
 	}
 
-	IV_FD_INIT(&conn->fd);
-	conn->fd.fd = fd;
-	conn->fd.cookie = (void *)conn;
-	conn->fd.handler_out = connect_done;
-	iv_fd_register(&conn->fd);
+	iv_sock_set_cookie(conn->sock, conn);
+	iv_sock_set_handler_out(conn->sock, connect_done);
 
-	ret = connect(fd, (struct sockaddr *)&conn->addr, sizeof(conn->addr));
-	if ((ret == 0 || errno != EINPROGRESS) && __connect_done(conn))
+	ret = iv_sock_connect(conn->sock, (struct sockaddr *)&conn->addr,
+			      sizeof(conn->addr));
+
+	if ((ret == 0 || iv_sock_get_errno() != EINPROGRESS) &&
+	    __connect_done(conn)) {
 		goto again;
+	}
 }
 
 int main()

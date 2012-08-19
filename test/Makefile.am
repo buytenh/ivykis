@@ -3,7 +3,8 @@ AM_CPPFLAGS		= -D_GNU_SOURCE -I$(top_srcdir)/src/include	\
 
 LDADD			= $(top_builddir)/src/libivykis.la
 
-PROGS			= iv_event_test			\
+PROGS			= client			\
+			  iv_event_test			\
 			  iv_thread_test		\
 			  iv_work_test
 
@@ -14,8 +15,7 @@ TESTS			= avl				\
 			  timer_order
 
 if HAVE_POSIX
-PROGS			+= client			\
-			   connectfail			\
+PROGS			+= connectfail			\
 			   connectreset			\
 			   iv_fd_pump_discard		\
 			   iv_fd_pump_echo		\
