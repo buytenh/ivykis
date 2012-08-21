@@ -80,13 +80,11 @@ struct iv_state {
 		} kqueue;
 #endif
 
-#ifdef HAVE_POLL
 		struct {
 			struct pollfd		*pfds;
 			struct iv_fd_		**fds;
 			int			num_regd_fds;
 		} poll;
-#endif
 
 #ifdef HAVE_PORT_CREATE
 		struct {

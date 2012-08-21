@@ -25,6 +25,7 @@ if HAVE_POSIX
 
 SRC			+= iv_event_raw_posix.c		\
 			   iv_fd.c			\
+			   iv_fd_poll.c			\
 			   iv_fd_pump.c			\
 			   iv_main_posix.c		\
 			   iv_popen.c			\
@@ -48,10 +49,6 @@ endif
 
 if HAVE_KQUEUE
 SRC			+= iv_fd_kqueue.c
-endif
-
-if HAVE_POLL
-SRC			+= iv_fd_poll.c
 endif
 
 if HAVE_PORT

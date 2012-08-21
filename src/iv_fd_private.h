@@ -81,9 +81,7 @@ struct iv_fd_ {
 #ifdef HAVE_SYS_DEVPOLL_H
 		struct iv_avl_node	avl_node;
 #endif
-#ifdef HAVE_POLL
 		int			index;
-#endif
 	} u;
 };
 
