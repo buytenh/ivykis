@@ -22,7 +22,6 @@
 #include <arpa/inet.h>
 #include <iv.h>
 #include <iv_fd_pump.h>
-#include <limits.h>
 #include <linux/netfilter_ipv4.h>
 #include <string.h>
 #include <sys/socket.h>
