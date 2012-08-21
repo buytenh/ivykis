@@ -73,12 +73,12 @@ struct iv_fd_ {
 
 	/*
 	 * This is for state internal to some of the poll methods:
-	 * ->avl_node is used by poll methods that maintain an
+	 * ->avl_node is used by the /dev/poll method to maintain an
 	 * internal fd tree, and ->index is used by iv_fd_poll to
 	 * maintain the index of this fd in the list of pollfds.
 	 */
 	union {
-#if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
+#ifdef HAVE_SYS_DEVPOLL_H
 		struct iv_avl_node	avl_node;
 #endif
 #ifdef HAVE_POLL
@@ -110,7 +110,6 @@ extern struct iv_fd_poll_method iv_fd_poll_method_epoll;
 extern struct iv_fd_poll_method iv_fd_poll_method_kqueue;
 extern struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern struct iv_fd_poll_method iv_fd_poll_method_port;
-extern struct iv_fd_poll_method iv_fd_poll_method_select;
 
 /* iv_event_posix.c */
 void iv_event_run_pending_events(void);

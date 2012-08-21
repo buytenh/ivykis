@@ -119,9 +119,6 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 #ifdef HAVE_POLL
 	consider_poll_method(st, exclude, &iv_fd_poll_method_poll);
 #endif
-#ifdef NEED_SELECT
-	consider_poll_method(st, exclude, &iv_fd_poll_method_select);
-#endif
 
 	if (method == NULL)
 		iv_fatal("iv_init: can't find suitable event dispatcher");
@@ -184,7 +181,7 @@ void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)
 }
 
 
-#if defined(HAVE_SYS_DEVPOLL_H) || defined(NEED_SELECT)
+#ifdef HAVE_SYS_DEVPOLL_H
 /* file descriptor avl tree handling ****************************************/
 struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 {

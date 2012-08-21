@@ -58,10 +58,6 @@ if HAVE_PORT
 SRC			+= iv_fd_port.c
 endif
 
-if NEED_SELECT
-SRC			+= iv_fd_select.c
-endif
-
 if HAVE_INOTIFY
 SRC			+= iv_inotify.c
 INC			+= include/iv_inotify.h

@@ -381,12 +381,6 @@ AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
 AM_CONDITIONAL([HAVE_POLL], [test x$ac_cv_func_poll = xyes])
 AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
-AM_CONDITIONAL([NEED_SELECT],
-		[test x$ac_cv_header_sys_devpoll_h != xyes &&
-		 test x$ac_cv_func_epoll_create != xyes &&
-		 test x$ac_cv_func_kqueue != xyes &&
-		 test x$ac_cv_func_poll != xyes &&
-		 test x$ac_cv_func_port_create != xyes])
 
 # Other conditionals.
 AM_CONDITIONAL([BUILD_ON_CYGWIN], [test $build_os = cygwin])

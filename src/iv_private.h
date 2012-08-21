@@ -26,8 +26,6 @@
 /*
  * Per-thread state.
  */
-#define NEED_SELECT
-
 struct iv_state {
 	/* iv_main_{posix,win32}.c  */
 	int			quit;
@@ -61,7 +59,6 @@ struct iv_state {
 	/* poll methods  */
 	union {
 #ifdef HAVE_SYS_DEVPOLL_H
-#undef NEED_SELECT
 		struct {
 			struct iv_avl_tree	fds;
 			int			poll_fd;
@@ -70,7 +67,6 @@ struct iv_state {
 #endif
 
 #ifdef HAVE_EPOLL_CREATE
-#undef NEED_SELECT
 		struct {
 			int			epoll_fd;
 			struct iv_list_head	notify;
@@ -78,7 +74,6 @@ struct iv_state {
 #endif
 
 #ifdef HAVE_KQUEUE
-#undef NEED_SELECT
 		struct {
 			int			kqueue_fd;
 			struct iv_list_head	notify;
@@ -86,7 +81,6 @@ struct iv_state {
 #endif
 
 #ifdef HAVE_POLL
-#undef NEED_SELECT
 		struct {
 			struct pollfd		*pfds;
 			struct iv_fd_		**fds;
@@ -95,20 +89,10 @@ struct iv_state {
 #endif
 
 #ifdef HAVE_PORT_CREATE
-#undef NEED_SELECT
 		struct {
 			int			port_fd;
 			struct iv_list_head	notify;
 		} port;
-#endif
-
-#ifdef NEED_SELECT
-		struct {
-			struct iv_avl_tree	fds;
-			void			*sets;
-			int			setsize;
-			int			fd_max;
-		} select;
 #endif
 	} u;
 #endif
