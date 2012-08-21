@@ -24,22 +24,8 @@ LT_INIT
 AC_PROG_CC
 AC_PROG_LIBTOOL
 
-# Check for -Wall.
-ac_save_CFLAGS=$CFLAGS
-ac_save_c_werror_flag=$ac_c_werror_flag
-ac_c_werror_flag=yes
-AC_CACHE_CHECK(whether $CC accepts -Wall, ac_cv_prog_cc_wall,
-	[ac_cv_prog_cc_wall=no
-	 CFLAGS="-Wall"
-	 _AC_COMPILE_IFELSE([AC_LANG_PROGRAM()], [ac_cv_prog_cc_wall=yes], [])
-	])
-if test $ac_cv_prog_cc_wall = yes
-then
-	CFLAGS="$ac_save_CFLAGS -Wall"
-else
-	CFLAGS=$ac_save_CFLAGS
-fi
-ac_c_werror_flag=$ac_save_c_werror_flag
+# Build with -Wall.
+CFLAGS="$CFLAGS -Wall"
 
 # Check the host operating system type: posix or win32.
 AC_MSG_CHECKING([host operating system type])
@@ -91,7 +77,7 @@ solaris*-sparc)
 	AC_MSG_RESULT([no])
 	;;
 *)
-	AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
+	_AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
 		[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler
 					   supports __thread.)
 		 AC_MSG_RESULT([yes])],
@@ -108,7 +94,6 @@ hpux*)
 	#
 	CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"
 	;;
-
 osf*)
 	#
 	# On Tru64, we need -D_BSD to get a definition for 'union
@@ -209,10 +194,12 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
 	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
 		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
 
+#
 # Check for __sync_lock_test_and_set().  We can't use AC_CHECK_FUNCS
 # for this, as autoconf will spit out a dummy definition for the
 # function we are testing for, and call it without any arguments,
 # which will prevent gcc from using the intrinsic.
+#
 AC_CACHE_CHECK(for __sync_lock_test_and_set(),
 	ac_cv_func_sync_lock_test_and_set,
 	[ac_cv_func_sync_lock_test_and_set=no
@@ -233,14 +220,9 @@ then
 fi
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netinet/in.h	\
-		  stddef.h stdlib.h string.h sys/ioctl.h sys/socket.h	\
-		  sys/time.h sys/wait.h syslog.h unistd.h], [],
-	AC_MSG_ERROR(some required header files not installed.))
 AC_CHECK_HEADERS([process.h])
 AC_CHECK_HEADERS([sys/devpoll.h])
 AC_CHECK_HEADERS([sys/eventfd.h])
-AC_CHECK_HEADERS([sys/select.h])
 AC_CHECK_HEADERS([sys/syscall.h])
 # Older FreeBSDs (6.1) don't include sys/ucontext.h in sys/thr.h.
 AC_CHECK_HEADERS([sys/thr.h], [], [], [#include <sys/ucontext.h>])
@@ -251,7 +233,6 @@ AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
 	[ac_cv_header_linux_netfilter_ipv4_h=no
 	 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
 		#include <arpa/inet.h>
-		#include <limits.h>
 		#include <linux/netfilter_ipv4.h>
 	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
 	])
@@ -316,9 +297,6 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([thr_self], [thread])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([dup2 fork malloc memcmp memmove memset		\
-		select socket strdup strerror], [],
-	AC_MSG_ERROR(some required library functions not available.))
 AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([epoll_create1])
 AC_CHECK_FUNCS([eventfd])
