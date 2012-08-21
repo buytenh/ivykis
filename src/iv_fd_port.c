@@ -115,9 +115,17 @@ static void iv_fd_port_poll(struct iv_state *st,
 
 poll_more:
 	nget = 1;
+
+	/*
+	 * If we get EINTR from port_getn(), no events are returned
+	 * and nget will not have been updated, but if we get ETIME,
+	 * events may be returned, and nget will be set to the number
+	 * of events in the array, and we need to process those
+	 * events as usual.
+	 */
 	ret = port_getn(st->u.port.port_fd, pe, PORTEV_NUM, &nget, to);
-	if (ret < 0) {
-		if (errno == EINTR || errno == ETIME)
+	if (ret < 0 && errno != ETIME) {
+		if (errno == EINTR)
 			return;
 
 		iv_fatal("iv_fd_port_poll: got error %d[%s]", errno,
