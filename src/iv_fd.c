@@ -181,45 +181,6 @@ void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)
 }
 
 
-#ifdef HAVE_SYS_DEVPOLL_H
-/* file descriptor avl tree handling ****************************************/
-struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
-{
-	struct iv_avl_node *an;
-
-	an = root->root;
-	while (an != NULL) {
-		struct iv_fd_ *p;
-
-		p = iv_container_of(an, struct iv_fd_, u.avl_node);
-		if (fd == p->fd)
-			return p;
-
-		if (fd < p->fd)
-			an = an->left;
-		else
-			an = an->right;
-	}
-
-	return NULL;
-}
-
-int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
-{
-	struct iv_fd_ *a = iv_container_of(_a, struct iv_fd_, u.avl_node);
-	struct iv_fd_ *b = iv_container_of(_b, struct iv_fd_, u.avl_node);
-
-	if (a->fd < b->fd)
-		return -1;
-
-	if (a->fd > b->fd)
-		return 1;
-
-	return 0;
-}
-#endif
-
-
 /* public use ***************************************************************/
 const char *iv_poll_method_name(void)
 {

@@ -115,7 +115,5 @@ extern struct iv_fd_poll_method iv_fd_poll_method_port;
 void iv_event_run_pending_events(void);
 
 /* iv_fd.c */
-struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd);
-int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b);
 void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
