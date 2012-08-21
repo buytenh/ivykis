@@ -134,10 +134,8 @@ static void iv_wait_got_sigchld(void *_dummy)
 #endif
 
 		we = malloc(sizeof(*we));
-		if (we == NULL) {
-			fprintf(stderr, "iv_wait_got_sigchld: OOM\n");
-			exit(1);
-		}
+		if (we == NULL)
+			iv_fatal("iv_wait_got_sigchld: out of memory");
 
 		we->status = status;
 #ifdef HAVE_WAIT4
