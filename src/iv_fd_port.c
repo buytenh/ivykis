@@ -133,32 +133,39 @@ poll_more:
 	}
 
 	for (i = 0; i < nget; i++) {
-		int revents;
-		struct iv_fd_ *fd;
+		int source;
 
-		if (pe[i].portev_source == PORT_SOURCE_USER) {
+		source = pe[i].portev_source;
+		if (source == PORT_SOURCE_FD) {
+			int revents;
+			struct iv_fd_ *fd;
+
+			revents = pe[i].portev_events;
+			fd = pe[i].portev_user;
+
+			if (revents & (POLLIN | POLLERR | POLLHUP))
+				iv_fd_make_ready(active, fd, MASKIN);
+
+			if (revents & (POLLOUT | POLLERR | POLLHUP))
+				iv_fd_make_ready(active, fd, MASKOUT);
+
+			if (revents & (POLLERR | POLLHUP))
+				iv_fd_make_ready(active, fd, MASKERR);
+
+			fd->registered_bands = 0;
+
+			iv_list_del_init(&fd->list_notify);
+			if (fd->wanted_bands) {
+				iv_list_add_tail(&fd->list_notify,
+						 &st->u.port.notify);
+			}
+		} else if (source == PORT_SOURCE_USER) {
 			__iv_invalidate_now(st);
 			iv_event_run_pending_events();
-			continue;
+		} else {
+			iv_fatal("iv_fd_port_poll: received event "
+				 "from unknown source %d", source);
 		}
-
-		revents = pe[i].portev_events;
-		fd = pe[i].portev_user;
-
-		if (revents & (POLLIN | POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKIN);
-
-		if (revents & (POLLOUT | POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKOUT);
-
-		if (revents & (POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKERR);
-
-		fd->registered_bands = 0;
-		iv_list_del_init(&fd->list_notify);
-
-		if (fd->wanted_bands)
-			iv_list_add_tail(&fd->list_notify, &st->u.port.notify);
 	}
 
 	if (nget == PORTEV_NUM) {
