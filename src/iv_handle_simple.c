@@ -23,6 +23,54 @@
 #include "iv_private.h"
 #include "iv_handle_private.h"
 
+/* poll thread **************************************************************/
+static DWORD WINAPI iv_handle_poll_thread(void *_h)
+{
+	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+	struct iv_state *st = h->st;
+	HANDLE hnd[2];
+	int sig;
+
+	hnd[0] = h->signal_handle;
+	hnd[1] = h->handle;
+
+	sig = 0;
+
+	EnterCriticalSection(&st->active_handles_lock);
+	while (h->polling) {
+		DWORD num;
+		DWORD ret;
+
+		num = iv_list_empty(&h->list_active) ? 2 : 1;
+
+		LeaveCriticalSection(&st->active_handles_lock);
+		if (sig) {
+			sig = 0;
+			SetEvent(st->wait);
+		}
+		ret = WaitForMultipleObjectsEx(num, hnd, FALSE,
+					       INFINITE, FALSE);
+		EnterCriticalSection(&st->active_handles_lock);
+
+		if (ret == WAIT_OBJECT_0)
+			continue;
+
+		if (ret != WAIT_OBJECT_0 + 1 && ret != WAIT_ABANDONED_0 + 1) {
+			iv_fatal("iv_handle_poll_thread(%d): %x",
+				 (int)(ULONG_PTR)h->handle, (int)ret);
+		}
+
+		if (iv_list_empty(&st->active_with_handler))
+			sig = 1;
+		iv_list_add_tail(&h->list_active, &st->active_with_handler);
+	}
+	LeaveCriticalSection(&st->active_handles_lock);
+
+	return 0;
+}
+
+
+/* internal use *************************************************************/
 void iv_handle_init(struct iv_state *st)
 {
 	st->wait = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -30,7 +78,7 @@ void iv_handle_init(struct iv_state *st)
 		iv_fatal("iv_handle_init: CreateEvent failed");
 
 	INIT_IV_LIST_HEAD(&st->handles);
-	InitializeCriticalSection(&st->active_handle_list_lock);
+	InitializeCriticalSection(&st->active_handles_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
 	INIT_IV_LIST_HEAD(&st->active_without_handler);
 	st->handled_handle = INVALID_HANDLE_VALUE;
@@ -39,23 +87,23 @@ void iv_handle_init(struct iv_state *st)
 void iv_handle_deinit(struct iv_state *st)
 {
 	CloseHandle(st->wait);
-	DeleteCriticalSection(&st->active_handle_list_lock);
+	DeleteCriticalSection(&st->active_handles_lock);
 }
 
 void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 {
 	struct iv_list_head handles;
 
-	EnterCriticalSection(&st->active_handle_list_lock);
+	EnterCriticalSection(&st->active_handles_lock);
 	if (iv_list_empty(&st->active_with_handler)) {
 		DWORD msec;
 		DWORD ret;
 
 		msec = 1000 * to->tv_sec + (to->tv_nsec + 999999) / 1000000;
 
-		LeaveCriticalSection(&st->active_handle_list_lock);
+		LeaveCriticalSection(&st->active_handles_lock);
 		ret = WaitForSingleObjectEx(st->wait, msec, TRUE);
-		EnterCriticalSection(&st->active_handle_list_lock);
+		EnterCriticalSection(&st->active_handles_lock);
 
 		if (ret != WAIT_OBJECT_0 && ret != WAIT_IO_COMPLETION &&
 		    ret != WAIT_TIMEOUT) {
@@ -67,7 +115,7 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 		__iv_invalidate_now(st);
 	}
 	__iv_list_steal_elements(&st->active_with_handler, &handles);
-	LeaveCriticalSection(&st->active_handle_list_lock);
+	LeaveCriticalSection(&st->active_handles_lock);
 
 	while (!iv_list_empty(&handles)) {
 		struct iv_handle_ *h;
@@ -121,51 +169,6 @@ void iv_handle_quit(struct iv_state *st)
 	}
 }
 
-static DWORD WINAPI iv_handle_poll_thread(void *_h)
-{
-	struct iv_handle_ *h = (struct iv_handle_ *)_h;
-	struct iv_state *st = h->st;
-	HANDLE hnd[2];
-	int sig;
-
-	hnd[0] = h->signal_handle;
-	hnd[1] = h->handle;
-
-	sig = 0;
-
-	EnterCriticalSection(&st->active_handle_list_lock);
-	while (h->polling) {
-		DWORD num;
-		DWORD ret;
-
-		num = iv_list_empty(&h->list_active) ? 2 : 1;
-
-		LeaveCriticalSection(&st->active_handle_list_lock);
-		if (sig) {
-			sig = 0;
-			SetEvent(st->wait);
-		}
-		ret = WaitForMultipleObjectsEx(num, hnd, FALSE,
-					       INFINITE, FALSE);
-		EnterCriticalSection(&st->active_handle_list_lock);
-
-		if (ret == WAIT_OBJECT_0)
-			continue;
-
-		if (ret != WAIT_OBJECT_0 + 1 && ret != WAIT_ABANDONED_0 + 1) {
-			iv_fatal("iv_handle_poll_thread(%d): %x",
-				 (int)(ULONG_PTR)h->handle, (int)ret);
-		}
-
-		if (iv_list_empty(&st->active_with_handler))
-			sig = 1;
-		iv_list_add_tail(&h->list_active, &st->active_with_handler);
-	}
-	LeaveCriticalSection(&st->active_handle_list_lock);
-
-	return 0;
-}
-
 static void iv_handle_start_poll_thread(struct iv_handle_ *h)
 {
 	HANDLE w;
@@ -192,6 +195,12 @@ void iv_handle_unquit(struct iv_state *st)
 	}
 }
 
+void iv_handle_process_detach(void)
+{
+}
+
+
+/* public use ***************************************************************/
 void IV_HANDLE_INIT(struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
@@ -206,7 +215,7 @@ void iv_handle_register(struct iv_handle *_h)
 
 	if (!iv_list_empty(&h->list)) {
 		iv_fatal("iv_handle_register: called with handle "
-			 "which is still registered");
+			 "which is already registered");
 	}
 
 	iv_list_add_tail(&h->list, &st->handles);
@@ -239,9 +248,9 @@ void iv_handle_unregister(struct iv_handle *_h)
 
 	iv_list_del_init(&h->list);
 	if (!iv_list_empty(&h->list_active)) {
-		EnterCriticalSection(&st->active_handle_list_lock);
+		EnterCriticalSection(&st->active_handles_lock);
 		iv_list_del_init(&h->list_active);
-		LeaveCriticalSection(&st->active_handle_list_lock);
+		LeaveCriticalSection(&st->active_handles_lock);
 	}
 	h->st = NULL;
 	CloseHandle(h->signal_handle);

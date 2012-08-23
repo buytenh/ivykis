@@ -131,6 +131,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	if (fdwReason == DLL_PROCESS_DETACH) {
 		TlsFree(iv_state_index);
 		iv_state_index = -1;
+		iv_handle_process_detach();
 	}
 
 	return TRUE;

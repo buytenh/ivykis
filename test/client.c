@@ -39,8 +39,11 @@ static int __connect_done(struct connector *conn)
 	if (ret == EINPROGRESS)
 		return 0;
 
-	if (ret)
+	if (ret) {
 		fprintf(stderr, "blah: %s\n", strerror(ret));
+		iv_sock_close(conn->sock);
+		return 0;
+	}
 
 #if 0
 	fprintf(stderr, ".");
@@ -61,9 +64,13 @@ static void connect_done(void *c)
 
 static void create_connector(struct connector *conn)
 {
+	static int connections;
 	int ret;
 
 again:
+	if (connections++ >= 10000)
+		return;
+
 	conn->sock = iv_sock_socket(AF_INET, SOCK_STREAM, 0);
 	if (conn->sock == NULL) {
 		perror("socket");
@@ -85,12 +92,12 @@ again:
 int main()
 {
 	struct sockaddr_in addr;
-	struct connector c[1000];
+	struct connector c[100];
 	int i;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(0x7f000001);
+	addr.sin_addr.s_addr = htonl(0xc0a8010a);
 
 	iv_init();
 
