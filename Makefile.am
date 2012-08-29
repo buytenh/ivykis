@@ -6,7 +6,7 @@ lib_LTLIBRARIES = libivykis.la
 
 libivykis_la_SOURCES =
 libivykis_la_LIBADD = lib/libivykis.la modules/libivykis-modules.la
-libivykis_la_LDFLAGS = -version-info 1:1:1
+libivykis_la_LDFLAGS = -version-info 1:2:1
 
 if HAVE_VERSIONING
 libivykis_la_LDFLAGS += -Wl,--version-script,${srcdir}/libivykis.ver
