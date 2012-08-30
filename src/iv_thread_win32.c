@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iv.h>
-#include <iv_event.h>
 #include <iv_thread.h>
 #include <iv_tls.h>
 #include <string.h>
