@@ -25,7 +25,7 @@
 
 static inline void spin_init(spinlock_t *lock)
 {
-	pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE);
+	pthread_spin_init(lock, PTHREAD_PROCESS_SHARED);
 }
 
 static inline void spin_lock(spinlock_t *lock)
