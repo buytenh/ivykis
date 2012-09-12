@@ -162,7 +162,7 @@ static void iv_work_thread_idle_timeout(void *_thr)
 		thr->idle_timer.expires.tv_sec += 10;
 		iv_timer_register(&thr->idle_timer);
 	} else {
-		iv_list_del(&thr->list);
+		iv_list_del_init(&thr->list);
 		__iv_work_thread_die(thr);
 	}
 
