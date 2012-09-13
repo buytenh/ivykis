@@ -98,7 +98,6 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 	signal(SIGURG, SIG_IGN);
 
 	sanitise_nofile_rlimit(euid);
-	method = NULL;
 
 	exclude = getenv("IV_EXCLUDE_POLL_METHOD");
 	if (exclude != NULL && getuid() != euid)
