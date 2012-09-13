@@ -177,6 +177,28 @@ void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)
 	fd->ready_bands |= bands;
 }
 
+void iv_fd_set_cloexec(int fd)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFD);
+	if (!(flags & FD_CLOEXEC)) {
+		flags |= FD_CLOEXEC;
+		fcntl(fd, F_SETFD, flags);
+	}
+}
+
+void iv_fd_set_nonblock(int fd)
+{
+	int flags;
+
+	flags = fcntl(fd, F_GETFL);
+	if (!(flags & O_NONBLOCK)) {
+		flags |= O_NONBLOCK;
+		fcntl(fd, F_SETFL, flags);
+	}
+}
+
 
 /* public use ***************************************************************/
 const char *iv_poll_method_name(void)
@@ -246,23 +268,13 @@ static void iv_fd_register_prologue(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_fd_register_epilogue(struct iv_state *st, struct iv_fd_ *fd)
 {
-	int flags;
 	int yes;
 
 	st->numobjs++;
 	st->numfds++;
 
-	flags = fcntl(fd->fd, F_GETFD);
-	if (!(flags & FD_CLOEXEC)) {
-		flags |= FD_CLOEXEC;
-		fcntl(fd->fd, F_SETFD, flags);
-	}
-
-	flags = fcntl(fd->fd, F_GETFL);
-	if (!(flags & O_NONBLOCK)) {
-		flags |= O_NONBLOCK;
-		fcntl(fd->fd, F_SETFL, flags);
-	}
+	iv_fd_set_cloexec(fd->fd);
+	iv_fd_set_nonblock(fd->fd);
 
 	yes = 1;
 	setsockopt(fd->fd, SOL_SOCKET, SO_OOBINLINE, &yes, sizeof(yes));

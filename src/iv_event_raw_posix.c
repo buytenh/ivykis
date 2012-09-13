@@ -28,6 +28,8 @@
 #include <string.h>
 #include <unistd.h>
 #include "config.h"
+#include "iv_private.h"
+#include "iv_fd_private.h"
 
 /* eventfd syscall **********************************************************/
 #ifdef HAVE_SYS_EVENTFD_H
@@ -120,19 +122,8 @@ int iv_event_raw_register(struct iv_event_raw *this)
 
 	this->event_wfd = fd[1];
 	if (eventfd_unavailable) {
-		int flags;
-
-		flags = fcntl(fd[1], F_GETFD);
-		if (!(flags & FD_CLOEXEC)) {
-			flags |= FD_CLOEXEC;
-			fcntl(fd[1], F_SETFD, flags);
-		}
-
-		flags = fcntl(fd[1], F_GETFL);
-		if (!(flags & O_NONBLOCK)) {
-			flags |= O_NONBLOCK;
-			fcntl(fd[1], F_SETFL, flags);
-		}
+		iv_fd_set_cloexec(fd[1]);
+		iv_fd_set_nonblock(fd[1]);
 	}
 
 	return 0;

@@ -29,7 +29,6 @@
 static int iv_fd_epoll_init(struct iv_state *st)
 {
 	int fd;
-	int flags;
 
 	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
 
@@ -47,11 +46,7 @@ static int iv_fd_epoll_init(struct iv_state *st)
 	if (fd < 0)
 		return -1;
 
-	flags = fcntl(fd, F_GETFD);
-	if (!(flags & FD_CLOEXEC)) {
-		flags |= FD_CLOEXEC;
-		fcntl(fd, F_SETFD, flags);
-	}
+	iv_fd_set_cloexec(fd);
 
 	st->u.epoll.epoll_fd = fd;
 

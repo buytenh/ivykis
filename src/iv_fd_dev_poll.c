@@ -51,17 +51,11 @@ static int iv_fd_dev_poll_init(struct iv_state *st)
 	if (poll_fd < 0)
 		return -1;
 #else
-	int flags;
-
 	poll_fd = open("/dev/poll", O_RDWR);
 	if (poll_fd < 0)
 		return -1;
 
-	flags = fcntl(poll_fd, F_GETFD);
-	if (!(flags & FD_CLOEXEC)) {
-		flags |= FD_CLOEXEC;
-		fcntl(poll_fd, F_SETFD, flags);
-	}
+	iv_fd_set_cloexec(poll_fd);
 #endif
 
 	INIT_IV_AVL_TREE(&st->u.dev_poll.fds, iv_fd_avl_compare);

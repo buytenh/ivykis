@@ -42,17 +42,12 @@
 static int iv_fd_kqueue_init(struct iv_state *st)
 {
 	int kqueue_fd;
-	int flags;
 
 	kqueue_fd = kqueue();
 	if (kqueue_fd < 0)
 		return -1;
 
-	flags = fcntl(kqueue_fd, F_GETFD);
-	if (!(flags & FD_CLOEXEC)) {
-		flags |= FD_CLOEXEC;
-		fcntl(kqueue_fd, F_SETFD, flags);
-	}
+	iv_fd_set_cloexec(kqueue_fd);
 
 	st->u.kqueue.kqueue_fd = kqueue_fd;
 	INIT_IV_LIST_HEAD(&st->u.kqueue.notify);
