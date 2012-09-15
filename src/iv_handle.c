@@ -33,7 +33,6 @@ void iv_handle_init(struct iv_state *st)
 	InitializeCriticalSection(&st->active_handle_list_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
 	INIT_IV_LIST_HEAD(&st->active_without_handler);
-	st->numhandles = 0;
 	st->handled_handle = INVALID_HANDLE_VALUE;
 }
 
@@ -224,7 +223,6 @@ void iv_handle_register(struct iv_handle *_h)
 		iv_handle_start_poll_thread(h);
 
 	st->numobjs++;
-	st->numhandles++;
 }
 
 void iv_handle_unregister(struct iv_handle *_h)
@@ -250,7 +248,6 @@ void iv_handle_unregister(struct iv_handle *_h)
 	CloseHandle(h->signal_handle);
 
 	st->numobjs--;
-	st->numhandles--;
 	if (st->handled_handle == h)
 		st->handled_handle = INVALID_HANDLE_VALUE;
 }
