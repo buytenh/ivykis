@@ -206,7 +206,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 
 	h->st = NULL;
 	iv_list_del_init(&h->list);
-	CloseHandle(&h->rewait_handle);
+	CloseHandle(h->rewait_handle);
 
 	st->numobjs--;
 	st->numhandles--;
