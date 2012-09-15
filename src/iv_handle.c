@@ -26,6 +26,9 @@
 void iv_handle_init(struct iv_state *st)
 {
 	st->wait = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (st->wait == NULL)
+		iv_fatal("iv_handle_init: CreateEvent failed");
+
 	InitializeCriticalSection(&st->active_handle_list_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
 	INIT_IV_LIST_HEAD(&st->active_without_handler);
@@ -163,7 +166,10 @@ void iv_handle_register(struct iv_handle *_h)
 	h->polling = 0;
 	h->st = st;
 	INIT_IV_LIST_HEAD(&h->list);
+
 	h->rewait_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (h->rewait_handle == NULL)
+		iv_fatal("iv_handle_register: CreateEvent failed");
 
 	if (h->handler != NULL)
 		__iv_handle_register(h);
