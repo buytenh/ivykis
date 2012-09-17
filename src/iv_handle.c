@@ -79,14 +79,10 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 		st->handled_handle = h;
 		h->handler(h->cookie);
 		if (st->handled_handle == h) {
-			SetEvent(h->rewait_handle);
+			SetEvent(h->signal_handle);
 			st->handled_handle = INVALID_HANDLE_VALUE;
 		}
 	}
-}
-
-static void WINAPI iv_handle_dummy_apcproc(ULONG_PTR dummy)
-{
 }
 
 static void iv_handle_stop_poll_thread(struct iv_handle_ *h)
@@ -94,10 +90,7 @@ static void iv_handle_stop_poll_thread(struct iv_handle_ *h)
 	DWORD ret;
 
 	h->polling = 0;
-
-	ret = QueueUserAPC(iv_handle_dummy_apcproc, h->thr_handle, 0);
-	if (ret == 0)
-		iv_fatal("iv_handle_stop_poll_thread: QueueUserAPC fail");
+	SetEvent(h->signal_handle);
 
 	do {
 		ret = WaitForSingleObjectEx(h->thr_handle, INFINITE, TRUE);
@@ -129,36 +122,37 @@ static DWORD WINAPI iv_handle_poll_thread(void *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 	struct iv_state *st = h->st;
+	HANDLE hnd[2];
 	int sig;
+
+	hnd[0] = h->signal_handle;
+	hnd[1] = h->handle;
 
 	sig = 0;
 
 	EnterCriticalSection(&st->active_handle_list_lock);
 	while (h->polling) {
-		HANDLE hnd;
+		DWORD num;
 		DWORD ret;
 
-		hnd = iv_list_empty(&h->list_active) ?
-			h->handle : h->rewait_handle;
+		num = iv_list_empty(&h->list_active) ? 2 : 1;
 
 		LeaveCriticalSection(&st->active_handle_list_lock);
 		if (sig) {
 			sig = 0;
 			SetEvent(st->wait);
 		}
-		ret = WaitForSingleObjectEx(hnd, INFINITE, TRUE);
+		ret = WaitForMultipleObjectsEx(num, hnd, FALSE,
+					       INFINITE, FALSE);
 		EnterCriticalSection(&st->active_handle_list_lock);
 
-		if (ret == WAIT_IO_COMPLETION)
+		if (ret == WAIT_OBJECT_0)
 			continue;
 
-		if (ret != WAIT_OBJECT_0 && ret != WAIT_ABANDONED_0) {
+		if (ret != WAIT_OBJECT_0 + 1 && ret != WAIT_ABANDONED_0 + 1) {
 			iv_fatal("iv_handle_poll_thread(%d): %x",
 				 (int)(ULONG_PTR)h->handle, (int)ret);
 		}
-
-		if (hnd == h->rewait_handle)
-			continue;
 
 		if (iv_list_empty(&st->active_with_handler))
 			sig = 1;
@@ -203,7 +197,7 @@ void IV_HANDLE_INIT(struct iv_handle *_h)
 	INIT_IV_LIST_HEAD(&h->list);
 	h->polling = 0;
 	INIT_IV_LIST_HEAD(&h->list_active);
-	h->rewait_handle = INVALID_HANDLE_VALUE;
+	h->signal_handle = INVALID_HANDLE_VALUE;
 	h->thr_handle = INVALID_HANDLE_VALUE;
 }
 
@@ -222,8 +216,8 @@ void iv_handle_register(struct iv_handle *_h)
 	h->st = st;
 	h->polling = 0;
 
-	h->rewait_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (h->rewait_handle == NULL)
+	h->signal_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (h->signal_handle == NULL)
 		iv_fatal("iv_handle_register: CreateEvent failed");
 
 	if (h->handler != NULL)
@@ -253,7 +247,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 		LeaveCriticalSection(&st->active_handle_list_lock);
 	}
 	h->st = NULL;
-	CloseHandle(h->rewait_handle);
+	CloseHandle(h->signal_handle);
 
 	st->numobjs--;
 	st->numhandles--;

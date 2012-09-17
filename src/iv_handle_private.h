@@ -33,6 +33,6 @@ struct iv_handle_ {
 	struct iv_list_head	list_active;
 	struct iv_state		*st;
 	int			polling;
-	HANDLE			rewait_handle;
+	HANDLE			signal_handle;
 	HANDLE			thr_handle;
 };
