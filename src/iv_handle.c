@@ -27,7 +27,8 @@ void iv_handle_init(struct iv_state *st)
 {
 	st->wait = CreateEvent(NULL, FALSE, FALSE, NULL);
 	InitializeCriticalSection(&st->active_handle_list_lock);
-	INIT_IV_LIST_HEAD(&st->active_handle_list);
+	INIT_IV_LIST_HEAD(&st->active_with_handler);
+	INIT_IV_LIST_HEAD(&st->active_without_handler);
 	st->numhandles = 0;
 	st->handled_handle = INVALID_HANDLE_VALUE;
 }
@@ -40,23 +41,29 @@ void iv_handle_deinit(struct iv_state *st)
 
 void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 {
-	int msec;
-	int ret;
 	struct iv_list_head handles;
 
-	msec = 1000 * to->tv_sec + (to->tv_nsec + 999999) / 1000000;
-
-	ret = WaitForSingleObjectEx(st->wait, msec, TRUE);
-	if (ret != WAIT_OBJECT_0 && ret != WAIT_IO_COMPLETION &&
-	    ret != WAIT_TIMEOUT) {
-		iv_fatal("iv_handle_poll_and_run: MsgWaitForMultipleObjectsEx "
-			 "returned %x", (int)ret);
-	}
-
-	__iv_invalidate_now(st);
-
 	EnterCriticalSection(&st->active_handle_list_lock);
-	__iv_list_steal_elements(&st->active_handle_list, &handles);
+	if (iv_list_empty(&st->active_with_handler)) {
+		DWORD msec;
+		DWORD ret;
+
+		msec = 1000 * to->tv_sec + (to->tv_nsec + 999999) / 1000000;
+
+		LeaveCriticalSection(&st->active_handle_list_lock);
+		ret = WaitForSingleObjectEx(st->wait, msec, TRUE);
+		EnterCriticalSection(&st->active_handle_list_lock);
+
+		if (ret != WAIT_OBJECT_0 && ret != WAIT_IO_COMPLETION &&
+		    ret != WAIT_TIMEOUT) {
+			iv_fatal("iv_handle_poll_and_run: "
+				 "WaitForSingleObjectEx returned %x",
+				 (int)ret);
+		}
+
+		__iv_invalidate_now(st);
+	}
+	__iv_list_steal_elements(&st->active_with_handler, &handles);
 	LeaveCriticalSection(&st->active_handle_list_lock);
 
 	while (!iv_list_empty(&handles)) {
@@ -89,43 +96,42 @@ void IV_HANDLE_INIT(struct iv_handle *_h)
 static DWORD WINAPI iv_handle_poll_thread(void *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
-	int waiting;
+	struct iv_state *st = h->st;
+	int sig;
 
-	waiting = 1;
+	sig = 0;
+
+	EnterCriticalSection(&st->active_handle_list_lock);
 	while (h->polling) {
-		struct iv_state *st = h->st;
 		HANDLE hnd;
 		DWORD ret;
-		int sig;
 
-		hnd = waiting ? h->handle : h->rewait_handle;
+		hnd = iv_list_empty(&h->list) ? h->handle : h->rewait_handle;
 
+		LeaveCriticalSection(&st->active_handle_list_lock);
+		if (sig) {
+			sig = 0;
+			SetEvent(st->wait);
+		}
 		ret = WaitForSingleObjectEx(hnd, INFINITE, TRUE);
+		EnterCriticalSection(&st->active_handle_list_lock);
+
 		if (ret == WAIT_IO_COMPLETION)
 			continue;
 
-		if (ret != WAIT_OBJECT_0 && ret != WAIT_ABANDONED) {
+		if (ret != WAIT_OBJECT_0 && ret != WAIT_ABANDONED_0) {
 			iv_fatal("iv_handle_poll_thread(%d): %x",
 				 (int)(ULONG_PTR)h->handle, (int)ret);
 		}
 
-		waiting ^= 1;
-		if (waiting)
+		if (hnd == h->rewait_handle)
 			continue;
 
-		sig = 0;
-
-		EnterCriticalSection(&st->active_handle_list_lock);
-		if (iv_list_empty(&h->list)) {
-			if (iv_list_empty(&st->active_handle_list))
-				sig = 1;
-			iv_list_add_tail(&h->list, &st->active_handle_list);
-		}
-		LeaveCriticalSection(&st->active_handle_list_lock);
-
-		if (sig)
-			SetEvent(st->wait);
+		if (iv_list_empty(&st->active_with_handler))
+			sig = 1;
+		iv_list_add_tail(&h->list, &st->active_with_handler);
 	}
+	LeaveCriticalSection(&st->active_handle_list_lock);
 
 	return 0;
 }
@@ -154,6 +160,7 @@ void iv_handle_register(struct iv_handle *_h)
 	}
 
 	h->registered = 1;
+	h->polling = 0;
 	h->st = st;
 	INIT_IV_LIST_HEAD(&h->list);
 	h->rewait_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -205,7 +212,11 @@ void iv_handle_unregister(struct iv_handle *_h)
 		__iv_handle_unregister(h);
 
 	h->st = NULL;
-	iv_list_del_init(&h->list);
+	if (!iv_list_empty(&h->list)) {
+		EnterCriticalSection(&st->active_handle_list_lock);
+		iv_list_del_init(&h->list);
+		LeaveCriticalSection(&st->active_handle_list_lock);
+	}
 	CloseHandle(h->rewait_handle);
 
 	st->numobjs--;
@@ -221,19 +232,34 @@ int iv_handle_registered(struct iv_handle *_h)
 	return h->registered;
 }
 
+static void iv_handle_move_to_list(struct iv_state *st, struct iv_handle_ *h,
+				   struct iv_list_head *list)
+{
+	if (!iv_list_empty(&h->list)) {
+		iv_list_del(&h->list);
+		iv_list_add_tail(&h->list, list);
+	}
+}
+
 void iv_handle_set_handler(struct iv_handle *_h, void (*handler)(void *))
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+	struct iv_state *st = h->st;
+	void (*old_handler)(void *);
 
 	if (!h->registered) {
 		iv_fatal("iv_handle_set_handler: called with handle "
 			 "which is not registered");
 	}
 
-	if (h->handler == NULL && handler != NULL)
-		__iv_handle_register(h);
-	else if (h->handler != NULL && handler == NULL)
-		__iv_handle_unregister(h);
-
+	old_handler = h->handler;
 	h->handler = handler;
+
+	if (old_handler == NULL && handler != NULL) {
+		iv_handle_move_to_list(st, h, &st->active_with_handler);
+		__iv_handle_register(h);
+	} else if (old_handler != NULL && handler == NULL) {
+		__iv_handle_unregister(h);
+		iv_handle_move_to_list(st, h, &st->active_without_handler);
+	}
 }
