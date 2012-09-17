@@ -37,6 +37,7 @@ void iv_init(void)
 	st = calloc(1, iv_tls_total_state_size());
 	TlsSetValue(iv_state_index, st);
 
+	st->quit = 0;
 	st->numobjs = 0;
 
 	iv_handle_init(st);
@@ -58,14 +59,21 @@ void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	st->quit = 1;
+	if (!st->quit) {
+		st->quit = 1;
+		iv_handle_quit(st);
+	}
 }
 
 void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	st->quit = 0;
+	if (st->quit) {
+		st->quit = 0;
+		iv_handle_unquit(st);
+	}
+
 	while (1) {
 		struct timespec to;
 

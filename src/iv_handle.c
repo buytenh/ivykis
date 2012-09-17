@@ -85,16 +85,44 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 	}
 }
 
-void IV_HANDLE_INIT(struct iv_handle *_h)
+static void WINAPI iv_handle_dummy_apcproc(ULONG_PTR dummy)
 {
-	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+}
 
-	h->st = NULL;
-	INIT_IV_LIST_HEAD(&h->list);
+static void iv_handle_stop_poll_thread(struct iv_handle_ *h)
+{
+	DWORD ret;
+
 	h->polling = 0;
-	INIT_IV_LIST_HEAD(&h->list_active);
-	h->rewait_handle = INVALID_HANDLE_VALUE;
+
+	ret = QueueUserAPC(iv_handle_dummy_apcproc, h->thr_handle, 0);
+	if (ret == 0)
+		iv_fatal("iv_handle_stop_poll_thread: QueueUserAPC fail");
+
+	do {
+		ret = WaitForSingleObjectEx(h->thr_handle, INFINITE, TRUE);
+	} while (ret == WAIT_IO_COMPLETION);
+
+	if (ret != WAIT_OBJECT_0) {
+		iv_fatal("iv_handle_stop_poll_thread: "
+			 "WaitForSingleObjectEx fail");
+	}
+
+	CloseHandle(h->thr_handle);
 	h->thr_handle = INVALID_HANDLE_VALUE;
+}
+
+void iv_handle_quit(struct iv_state *st)
+{
+	struct iv_list_head *ilh;
+
+	iv_list_for_each (ilh, &st->handles) {
+		struct iv_handle_ *h;
+
+		h = iv_container_of(ilh, struct iv_handle_, list);
+		if (h->handler != NULL)
+			iv_handle_stop_poll_thread(h);
+	}
 }
 
 static DWORD WINAPI iv_handle_poll_thread(void *_h)
@@ -141,7 +169,7 @@ static DWORD WINAPI iv_handle_poll_thread(void *_h)
 	return 0;
 }
 
-static void __iv_handle_register(struct iv_handle_ *h)
+static void iv_handle_start_poll_thread(struct iv_handle_ *h)
 {
 	HANDLE w;
 
@@ -149,9 +177,34 @@ static void __iv_handle_register(struct iv_handle_ *h)
 
 	w = CreateThread(NULL, 0, iv_handle_poll_thread, (void *)h, 0, NULL);
 	if (w == NULL)
-		iv_fatal("__iv_handle_register: CreateThread failed");
+		iv_fatal("iv_handle_start_poll_thread: CreateThread failed");
 
 	h->thr_handle = w;
+}
+
+void iv_handle_unquit(struct iv_state *st)
+{
+	struct iv_list_head *ilh;
+
+	iv_list_for_each (ilh, &st->handles) {
+		struct iv_handle_ *h;
+
+		h = iv_container_of(ilh, struct iv_handle_, list);
+		if (h->handler != NULL)
+			iv_handle_start_poll_thread(h);
+	}
+}
+
+void IV_HANDLE_INIT(struct iv_handle *_h)
+{
+	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+
+	h->st = NULL;
+	INIT_IV_LIST_HEAD(&h->list);
+	h->polling = 0;
+	INIT_IV_LIST_HEAD(&h->list_active);
+	h->rewait_handle = INVALID_HANDLE_VALUE;
+	h->thr_handle = INVALID_HANDLE_VALUE;
 }
 
 void iv_handle_register(struct iv_handle *_h)
@@ -174,35 +227,10 @@ void iv_handle_register(struct iv_handle *_h)
 		iv_fatal("iv_handle_register: CreateEvent failed");
 
 	if (h->handler != NULL)
-		__iv_handle_register(h);
+		iv_handle_start_poll_thread(h);
 
 	st->numobjs++;
 	st->numhandles++;
-}
-
-static void WINAPI iv_handle_dummy_apcproc(ULONG_PTR dummy)
-{
-}
-
-static void __iv_handle_unregister(struct iv_handle_ *h)
-{
-	DWORD ret;
-
-	h->polling = 0;
-
-	ret = QueueUserAPC(iv_handle_dummy_apcproc, h->thr_handle, 0);
-	if (ret == 0)
-		iv_fatal("__iv_handle_unregister: QueueUserAPC fail");
-
-	do {
-		ret = WaitForSingleObjectEx(h->thr_handle, INFINITE, TRUE);
-	} while (ret == WAIT_IO_COMPLETION);
-
-	if (ret != WAIT_OBJECT_0)
-		iv_fatal("__iv_handle_unregister: WaitForSingleObjectEx fail");
-
-	CloseHandle(h->thr_handle);
-	h->thr_handle = INVALID_HANDLE_VALUE;
 }
 
 void iv_handle_unregister(struct iv_handle *_h)
@@ -216,7 +244,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 	}
 
 	if (h->handler != NULL)
-		__iv_handle_unregister(h);
+		iv_handle_stop_poll_thread(h);
 
 	iv_list_del(&h->list);
 	if (!iv_list_empty(&h->list_active)) {
@@ -265,9 +293,9 @@ void iv_handle_set_handler(struct iv_handle *_h, void (*handler)(void *))
 
 	if (old_handler == NULL && handler != NULL) {
 		iv_handle_move_to_list(st, h, &st->active_with_handler);
-		__iv_handle_register(h);
+		iv_handle_start_poll_thread(h);
 	} else if (old_handler != NULL && handler == NULL) {
-		__iv_handle_unregister(h);
+		iv_handle_stop_poll_thread(h);
 		iv_handle_move_to_list(st, h, &st->active_without_handler);
 	}
 }
