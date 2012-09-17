@@ -40,6 +40,7 @@ struct iv_state {
 #ifdef _WIN32
 	/* iv_handle.c  */
 	HANDLE			wait;
+	struct iv_list_head	handles;
 	CRITICAL_SECTION	active_handle_list_lock;
 	struct iv_list_head	active_with_handler;
 	struct iv_list_head	active_without_handler;

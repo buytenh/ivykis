@@ -29,10 +29,10 @@ struct iv_handle_ {
 	/*
 	 * Private data.
 	 */
-	int			registered;
-	int			polling;
-	struct iv_state		*st;
 	struct iv_list_head	list;
+	struct iv_list_head	list_active;
+	struct iv_state		*st;
+	int			polling;
 	HANDLE			rewait_handle;
 	HANDLE			thr_handle;
 };

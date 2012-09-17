@@ -29,6 +29,7 @@ void iv_handle_init(struct iv_state *st)
 	if (st->wait == NULL)
 		iv_fatal("iv_handle_init: CreateEvent failed");
 
+	INIT_IV_LIST_HEAD(&st->handles);
 	InitializeCriticalSection(&st->active_handle_list_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
 	INIT_IV_LIST_HEAD(&st->active_without_handler);
@@ -72,8 +73,8 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 	while (!iv_list_empty(&handles)) {
 		struct iv_handle_ *h;
 
-		h = iv_list_entry(handles.next, struct iv_handle_, list);
-		iv_list_del_init(&h->list);
+		h = iv_list_entry(handles.next, struct iv_handle_, list_active);
+		iv_list_del_init(&h->list_active);
 
 		st->handled_handle = h;
 		h->handler(h->cookie);
@@ -88,10 +89,10 @@ void IV_HANDLE_INIT(struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 
-	h->registered = 0;
-	h->polling = 0;
 	h->st = NULL;
 	INIT_IV_LIST_HEAD(&h->list);
+	h->polling = 0;
+	INIT_IV_LIST_HEAD(&h->list_active);
 	h->rewait_handle = INVALID_HANDLE_VALUE;
 	h->thr_handle = INVALID_HANDLE_VALUE;
 }
@@ -109,7 +110,8 @@ static DWORD WINAPI iv_handle_poll_thread(void *_h)
 		HANDLE hnd;
 		DWORD ret;
 
-		hnd = iv_list_empty(&h->list) ? h->handle : h->rewait_handle;
+		hnd = iv_list_empty(&h->list_active) ?
+			h->handle : h->rewait_handle;
 
 		LeaveCriticalSection(&st->active_handle_list_lock);
 		if (sig) {
@@ -132,7 +134,7 @@ static DWORD WINAPI iv_handle_poll_thread(void *_h)
 
 		if (iv_list_empty(&st->active_with_handler))
 			sig = 1;
-		iv_list_add_tail(&h->list, &st->active_with_handler);
+		iv_list_add_tail(&h->list_active, &st->active_with_handler);
 	}
 	LeaveCriticalSection(&st->active_handle_list_lock);
 
@@ -157,15 +159,15 @@ void iv_handle_register(struct iv_handle *_h)
 	struct iv_state *st = iv_get_state();
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 
-	if (h->registered) {
+	if (!iv_list_empty(&h->list)) {
 		iv_fatal("iv_handle_register: called with handle "
 			 "which is still registered");
 	}
 
-	h->registered = 1;
-	h->polling = 0;
+	iv_list_add_tail(&h->list, &st->handles);
+	INIT_IV_LIST_HEAD(&h->list_active);
 	h->st = st;
-	INIT_IV_LIST_HEAD(&h->list);
+	h->polling = 0;
 
 	h->rewait_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (h->rewait_handle == NULL)
@@ -208,21 +210,21 @@ void iv_handle_unregister(struct iv_handle *_h)
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 	struct iv_state *st = h->st;
 
-	if (!h->registered) {
+	if (iv_list_empty(&h->list)) {
 		iv_fatal("iv_handle_unregister: called with handle "
 			 "which is not registered");
 	}
-	h->registered = 0;
 
 	if (h->handler != NULL)
 		__iv_handle_unregister(h);
 
-	h->st = NULL;
-	if (!iv_list_empty(&h->list)) {
+	iv_list_del(&h->list);
+	if (!iv_list_empty(&h->list_active)) {
 		EnterCriticalSection(&st->active_handle_list_lock);
-		iv_list_del_init(&h->list);
+		iv_list_del_init(&h->list_active);
 		LeaveCriticalSection(&st->active_handle_list_lock);
 	}
+	h->st = NULL;
 	CloseHandle(h->rewait_handle);
 
 	st->numobjs--;
@@ -235,15 +237,15 @@ int iv_handle_registered(struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 
-	return h->registered;
+	return !iv_list_empty(&h->list);
 }
 
 static void iv_handle_move_to_list(struct iv_state *st, struct iv_handle_ *h,
 				   struct iv_list_head *list)
 {
-	if (!iv_list_empty(&h->list)) {
-		iv_list_del(&h->list);
-		iv_list_add_tail(&h->list, list);
+	if (!iv_list_empty(&h->list_active)) {
+		iv_list_del(&h->list_active);
+		iv_list_add_tail(&h->list_active, list);
 	}
 }
 
@@ -253,7 +255,7 @@ void iv_handle_set_handler(struct iv_handle *_h, void (*handler)(void *))
 	struct iv_state *st = h->st;
 	void (*old_handler)(void *);
 
-	if (!h->registered) {
+	if (iv_list_empty(&h->list)) {
 		iv_fatal("iv_handle_set_handler: called with handle "
 			 "which is not registered");
 	}
