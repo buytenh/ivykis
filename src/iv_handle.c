@@ -192,12 +192,7 @@ void IV_HANDLE_INIT(struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 
-	h->st = NULL;
 	INIT_IV_LIST_HEAD(&h->list);
-	h->polling = 0;
-	INIT_IV_LIST_HEAD(&h->list_active);
-	h->signal_handle = INVALID_HANDLE_VALUE;
-	h->thr_handle = INVALID_HANDLE_VALUE;
 }
 
 void iv_handle_register(struct iv_handle *_h)
