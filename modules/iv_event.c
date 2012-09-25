@@ -41,17 +41,20 @@ static void iv_event_run_pending_events(void *_tinfo)
 	struct iv_list_head events;
 
 	pthread_mutex_lock(&tinfo->list_mutex);
-	__iv_list_steal_elements(&tinfo->pending_events, &events);
-	pthread_mutex_unlock(&tinfo->list_mutex);
 
+	__iv_list_steal_elements(&tinfo->pending_events, &events);
 	while (!iv_list_empty(&events)) {
 		struct iv_event *ie;
 
 		ie = iv_container_of(events.next, struct iv_event, list);
 		iv_list_del_init(&ie->list);
 
+		pthread_mutex_unlock(&tinfo->list_mutex);
 		ie->handler(ie->cookie);
+		pthread_mutex_lock(&tinfo->list_mutex);
 	}
+
+	pthread_mutex_unlock(&tinfo->list_mutex);
 }
 
 static void iv_event_tls_init_thread(void *_tinfo)
