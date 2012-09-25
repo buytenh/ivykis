@@ -77,7 +77,7 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 
 		st->handled_handle = h;
 		h->handler(h->cookie);
-		if (st->handled_handle == h) {
+		if (st->handled_handle == h && h->polling) {
 			SetEvent(h->signal_handle);
 			st->handled_handle = INVALID_HANDLE_VALUE;
 		}
