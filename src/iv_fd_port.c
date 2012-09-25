@@ -100,12 +100,15 @@ static void iv_fd_port_upload(struct iv_state *st)
 static void iv_fd_port_poll(struct iv_state *st,
 			    struct iv_list_head *active, struct timespec *to)
 {
+	int run_events;
 	unsigned int nget;
 	port_event_t pe[PORTEV_NUM];
 	int ret;
 	int i;
 
 	iv_fd_port_upload(st);
+
+	run_events = 0;
 
 poll_more:
 	nget = 1;
@@ -154,8 +157,7 @@ poll_more:
 						 &st->u.port.notify);
 			}
 		} else if (source == PORT_SOURCE_USER) {
-			__iv_invalidate_now(st);
-			iv_event_run_pending_events();
+			run_events = 1;
 		} else {
 			iv_fatal("iv_fd_port_poll: received event "
 				 "from unknown source %d", source);
@@ -167,6 +169,9 @@ poll_more:
 		to->tv_nsec = 0;
 		goto poll_more;
 	}
+
+	if (run_events)
+		iv_event_run_pending_events();
 }
 
 static void iv_fd_port_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)

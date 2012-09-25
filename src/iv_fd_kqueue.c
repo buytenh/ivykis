@@ -138,6 +138,7 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 	int num;
 	struct kevent batch[st->numfds ? : 1];
 	int ret;
+	int run_events;
 	int i;
 
 	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
@@ -162,12 +163,12 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 			 strerror(errno));
 	}
 
+	run_events = 0;
 	for (i = 0; i < ret; i++) {
 		struct iv_fd_ *fd;
 
 		if (batch[i].filter == EVFILT_USER) {
-			__iv_invalidate_now(st);
-			iv_event_run_pending_events();
+			run_events = 1;
 			continue;
 		}
 
@@ -189,6 +190,9 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 				 "filter %d", batch[i].filter);
 		}
 	}
+
+	if (run_events)
+		iv_event_run_pending_events();
 }
 
 static void iv_fd_kqueue_upload_all(struct iv_state *st)

@@ -141,10 +141,10 @@ void iv_fd_poll_and_run(struct iv_state *st, struct timespec *to)
 {
 	struct iv_list_head active;
 
+	__iv_invalidate_now(st);
+
 	INIT_IV_LIST_HEAD(&active);
 	method->poll(st, &active, to);
-
-	__iv_invalidate_now(st);
 
 	while (!iv_list_empty(&active)) {
 		struct iv_fd_ *fd;
