@@ -26,82 +26,52 @@
 #include "iv_private.h"
 
 static int method;
-static ULONGLONG (WINAPI *gtc64)(void);
-static int tc32_cs_initialized;
-static CRITICAL_SECTION tc32_cs;
-static DWORD tc32_high;
-static DWORD tc32_low;
+static LONGLONG freq;
+static UINT32 last_sec;
 
 void iv_time_init(struct iv_state *st)
 {
-	if (!tc32_cs_initialized) {
-		tc32_cs_initialized = 1;
-		InitializeCriticalSection(&tc32_cs);
-	}
-}
+	if (!method) {
+		LARGE_INTEGER _freq;
 
-static void tc64_to_timespec(struct timespec *time, ULONGLONG tc64)
-{
-	time->tv_sec = tc64 / 1000;
-	time->tv_nsec = 1000000L * (tc64 % 1000);
+		if (QueryPerformanceFrequency(&_freq)) {
+			method = 1;
+			freq = _freq.QuadPart;
+		} else {
+			method = 2;
+		}
+	}
 }
 
 void iv_time_get(struct timespec *time)
 {
-	LARGE_INTEGER _count;
-	LARGE_INTEGER _freq;
-	DWORD tc;
-	DWORD tc_high;
+	UINT32 local_last_sec;
+	UINT32 msec;
 
-	switch (method) {
-	case 0:
-		if (QueryPerformanceFrequency(&_freq) &&
-		    QueryPerformanceCounter(&_count)) {
-			LONGLONG count = _count.QuadPart;
-			LONGLONG freq = _freq.QuadPart;
+	if (method == 1) {
+		LARGE_INTEGER _cnt;
 
-			time->tv_sec = count / freq;
-			time->tv_nsec = (1000000000ULL * (count % freq)) / freq;
+		if (QueryPerformanceCounter(&_cnt)) {
+			LONGLONG cnt = _cnt.QuadPart;
 
-			break;
-		}
-
-		method = 1;
-
-		/* fall through */
-
-	case 1:
-		if (gtc64 == NULL) {
-			HMODULE kernel32;
-
-			kernel32 = GetModuleHandle(TEXT("kernel32.dll"));
-			gtc64 = (ULONGLONG (WINAPI *)(void))
-				GetProcAddress(kernel32, "GetTickCount64");
-		}
-
-		if (gtc64 != NULL) {
-			tc64_to_timespec(time, gtc64());
-			break;
+			time->tv_sec = cnt / freq;
+			time->tv_nsec = (1000000000ULL * (cnt % freq)) / freq;
+			return;
 		}
 
 		method = 2;
-
-		/* fall through */
-
-	case 2:
-		EnterCriticalSection(&tc32_cs);
-
-		tc = GetTickCount();
-		if ((unsigned)tc < (unsigned)tc32_low)
-			tc32_high++;
-		tc32_low = tc;
-
-		tc_high = tc32_high;
-
-		LeaveCriticalSection(&tc32_cs);
-
-		tc64_to_timespec(time, (((ULONGLONG)tc_high) << 32) | tc);
-
-		break;
 	}
+
+	local_last_sec = last_sec;
+
+	msec = GetTickCount() - 1000 * local_last_sec;
+	if (msec >= 1000) {
+		local_last_sec += msec / 1000;
+		msec %= 1000;
+
+		last_sec = local_last_sec;
+	}
+
+	time->tv_sec = local_last_sec;
+	time->tv_nsec = 1000000 * msec;
 }
