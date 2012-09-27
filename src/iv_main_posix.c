@@ -40,8 +40,6 @@ static void __iv_deinit(struct iv_state *st)
 	__st = NULL;
 #endif
 
-	barrier();
-
 	free(st);
 }
 

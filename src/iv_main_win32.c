@@ -100,8 +100,6 @@ static void __iv_deinit(struct iv_state *st)
 
 	TlsSetValue(iv_state_index, NULL);
 
-	barrier();
-
 	free(st);
 }
 
