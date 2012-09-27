@@ -143,16 +143,6 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 
 	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
-	/*
-	 * Valgrind 3.5.0 as supplied with FreeBSD 8.1-RELEASE ports
-	 * doesn't understand that kevent(2) fills in kevent udata on
-	 * return, and labels our subsequent use of it as "Conditional
-	 * jump or move depends on uninitialised value(s)".  Zero the
-	 * udata fields here as an ugly workaround.
-	 */
-	for (i = 0; i < (st->numfds ? : 1); i++)
-		batch[i].udata = 0;
-
 	ret = kevent(st->u.kqueue.kqueue_fd, kev, num,
 		     batch, st->numfds ? : 1, to);
 	if (ret < 0) {
