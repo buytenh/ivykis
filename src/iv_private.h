@@ -164,6 +164,8 @@ struct iv_timer_ {
 /*
  * Misc internal stuff.
  */
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 static inline void
 __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 {

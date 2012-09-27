@@ -128,7 +128,7 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 
 	msec = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
-	ret = epoll_wait(st->u.epoll.epoll_fd, batch, st->numfds ? : 1, msec);
+	ret = epoll_wait(st->u.epoll.epoll_fd, batch, ARRAY_SIZE(batch), msec);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;

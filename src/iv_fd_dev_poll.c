@@ -172,7 +172,7 @@ iv_fd_dev_poll_poll(struct iv_state *st,
 	iv_fd_dev_poll_flush_pending(st);
 
 	dvp.dp_fds = batch;
-	dvp.dp_nfds = st->numfds ? : 1;
+	dvp.dp_nfds = ARRAY_SIZE(batch);
 	dvp.dp_timeout = 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
 
 	ret = ioctl(st->u.dev_poll.poll_fd, DP_POLL, &dvp);

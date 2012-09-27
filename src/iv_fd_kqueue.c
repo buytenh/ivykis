@@ -144,7 +144,7 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 	iv_fd_kqueue_upload(st, kev, UPLOAD_BATCH, &num);
 
 	ret = kevent(st->u.kqueue.kqueue_fd, kev, num,
-		     batch, st->numfds ? : 1, to);
+		     batch, ARRAY_SIZE(batch), to);
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
