@@ -48,6 +48,7 @@ const char *iv_poll_method_name(void);
 void iv_fatal(const char *fmt, ...) __attribute__((noreturn))
 	__attribute__((format(printf, 1, 2)));
 void iv_set_fatal_msg_handler(void (*handler)(const char *msg));
+unsigned long iv_get_thread_id(void);
 
 
 /*
