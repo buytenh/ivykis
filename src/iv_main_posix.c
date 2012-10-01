@@ -75,7 +75,7 @@ void iv_init_flags(unsigned int flags)
 	__st = st;
 #endif
 
-	iv_fd_init(st);
+	iv_fd_init(st, flags);
 	iv_task_init(st);
 	iv_timer_init(st);
 

@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 	struct addrinfo hints;
 	int i;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;

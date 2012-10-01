@@ -130,7 +130,7 @@ int main()
 	struct iv_wait_interest this;
 	int ret;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_WAIT_INTEREST_INIT(&this);
 	this.cookie = &this;

@@ -45,7 +45,7 @@ static void thr_exit(void *cookie)
 
 int main()
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	iv_thread_set_debug_state(1);
 

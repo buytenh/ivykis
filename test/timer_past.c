@@ -40,7 +40,7 @@ int main()
 {
 	alarm(5);
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_TASK_INIT(&task);
 	task.handler = handler_task;

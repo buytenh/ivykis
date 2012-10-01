@@ -404,6 +404,16 @@ AC_CACHE_CHECK(whether $LD supports symbol version scripts,
 	])
 LDFLAGS=$ac_save_LDFLAGS
 
+# Check whether to build the poll-mt poll method.
+AC_ARG_ENABLE([poll-mt],
+	AS_HELP_STRING([--enable-poll-mt], [enable the poll-mt poll method]))
+
+if test x$enable_poll_mt = xyes
+then
+	AC_DEFINE(ENABLE_POLL_MT, 1,
+		  Define to 1 to enable the poll-mt poll method.)
+fi
+
 else
 
 # Build a libivykis DLL.
@@ -420,6 +430,7 @@ AM_CONDITIONAL([HAVE_WIN32], [test $ac_cv_host_system = win32])
 AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
+AM_CONDITIONAL([HAVE_POLL_MT], [test x$enable_poll_mt = xyes])
 AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
 
 # Other conditionals.

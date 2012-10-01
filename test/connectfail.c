@@ -55,7 +55,7 @@ int main()
 	struct sockaddr_in addr;
 	int ret;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {

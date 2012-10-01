@@ -61,7 +61,7 @@ int main()
 {
 	long long nsec;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 #ifdef USE_SIGNAL
 	signal(SIGALRM, got_signal_timeout);

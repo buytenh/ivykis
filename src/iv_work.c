@@ -162,7 +162,7 @@ static void iv_work_thread(void *_thr)
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
 
-	iv_init();
+	iv_init(0);
 
 	INIT_IV_LIST_HEAD(&thr->list);
 

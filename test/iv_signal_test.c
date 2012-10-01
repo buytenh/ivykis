@@ -38,7 +38,7 @@ int main()
 {
 	alarm(5);
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_SIGNAL_INIT(&is_sigusr1);
 	is_sigusr1.signum = SIGUSR1;

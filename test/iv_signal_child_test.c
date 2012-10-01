@@ -37,7 +37,7 @@ int main()
 	char *argv[3];
 	struct iv_popen_request popen_req;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_SIGNAL_INIT(&is_sigterm);
 	is_sigterm.signum = SIGTERM;

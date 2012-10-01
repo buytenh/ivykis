@@ -26,7 +26,7 @@ int main()
 {
 	struct iv_fd fd;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_FD_INIT(&fd);
 	fd.fd = 0;

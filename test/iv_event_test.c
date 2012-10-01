@@ -66,7 +66,7 @@ static void got_tim1(void *_dummy)
 
 static void thread1(void *_dummy)
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_EVENT_INIT(&ev1);
 	ev1.handler = got_ev1;
@@ -80,7 +80,7 @@ static void thread1(void *_dummy)
 
 int main()
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_EVENT_INIT(&ev0);
 	ev0.handler = got_ev0;

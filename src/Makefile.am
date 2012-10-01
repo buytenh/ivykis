@@ -52,6 +52,10 @@ if HAVE_KQUEUE
 SRC			+= iv_fd_kqueue.c
 endif
 
+if HAVE_POLL_MT
+SRC			+= iv_fd_poll_mt.c
+endif
+
 if HAVE_PORT
 SRC			+= iv_fd_port.c
 endif

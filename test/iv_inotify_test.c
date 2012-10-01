@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_INOTIFY_INIT(&inotify);
 	iv_inotify_register(&inotify);

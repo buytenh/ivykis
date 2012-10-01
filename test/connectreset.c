@@ -155,7 +155,7 @@ int main()
 	struct sockaddr_in addr;
 	int ret;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	server_init();
 

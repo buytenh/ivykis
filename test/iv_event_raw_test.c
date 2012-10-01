@@ -60,7 +60,7 @@ int main()
 {
 	alarm(5);
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_EVENT_RAW_INIT(&ev0);
 	ev0.handler = gotev0;

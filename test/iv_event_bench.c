@@ -79,7 +79,7 @@ static void got_ev_child(void *_dummy)
 
 static void thr_child(void *_dummy)
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_EVENT_INIT(&ev_child);
 	ev_child.handler = got_ev_child;
@@ -99,7 +99,7 @@ int main()
 {
 	long long nsec;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 #ifdef USE_SIGNAL
 	signal(SIGALRM, got_signal_timeout);

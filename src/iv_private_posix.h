@@ -18,11 +18,23 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <poll.h>
 #include <pthread.h>
 
 #define MASKIN		1
 #define MASKOUT		2
 #define MASKERR		4
+
+#define MAX_POLL_FDS		7
+
+struct iv_mt_group {
+	struct iv_list_head	list_aux;
+	struct iv_state		*st;
+	int			upd_pipe[2];
+	int			update_occured;
+	int			num_fds;
+	struct iv_fd_		*fds[MAX_POLL_FDS];
+};
 
 struct iv_state {
 	/* iv_main_posix.c  */
@@ -73,6 +85,20 @@ struct iv_state {
 			struct iv_fd_		**fds;
 			int			num_regd_fds;
 		} poll;
+
+#ifdef ENABLE_POLL_MT
+		struct {
+			pthread_mutex_t		state_lock;
+			pthread_cond_t		groups_aux_empty;
+			struct iv_list_head	groups_aux;
+			struct iv_mt_group	*notokay;
+			pthread_cond_t		exec_lock_free;
+			int			exec_lock;
+			int			event_rx_active;
+			struct iv_mt_group	group_main;
+			struct pollfd		pfds[MAX_POLL_FDS + 1];
+		} poll_mt;
+#endif
 
 #ifdef HAVE_PORT_CREATE
 		struct {
@@ -133,16 +159,19 @@ struct iv_fd_ {
 #endif
 
 	/*
-	 * This is for state internal to some of the poll methods:
-	 * ->avl_node is used by the /dev/poll method to maintain an
-	 * internal fd tree, and ->index is used by iv_fd_poll to
-	 * maintain the index of this fd in the list of pollfds.
+	 * This is for state internal to some of the poll methods.
 	 */
 	union {
 #ifdef HAVE_SYS_DEVPOLL_H
 		struct iv_avl_node	avl_node;
 #endif
 		int			index;
+#ifdef ENABLE_POLL_MT
+		struct {
+			struct iv_mt_group	*grp;
+			int			index;
+		} poll_mt;
+#endif
 	} u;
 };
 
@@ -168,6 +197,7 @@ extern struct iv_fd_poll_method iv_fd_poll_method_dev_poll;
 extern struct iv_fd_poll_method iv_fd_poll_method_epoll;
 extern struct iv_fd_poll_method iv_fd_poll_method_kqueue;
 extern struct iv_fd_poll_method iv_fd_poll_method_poll;
+extern struct iv_fd_poll_method iv_fd_poll_method_poll_mt;
 extern struct iv_fd_poll_method iv_fd_poll_method_port;
 extern struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 
@@ -175,14 +205,17 @@ extern struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 void iv_event_run_pending_events(void);
 
 /* iv_fd.c */
-void iv_fd_init(struct iv_state *st);
+void iv_fd_init(struct iv_state *st, unsigned int flags);
 void iv_fd_deinit(struct iv_state *st);
+void iv_fd_run_active_list(struct iv_state *st, struct iv_list_head *active);
 void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs);
 void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
 void iv_fd_set_cloexec(int fd);
 void iv_fd_set_nonblock(int fd);
 
+
+extern pthread_key_t iv_state_key;
 
 #ifdef HAVE_THREAD
 extern __thread struct iv_state *__st;
@@ -192,8 +225,6 @@ static inline struct iv_state *iv_get_state(void)
 	return __st;
 }
 #else
-extern pthread_key_t iv_state_key;
-
 static inline struct iv_state *iv_get_state(void)
 {
 	return pthread_getspecific(iv_state_key);

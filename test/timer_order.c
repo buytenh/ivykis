@@ -51,7 +51,7 @@ int main()
 
 	alarm(30);
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	iv_validate_now();
 

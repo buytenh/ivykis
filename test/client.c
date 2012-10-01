@@ -102,7 +102,7 @@ int main()
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(0x7f000001);
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	for (i = 0; i < sizeof(c) / sizeof(c[0]); i++) {
 		struct connector *conn = c + i;

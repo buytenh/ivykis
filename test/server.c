@@ -129,7 +129,7 @@ static void *thr(void *_fp)
 {
 	int fp = (int)(unsigned long)_fp;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	create_run_handles(fp, NUMPORTS);
 
@@ -140,7 +140,7 @@ int main()
 {
 	int i;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	for (i = 1; i < 10; i++) {
 		unsigned long fp = 20000 + i * NUMPORTS;
@@ -156,7 +156,7 @@ int main()
 #else
 int main()
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	create_run_handles(20000, 10 * NUMPORTS);
 

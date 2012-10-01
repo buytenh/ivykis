@@ -86,7 +86,7 @@ static void consider_poll_method(struct iv_state *st, char *exclude,
 	}
 }
 
-static void iv_fd_init_first_thread(struct iv_state *st)
+static void iv_fd_init_first_thread(struct iv_state *st, unsigned int flags)
 {
 	int euid;
 	char *exclude;
@@ -102,6 +102,10 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 	if (exclude != NULL && getuid() != euid)
 		exclude = NULL;
 
+#ifdef ENABLE_POLL_MT
+	if (flags & IVF_MT_TOLERANT)
+		consider_poll_method(st, exclude, &iv_fd_poll_method_poll_mt);
+#endif
 #ifdef HAVE_PORT_CREATE
 	consider_poll_method(st, exclude, &iv_fd_poll_method_port);
 #endif
@@ -123,10 +127,10 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 		iv_fatal("iv_init: can't find suitable event dispatcher");
 }
 
-void iv_fd_init(struct iv_state *st)
+void iv_fd_init(struct iv_state *st, unsigned int flags)
 {
 	if (method == NULL)
-		iv_fd_init_first_thread(st);
+		iv_fd_init_first_thread(st, flags);
 	else if (method->init(st) < 0)
 		iv_fatal("iv_init: can't initialize event dispatcher");
 
@@ -138,17 +142,12 @@ void iv_fd_deinit(struct iv_state *st)
 	method->deinit(st);
 }
 
-void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs)
+void iv_fd_run_active_list(struct iv_state *st, struct iv_list_head *active)
 {
-	struct iv_list_head active;
-
-	INIT_IV_LIST_HEAD(&active);
-	method->poll(st, &active, abs);
-
-	while (!iv_list_empty(&active)) {
+	while (!iv_list_empty(active)) {
 		struct iv_fd_ *fd;
 
-		fd = iv_list_entry(active.next, struct iv_fd_, list_active);
+		fd = iv_list_entry(active->next, struct iv_fd_, list_active);
 		iv_list_del_init(&fd->list_active);
 
 		st->handled_fd = fd;
@@ -165,6 +164,15 @@ void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs)
 			if (fd->handler_out != NULL)
 				fd->handler_out(fd->cookie);
 	}
+}
+
+void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs)
+{
+	struct iv_list_head active;
+
+	INIT_IV_LIST_HEAD(&active);
+	method->poll(st, &active, abs);
+	iv_fd_run_active_list(st, &active);
 }
 
 void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)

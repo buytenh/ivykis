@@ -48,7 +48,7 @@ static int get_nexthop(void *cookie, struct sockaddr_in *nexthop,
 
 int main()
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	ki.listen_port = 63636;
 	ki.cookie = NULL;

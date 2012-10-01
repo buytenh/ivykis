@@ -121,7 +121,7 @@ static int open_listening_socket(void)
 
 int main()
 {
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 	open_listening_socket();
 	iv_main();
 

@@ -52,7 +52,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 {
 	struct iv_handle h;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	IV_HANDLE_INIT(&h);
 	h.handle = CreateEvent(NULL, FALSE, FALSE, NULL);

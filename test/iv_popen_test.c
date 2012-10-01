@@ -109,7 +109,7 @@ int main()
 	struct req req[NUM];
 	int i;
 
-	iv_init();
+	iv_init(IVF_MT_TOLERANT);
 
 	for (i = 0; i < NUM; i++)
 		open_child_request(&req[i]);

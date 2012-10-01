@@ -52,6 +52,8 @@ void iv_fatal(const char *fmt, ...) __attribute__((noreturn))
 void iv_set_fatal_msg_handler(void (*handler)(const char *msg));
 unsigned long iv_get_thread_id(void);
 
+#define IVF_MT_TOLERANT		1
+
 
 /*
  * Time handling.
