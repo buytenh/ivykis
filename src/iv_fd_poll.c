@@ -116,17 +116,17 @@ static void iv_fd_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 			bits_to_poll_mask(fd->wanted_bands);
 		st->u.poll.fds[fd->u.index] = fd;
 	} else if (fd->u.index != -1 && !fd->wanted_bands) {
-		if (fd->u.index != st->u.poll.num_regd_fds - 1) {
+		st->u.poll.num_regd_fds--;
+		if (fd->u.index != st->u.poll.num_regd_fds) {
 			struct iv_fd_ *last;
 
 			st->u.poll.pfds[fd->u.index] =
-				st->u.poll.pfds[st->u.poll.num_regd_fds - 1];
+				st->u.poll.pfds[st->u.poll.num_regd_fds];
 
-			last = st->u.poll.fds[st->u.poll.num_regd_fds - 1];
+			last = st->u.poll.fds[st->u.poll.num_regd_fds];
 			last->u.index = fd->u.index;
 			st->u.poll.fds[fd->u.index] = last;
 		}
-		st->u.poll.num_regd_fds--;
 
 		fd->u.index = -1;
 	} else {
