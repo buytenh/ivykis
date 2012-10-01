@@ -105,6 +105,9 @@ IVYKIS_0.33 {
 } IVYKIS_0.30;
 
 IVYKIS_0.40 {
+	# iv_tid
+	iv_get_thread_id;
+
 	# iv_timer
 	__iv_now_location_valid;
 } IVYKIS_0.33;

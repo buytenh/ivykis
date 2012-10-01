@@ -35,47 +35,6 @@
 #endif
 
 
-/* thread ID ****************************************************************/
-#ifdef HAVE_PROCESS_H
-#include <process.h>
-#endif
-#ifdef HAVE_SYS_SYSCALL_H
-#include <sys/syscall.h>
-#endif
-#ifdef HAVE_SYS_THR_H
-/* Older FreeBSDs (6.1) don't include sys/ucontext.h in sys/thr.h.  */
-#include <sys/ucontext.h>
-#include <sys/thr.h>
-#endif
-#ifdef HAVE_THREAD_H
-#include <thread.h>
-#endif
-
-static unsigned long get_thread_id(void)
-{
-	unsigned long thread_id;
-
-#if defined(__NR_gettid)
-	thread_id = syscall(__NR_gettid);
-#elif defined(HAVE_GETTID) && defined(HAVE_PROCESS_H)
-	thread_id = gettid();
-#elif defined(HAVE_LWP_GETTID)
-	thread_id = lwp_gettid();
-#elif defined(HAVE_THR_SELF) && defined(HAVE_SYS_THR_H)
-	long thr;
-	thr_self(&thr);
-	thread_id = (unsigned long)thr;
-#elif defined(HAVE_THR_SELF) && defined(HAVE_THREAD_H)
-	thread_id = thr_self();
-#else
-#warning using pthread_self for get_thread_id
-	thread_id = pthr_self();
-#endif
-
-	return thread_id;
-}
-
-
 /* data structures and global data ******************************************/
 struct iv_thread {
 	struct iv_list_head	list;
@@ -143,7 +102,7 @@ static void *iv_thread_handler(void *_thr)
 {
 	struct iv_thread *thr = _thr;
 
-	thr->tid = get_thread_id();
+	thr->tid = iv_get_thread_id();
 
 	pthread_cleanup_push(iv_thread_cleanup_handler, thr);
 	thr->start_routine(thr->arg);
@@ -220,6 +179,8 @@ out:
 	return -1;
 }
 
+
+/* misc functionality *******************************************************/
 void iv_thread_set_debug_state(int state)
 {
 	iv_thread_debug = !!state;
@@ -227,7 +188,7 @@ void iv_thread_set_debug_state(int state)
 
 unsigned long iv_thread_get_id(void)
 {
-	return get_thread_id();
+	return iv_get_thread_id();
 }
 
 void iv_thread_list_children(void)
@@ -236,7 +197,7 @@ void iv_thread_list_children(void)
 	struct iv_list_head *ilh;
 
 	fprintf(stderr, "tid\tname\n");
-	fprintf(stderr, "%lu\tself\n", get_thread_id());
+	fprintf(stderr, "%lu\tself\n", iv_get_thread_id());
 
 	iv_list_for_each (ilh, &tinfo->child_threads) {
 		struct iv_thread *thr;

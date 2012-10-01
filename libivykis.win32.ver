@@ -47,6 +47,9 @@ global:
 	iv_thread_get_id;
 	iv_thread_list_children;
 
+	# iv_tid
+	iv_get_thread_id;
+
 	# iv_timer
 	iv_invalidate_now;
 	iv_validate_now;

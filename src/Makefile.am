@@ -30,6 +30,7 @@ SRC			+= iv_event_raw_posix.c		\
 			   iv_popen.c			\
 			   iv_signal.c			\
 			   iv_thread_posix.c		\
+			   iv_tid_posix.c		\
 			   iv_time_posix.c		\
 			   iv_wait.c
 
@@ -72,6 +73,7 @@ SRC			+= iv_event_raw_win32.c		\
 			   iv_handle.c			\
 			   iv_main_win32.c		\
 			   iv_thread_win32.c		\
+			   iv_tid_win32.c		\
 			   iv_time_win32.c
 
 LINKFLAGS = -version-info 0:0:0						\

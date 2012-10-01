@@ -146,6 +146,8 @@ out:
 	return -1;
 }
 
+
+/* misc functionality *******************************************************/
 void iv_thread_set_debug_state(int state)
 {
 	iv_thread_debug = !!state;
@@ -153,7 +155,7 @@ void iv_thread_set_debug_state(int state)
 
 unsigned long iv_thread_get_id(void)
 {
-	return GetCurrentThreadId();
+	return iv_get_thread_id();
 }
 
 void iv_thread_list_children(void)
