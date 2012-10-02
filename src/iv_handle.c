@@ -233,7 +233,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 	if (h->handler != NULL)
 		iv_handle_stop_poll_thread(h);
 
-	iv_list_del(&h->list);
+	iv_list_del_init(&h->list);
 	if (!iv_list_empty(&h->list_active)) {
 		EnterCriticalSection(&st->active_handle_list_lock);
 		iv_list_del_init(&h->list_active);
