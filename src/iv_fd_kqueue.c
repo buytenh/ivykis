@@ -211,17 +211,32 @@ static void iv_fd_kqueue_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 
 static int iv_fd_kqueue_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 {
-	struct kevent kev[2];
-	int num = 0;
+	struct kevent kev;
 	int ret;
 
-	iv_fd_kqueue_queue_one(kev, &num, fd);
+	if (fd->wanted_bands & MASKIN) {
+		EV_SET(&kev, fd->fd, EVFILT_READ, EV_ADD | EV_ENABLE,
+		       0, 0, (void *)(intptr_t)fd);
 
-	ret = __kevent_retry(st->u.kqueue.kqueue_fd, kev, num);
-	if (ret == 0)
-		fd->registered_bands = fd->wanted_bands;
+		ret = __kevent_retry(st->u.kqueue.kqueue_fd, &kev, 1);
+		if (ret == 0) {
+			fd->registered_bands |= MASKIN;
+			return 0;
+		}
+	}
 
-	return ret;
+	if (fd->wanted_bands & MASKOUT) {
+		EV_SET(&kev, fd->fd, EVFILT_WRITE, EV_ADD | EV_ENABLE,
+		       0, 0, (void *)(intptr_t)fd);
+
+		ret = __kevent_retry(st->u.kqueue.kqueue_fd, &kev, 1);
+		if (ret == 0) {
+			fd->registered_bands |= MASKOUT;
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 static void iv_fd_kqueue_deinit(struct iv_state *st)
