@@ -54,6 +54,7 @@ struct iv_state {
 	struct timespec		time;
 	int			time_valid;
 	int			num_timers;
+	int			rat_depth;
 	struct ratnode		*timer_root;
 
 #ifndef _WIN32

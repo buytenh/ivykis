@@ -56,66 +56,58 @@ struct timespec *__iv_now_location(void)
 }
 
 
-/* timer list handling ******************************************************/
-#define SPLIT_BITS		(10)
+/* internal use *************************************************************/
+#define SPLIT_BITS		(8)
 #define SPLIT_NODES		(1 << SPLIT_BITS)
-#define SPLIT_LEVELS		(2)
-#define SPLIT_MAX		(1 << (SPLIT_BITS * SPLIT_LEVELS))
 struct ratnode { void *child[SPLIT_NODES]; };
 
-void IV_TIMER_INIT(struct iv_timer *_t)
+static struct ratnode *iv_timer_allocate_ratnode(void)
 {
-	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+	struct ratnode *node;
 
-	t->index = -1;
-}
+	node = calloc(1, sizeof(struct ratnode));
+	if (node == NULL)
+		iv_fatal("iv_timer_allocate_ratnode: out of memory");
 
-static inline int timespec_gt(struct timespec *a, struct timespec *b)
-{
-	return !!(a->tv_sec > b->tv_sec ||
-		 (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
-}
-
-static inline int timer_ptr_gt(struct iv_timer_ *a, struct iv_timer_ *b)
-{
-	return timespec_gt(&a->expires, &b->expires);
-}
-
-static struct iv_timer_ **get_node(struct iv_state *st, int index)
-{
-	struct ratnode **r;
-	int i;
-
-	if (index < 1 || index >= SPLIT_MAX)
-		return NULL;
-
-	r = &st->timer_root;
-	for (i = SPLIT_LEVELS - 1; i >= 0; i--) {
-		int bits;
-
-		if (*r == NULL) {
-			*r = calloc(1, sizeof(struct ratnode));
-			if (*r == NULL)
-				return NULL;
-		}
-
-		bits = (index >> i * SPLIT_BITS) & (SPLIT_NODES - 1);
-		r = (struct ratnode **)&((*r)->child[bits]);
-	}
-
-	return (struct iv_timer_ **)r;
+	return node;
 }
 
 void iv_timer_init(struct iv_state *st)
 {
-	if (get_node(st, 1) == NULL)
-		iv_fatal("iv_timer_init: can't alloc memory for root ratnode");
+	st->rat_depth = 0;
+	st->timer_root = iv_timer_allocate_ratnode();
+}
+
+static struct iv_timer_ **iv_timer_get_node(struct iv_state *st, int index)
+{
+	struct ratnode *r;
+	int i;
+
+	if (index >> ((st->rat_depth + 1) * SPLIT_BITS) != 0) {
+		st->rat_depth++;
+
+		r = iv_timer_allocate_ratnode();
+		r->child[0] = st->timer_root;
+		st->timer_root = r;
+	}
+
+	r = st->timer_root;
+	for (i = st->rat_depth; i > 0; i--) {
+		int bits;
+
+		bits = (index >> (i * SPLIT_BITS)) & (SPLIT_NODES - 1);
+		if (r->child[bits] == NULL)
+			r->child[bits] = iv_timer_allocate_ratnode();
+		r = r->child[bits];
+	}
+
+	return (struct iv_timer_ **)(r->child + (index & (SPLIT_NODES - 1)));
 }
 
 int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 {
 	if (st->num_timers) {
-		struct iv_timer_ *t = *get_node(st, 1);
+		struct iv_timer_ *t = *iv_timer_get_node(st, 1);
 
 		iv_validate_now();
 		to->tv_sec = t->expires.tv_sec - st->time.tv_sec;
@@ -135,18 +127,39 @@ int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 	return 0;
 }
 
+static inline int timespec_gt(struct timespec *a, struct timespec *b)
+{
+	return !!(a->tv_sec > b->tv_sec ||
+		 (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
+}
+
+void iv_run_timers(struct iv_state *st)
+{
+	while (st->num_timers) {
+		struct iv_timer_ *t = *iv_timer_get_node(st, 1);
+
+		if (!st->time_valid) {
+			st->time_valid = 1;
+			iv_time_get(&st->time);
+		}
+
+		if (timespec_gt(&t->expires, &st->time))
+			break;
+		iv_timer_unregister((struct iv_timer *)t);
+		t->handler(t->cookie);
+	}
+}
+
 static void free_ratnode(struct ratnode *node, int depth)
 {
-	int i;
+	if (depth) {
+		int i;
 
-	for (i = 0; i < SPLIT_NODES; i++) {
-		if (node->child[i] == NULL)
-			break;
-
-		if (depth == 1)
-			free(node->child[i]);
-		else
+		for (i = 0; i < SPLIT_NODES; i++) {
+			if (node->child[i] == NULL)
+				break;
 			free_ratnode(node->child[i], depth - 1);
+		}
 	}
 
 	free(node);
@@ -154,8 +167,40 @@ static void free_ratnode(struct ratnode *node, int depth)
 
 void iv_timer_deinit(struct iv_state *st)
 {
-	free_ratnode(st->timer_root, SPLIT_LEVELS - 1);
+	free_ratnode(st->timer_root, st->rat_depth);
 	st->timer_root = NULL;
+}
+
+static void iv_timer_radix_tree_remove_level(struct iv_state *st)
+{
+	struct ratnode *root;
+	int i;
+
+	st->rat_depth--;
+
+	root = st->timer_root;
+	for (i = 1; i < SPLIT_NODES; i++) {
+		if (root->child[i] == NULL)
+			break;
+		free_ratnode(root->child[i], st->rat_depth);
+	}
+
+	st->timer_root = root->child[0];
+	free(root);
+}
+
+
+/* public use ***************************************************************/
+void IV_TIMER_INIT(struct iv_timer *_t)
+{
+	struct iv_timer_ *t = (struct iv_timer_ *)_t;
+
+	t->index = -1;
+}
+
+static inline int timer_ptr_gt(struct iv_timer_ *a, struct iv_timer_ *b)
+{
+	return timespec_gt(&a->expires, &b->expires);
 }
 
 static void pull_up(struct iv_state *st, int index, struct iv_timer_ **i)
@@ -166,7 +211,7 @@ static void pull_up(struct iv_state *st, int index, struct iv_timer_ **i)
 		struct iv_timer_ **p;
 
 		parent = index / 2;
-		p = get_node(st, parent);
+		p = iv_timer_get_node(st, parent);
 
 		if (!timer_ptr_gt(*p, *i))
 			break;
@@ -198,10 +243,7 @@ void iv_timer_register(struct iv_timer *_t)
 	st->numobjs++;
 
 	index = ++st->num_timers;
-	p = get_node(st, index);
-	if (p == NULL)
-		iv_fatal("iv_timer_register: timer list overflow");
-
+	p = iv_timer_get_node(st, index);
 	*p = t;
 	t->index = index;
 
@@ -221,7 +263,7 @@ static void push_down(struct iv_state *st, int index, struct iv_timer_ **i)
 		if (2 * index <= st->num_timers) {
 			struct iv_timer_ **p;
 
-			p = get_node(st, 2 * index);
+			p = iv_timer_get_node(st, 2 * index);
 			if (timer_ptr_gt(*imin, p[0])) {
 				index_min = 2 * index;
 				imin = p;
@@ -264,7 +306,7 @@ void iv_timer_unregister(struct iv_timer *_t)
 			 t->index, st->num_timers);
 	}
 
-	p = get_node(st, t->index);
+	p = iv_timer_get_node(st, t->index);
 	if (*p != t) {
 		iv_fatal("iv_timer_unregister: unregistered timer "
 			 "index belonging to other timer");
@@ -272,35 +314,22 @@ void iv_timer_unregister(struct iv_timer *_t)
 
 	st->numobjs--;
 
-	m = get_node(st, st->num_timers);
-	st->num_timers--;
-
+	m = iv_timer_get_node(st, st->num_timers);
 	*p = *m;
 	(*p)->index = t->index;
 	*m = NULL;
+
+	if (st->rat_depth > 0 &&
+	    st->num_timers == (1 << (st->rat_depth * SPLIT_BITS)))
+		iv_timer_radix_tree_remove_level(st);
+	st->num_timers--;
+
 	if (p != m) {
 		pull_up(st, (*p)->index, p);
 		push_down(st, (*p)->index, p);
 	}
 
 	t->index = -1;
-}
-
-void iv_run_timers(struct iv_state *st)
-{
-	while (st->num_timers) {
-		struct iv_timer_ *t = *get_node(st, 1);
-
-		if (!st->time_valid) {
-			st->time_valid = 1;
-			iv_time_get(&st->time);
-		}
-
-		if (timespec_gt(&t->expires, &st->time))
-			break;
-		iv_timer_unregister((struct iv_timer *)t);
-		t->handler(t->cookie);
-	}
 }
 
 int iv_timer_registered(struct iv_timer *_t)
