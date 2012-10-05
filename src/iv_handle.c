@@ -77,14 +77,15 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 
 		st->handled_handle = h;
 		h->handler(h->cookie);
-		if (st->handled_handle == h && h->polling) {
+		if (st->handled_handle == h) {
 			SetEvent(h->signal_handle);
 			st->handled_handle = INVALID_HANDLE_VALUE;
 		}
 	}
 }
 
-static void iv_handle_stop_poll_thread(struct iv_handle_ *h)
+static void
+iv_handle_stop_poll_thread(struct iv_state *st, struct iv_handle_ *h)
 {
 	DWORD ret;
 
@@ -102,6 +103,9 @@ static void iv_handle_stop_poll_thread(struct iv_handle_ *h)
 
 	CloseHandle(h->thr_handle);
 	h->thr_handle = INVALID_HANDLE_VALUE;
+
+	if (st->handled_handle == h)
+		st->handled_handle = INVALID_HANDLE_VALUE;
 }
 
 void iv_handle_quit(struct iv_state *st)
@@ -113,7 +117,7 @@ void iv_handle_quit(struct iv_state *st)
 
 		h = iv_container_of(ilh, struct iv_handle_, list);
 		if (h->handler != NULL)
-			iv_handle_stop_poll_thread(h);
+			iv_handle_stop_poll_thread(st, h);
 	}
 }
 
@@ -231,7 +235,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 	}
 
 	if (h->handler != NULL)
-		iv_handle_stop_poll_thread(h);
+		iv_handle_stop_poll_thread(st, h);
 
 	iv_list_del_init(&h->list);
 	if (!iv_list_empty(&h->list_active)) {
@@ -243,8 +247,6 @@ void iv_handle_unregister(struct iv_handle *_h)
 	CloseHandle(h->signal_handle);
 
 	st->numobjs--;
-	if (st->handled_handle == h)
-		st->handled_handle = INVALID_HANDLE_VALUE;
 }
 
 int iv_handle_registered(struct iv_handle *_h)
@@ -281,7 +283,7 @@ void iv_handle_set_handler(struct iv_handle *_h, void (*handler)(void *))
 		iv_handle_move_to_list(st, h, &st->active_with_handler);
 		iv_handle_start_poll_thread(h);
 	} else if (old_handler != NULL && handler == NULL) {
-		iv_handle_stop_poll_thread(h);
+		iv_handle_stop_poll_thread(st, h);
 		iv_handle_move_to_list(st, h, &st->active_without_handler);
 	}
 }
