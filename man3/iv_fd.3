@@ -144,7 +144,7 @@ can only be registered in one thread at a time.
 does not return errors to the caller, and in case of an error while
 registering the file descriptor, for example if it isn't open or is
 unpollable,
-.BR abort (3)
+.BR iv_fatal (2)
 will be invoked.  If it is not known whether registering the file
 descriptor with the kernel will be successful or not, use
 .B iv_fd_register_try
