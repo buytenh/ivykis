@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -42,6 +42,7 @@ static inline void IV_EVENT_INIT(struct iv_event *this)
 
 int iv_event_register(struct iv_event *this);
 void iv_event_unregister(struct iv_event *this);
+void iv_event_set_handler(struct iv_event *this, void (*handler)(void *));
 void iv_event_post(struct iv_event *this);
 
 #ifdef __cplusplus

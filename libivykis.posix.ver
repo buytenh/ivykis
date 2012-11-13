@@ -103,3 +103,8 @@ IVYKIS_0.33 {
 	# iv_thread
 	iv_thread_get_id;
 } IVYKIS_0.30;
+
+IVYKIS_0.37 {
+	# iv_event
+	iv_event_set_handler;
+} IVYKIS_0.33;

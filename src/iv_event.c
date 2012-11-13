@@ -37,6 +37,7 @@ struct iv_event_thr_info {
 	struct iv_task		run_locally_queued;
 	__mutex_t		list_mutex;
 	struct iv_list_head	pending_events;
+	struct iv_list_head	pending_events_no_handler;
 };
 
 static int iv_event_use_event_raw;
@@ -89,6 +90,8 @@ static void iv_event_tls_init_thread(void *_tinfo)
 	mutex_init(&tinfo->list_mutex);
 
 	INIT_IV_LIST_HEAD(&tinfo->pending_events);
+
+	INIT_IV_LIST_HEAD(&tinfo->pending_events_no_handler);
 }
 
 static void iv_event_tls_deinit_thread(void *_tinfo)
@@ -167,6 +170,47 @@ void iv_event_unregister(struct iv_event *this)
 	}
 }
 
+static void iv_event_kick_tinfo(struct iv_event_thr_info *tinfo)
+{
+	struct iv_event_thr_info *me = iv_tls_user_ptr(&iv_event_tls_user);
+
+	if (tinfo == me) {
+		if (!iv_task_registered(&me->run_locally_queued))
+			iv_task_register(&me->run_locally_queued);
+	} else if (!iv_event_use_event_raw) {
+		event_send(tinfo->u.st);
+	} else {
+		iv_event_raw_post(&tinfo->u.ier);
+	}
+}
+
+void iv_event_set_handler(struct iv_event *this, void (*handler)(void *))
+{
+	struct iv_event_thr_info *tinfo = this->tinfo;
+	int post;
+
+	post = 0;
+
+	mutex_lock(&tinfo->list_mutex);
+	if (!iv_list_empty(&this->list)) {
+		if (this->handler == NULL && handler != NULL) {
+			iv_list_del(&this->list);
+			if (iv_list_empty(&tinfo->pending_events))
+				post = 1;
+			iv_list_add_tail(&this->list, &tinfo->pending_events);
+		} else if (this->handler != NULL && handler == NULL) {
+			iv_list_del(&this->list);
+			iv_list_add_tail(&this->list,
+					 &tinfo->pending_events_no_handler);
+		}
+	}
+	this->handler = handler;
+	mutex_unlock(&tinfo->list_mutex);
+
+	if (post)
+		iv_event_kick_tinfo(tinfo);
+}
+
 void iv_event_post(struct iv_event *this)
 {
 	struct iv_event_thr_info *tinfo = this->tinfo;
@@ -176,23 +220,19 @@ void iv_event_post(struct iv_event *this)
 
 	mutex_lock(&tinfo->list_mutex);
 	if (iv_list_empty(&this->list)) {
-		if (iv_list_empty(&tinfo->pending_events))
-			post = 1;
-		iv_list_add_tail(&this->list, &tinfo->pending_events);
+		struct iv_list_head *list;
+
+		if (this->handler != NULL) {
+			list = &tinfo->pending_events;
+			if (iv_list_empty(list))
+				post = 1;
+		} else {
+			list = &tinfo->pending_events_no_handler;
+		}
+		iv_list_add_tail(&this->list, list);
 	}
 	mutex_unlock(&tinfo->list_mutex);
 
-	if (post) {
-		struct iv_event_thr_info *me;
-
-		me = iv_tls_user_ptr(&iv_event_tls_user);
-		if (tinfo == me) {
-			if (!iv_task_registered(&me->run_locally_queued))
-				iv_task_register(&me->run_locally_queued);
-		} else if (!iv_event_use_event_raw) {
-			event_send(tinfo->u.st);
-		} else {
-			iv_event_raw_post(&tinfo->u.ier);
-		}
-	}
+	if (post)
+		iv_event_kick_tinfo(tinfo);
 }

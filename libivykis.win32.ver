@@ -9,6 +9,7 @@ global:
 	# iv_event
 	iv_event_register;
 	iv_event_unregister;
+	iv_event_set_handler;
 	iv_event_post;
 
 	# iv_event_raw
