@@ -26,8 +26,13 @@
 #include <iv_tls.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_SYS_SYSCALL_H
+#include <sys/syscall.h>
+#endif
 #include "config.h"
 #include "iv_fd_pump.h"
+#include "iv_private.h"
+#include "iv_fd_private.h"
 
 /* thread state handling ****************************************************/
 struct iv_fd_pump_thr_info {
@@ -65,6 +70,39 @@ static void iv_fd_pump_tls_init(void)
 }
 
 
+/* pipe acquisition *********************************************************/
+#if (defined(__NR_pipe2) || defined(HAVE_PIPE2)) && defined(O_CLOEXEC)
+static int pipe2_support = 1;
+#endif
+
+static int grab_pipe(int *fd)
+{
+	int ret;
+
+#if (defined(__NR_pipe2) || defined(HAVE_PIPE2)) && defined(O_CLOEXEC)
+	if (pipe2_support) {
+#ifdef __NR_pipe2
+		ret = syscall(__NR_pipe2, fd, O_CLOEXEC);
+#else
+		ret = pipe2(fd, O_CLOEXEC);
+#endif
+		if (ret == 0 || errno != ENOSYS)
+			return ret;
+
+		pipe2_support = 0;
+	}
+#endif
+
+	ret = pipe(fd);
+	if (ret == 0) {
+		iv_fd_set_cloexec(fd[0]);
+		iv_fd_set_cloexec(fd[1]);
+	}
+
+	return ret;
+}
+
+
 /* buffer management ********************************************************/
 #define MAX_CACHED_BUFS		20
 #define BUF_SIZE		4096
@@ -99,7 +137,7 @@ static struct iv_fd_pump_buf *buf_alloc(void)
 
 	buf = malloc(size);
 
-	if (buf != NULL && splice_available && pipe(buf->u.pfd) < 0) {
+	if (buf != NULL && splice_available && grab_pipe(buf->u.pfd) < 0) {
 		free(buf);
 		buf = NULL;
 	}
