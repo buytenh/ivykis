@@ -347,9 +347,9 @@ int main()
 }
 .fi
 .PP
-The global variable 'iv_now' contains the current time-of-day.
-However, it is updated lazily, and its contents might be stale at
-any given time.  Before using it,
+The global variable 'iv_now' represents a monotonic timer.  However,
+it is updated lazily, and its contents might be stale at any given
+time.  Before using it,
 .BR iv_validate_now (3)
 must be called.
 .SH "EXAMPLE 4"

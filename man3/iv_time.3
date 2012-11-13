@@ -17,9 +17,7 @@ iv_now, iv_validate_now, iv_invalidate_now \- ivykis time handling
 .br
 .SH DESCRIPTION
 .B iv_now
-is a global variable that reflects the current time-of-day.  Applications
-written to the ivykis API generally require to know the current time-of-day
-in many places, and therefore effort is done to cache this quantity.
+is a global variable that represents a monotonic timer.
 .PP
 The contents of
 .B iv_now
@@ -31,9 +29,9 @@ are up-to-date.
 .PP
 The function
 .B iv_invalidate_now
-is called to invalidate the currently cached time-of-day.  This function
-should be called after any operation that takes a significant amount of
-wall clock time.
+is called to invalidate the currently cached time.  This function
+should be called after any operation that takes a significant amount
+of wall clock time.
 .SH "SEE ALSO"
 .BR ivykis (3),
 .BR iv_examples (3)
