@@ -107,4 +107,6 @@ IVYKIS_0.33 {
 IVYKIS_0.37 {
 	# iv_event
 	iv_event_set_handler;
+	iv_event_set_active;
+	iv_event_set_inactive;
 } IVYKIS_0.33;

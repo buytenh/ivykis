@@ -11,6 +11,8 @@ global:
 	iv_event_unregister;
 	iv_event_set_handler;
 	iv_event_post;
+	iv_event_set_active;
+	iv_event_set_inactive;
 
 	# iv_event_raw
 	iv_event_raw_register;
