@@ -108,12 +108,12 @@ void iv_event_run_pending_events(void)
 
 int iv_event_register(struct iv_event *this)
 {
-	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
+	struct iv_state *st = iv_get_state();
+	struct iv_event_thr_info *tinfo =
+		__iv_tls_user_ptr(st, &iv_event_tls_user);
 
 	if (!tinfo->event_count++) {
 		if (!iv_event_use_event_raw) {
-			struct iv_state *st = iv_get_state();
-
 			if (event_rx_on(st) == 0)
 				tinfo->u.st = st;
 			else

@@ -72,10 +72,8 @@ void iv_tls_thread_deinit(struct iv_state *st)
 	}
 }
 
-void *iv_tls_user_ptr(struct iv_tls_user *itu)
+void *__iv_tls_user_ptr(struct iv_state *st, struct iv_tls_user *itu)
 {
-	struct iv_state *st = iv_get_state();
-
 	if (itu->state_offset == 0)
 		iv_fatal("iv_tls_user_ptr: called on unregistered iv_tls_user");
 
@@ -83,4 +81,11 @@ void *iv_tls_user_ptr(struct iv_tls_user *itu)
 		return ((void *)st) + itu->state_offset;
 
 	return NULL;
+}
+
+void *iv_tls_user_ptr(struct iv_tls_user *itu)
+{
+	struct iv_state *st = iv_get_state();
+
+	return __iv_tls_user_ptr(st, itu);
 }
