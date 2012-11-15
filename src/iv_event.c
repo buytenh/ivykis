@@ -140,7 +140,7 @@ int iv_event_register(struct iv_event *this)
 
 void iv_event_unregister(struct iv_event *this)
 {
-	struct iv_event_thr_info *tinfo = iv_tls_user_ptr(&iv_event_tls_user);
+	struct iv_event_thr_info *tinfo = this->tinfo;
 
 	if (!iv_list_empty(&this->list)) {
 		mutex_lock(&tinfo->list_mutex);
