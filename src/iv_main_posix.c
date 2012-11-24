@@ -52,7 +52,13 @@ static void iv_state_destructor(void *data)
 	__iv_deinit(st);
 }
 
+#undef iv_init
 void iv_init(void)
+{
+	iv_init_flags(0);
+}
+
+void iv_init_flags(unsigned int flags)
 {
 	struct iv_state *st;
 

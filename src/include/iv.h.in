@@ -39,7 +39,9 @@ extern "C" {
 /*
  * Library initialisation, main loop.
  */
-void iv_init(void);
+#define iv_init(flags)		iv_init_flags(flags + 0)
+
+void iv_init_flags(unsigned int flags);
 int iv_inited(void);
 void iv_main(void);
 void iv_quit(void);

@@ -105,6 +105,9 @@ IVYKIS_0.33 {
 } IVYKIS_0.30;
 
 IVYKIS_0.39 {
+	# iv_main
+	iv_init_flags;
+
 	# iv_tid
 	iv_get_thread_id;
 } IVYKIS_0.33;

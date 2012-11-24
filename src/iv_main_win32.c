@@ -24,7 +24,13 @@
 
 DWORD iv_state_index = -1;
 
+#undef iv_init
 void iv_init(void)
+{
+	iv_init_flags(0);
+}
+
+void iv_init_flags(unsigned int flags)
 {
 	struct iv_state *st;
 

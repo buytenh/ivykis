@@ -29,6 +29,7 @@ global:
 
 	# iv_main
 	iv_init;
+	iv_init_flags;
 	iv_inited;
 	iv_quit;
 	iv_main;
