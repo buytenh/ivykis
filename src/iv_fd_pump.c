@@ -366,15 +366,11 @@ static int iv_fd_pump_try_output(struct iv_fd_pump *ip)
 
 static int __iv_fd_pump_pump(struct iv_fd_pump *ip)
 {
-	if (!ip->full && ip->saw_fin == 0) {
-		if (iv_fd_pump_try_input(ip))
-			return -1;
-	}
+	if (!ip->full && ip->saw_fin == 0 && iv_fd_pump_try_input(ip))
+		return -1;
 
-	if (ip->bytes || ip->saw_fin == 1) {
-		if (iv_fd_pump_try_output(ip))
-			return -1;
-	}
+	if (ip->bytes && iv_fd_pump_try_output(ip))
+		return -1;
 
 
 	switch (ip->saw_fin) {
