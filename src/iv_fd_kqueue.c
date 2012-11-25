@@ -136,7 +136,7 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 {
 	struct kevent kev[UPLOAD_BATCH];
 	int num;
-	struct kevent batch[st->numfds ? : 1];
+	struct kevent batch[st->numfds ? 2 * st->numfds : 1];
 	int ret;
 	int run_events;
 	int i;
