@@ -21,7 +21,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/poll.h>
+#ifdef HAVE_SYS_SYSCALL_H
+#include <sys/syscall.h>
+#endif
 #include "iv_private.h"
 #include "iv_fd_private.h"
 
@@ -42,11 +46,33 @@ static int iv_fd_poll_init(struct iv_state *st)
 	return 0;
 }
 
+static void
+iv_fd_poll_activate_fds(struct iv_state *st, struct iv_list_head *active)
+{
+	int i;
+
+	for (i = 0; i < st->u.poll.num_regd_fds; i++) {
+		struct iv_fd_ *fd;
+		int revents;
+
+		fd = st->u.poll.fds[i];
+		revents = st->u.poll.pfds[i].revents;
+
+		if (revents & (POLLIN | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKIN);
+
+		if (revents & (POLLOUT | POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKOUT);
+
+		if (revents & (POLLERR | POLLHUP))
+			iv_fd_make_ready(active, fd, MASKERR);
+	}
+}
+
 static void iv_fd_poll_poll(struct iv_state *st,
 			    struct iv_list_head *active, struct timespec *to)
 {
 	int ret;
-	int i;
 
 #if _AIX
 	/*
@@ -66,22 +92,7 @@ static void iv_fd_poll_poll(struct iv_state *st,
 			 strerror(errno));
 	}
 
-	for (i = 0; i < st->u.poll.num_regd_fds; i++) {
-		struct iv_fd_ *fd;
-		int revents;
-
-		fd = st->u.poll.fds[i];
-		revents = st->u.poll.pfds[i].revents;
-
-		if (revents & (POLLIN | POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKIN);
-
-		if (revents & (POLLOUT | POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKOUT);
-
-		if (revents & (POLLERR | POLLHUP))
-			iv_fd_make_ready(active, fd, MASKERR);
-	}
+	iv_fd_poll_activate_fds(st, active);
 }
 
 static void iv_fd_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
@@ -163,7 +174,6 @@ static void iv_fd_poll_deinit(struct iv_state *st)
 	free(st->u.poll.pfds);
 }
 
-
 struct iv_fd_poll_method iv_fd_poll_method_poll = {
 	.name		= "poll",
 	.init		= iv_fd_poll_init,
@@ -173,3 +183,45 @@ struct iv_fd_poll_method iv_fd_poll_method_poll = {
 	.notify_fd_sync	= iv_fd_poll_notify_fd_sync,
 	.deinit		= iv_fd_poll_deinit,
 };
+
+
+#ifdef HAVE_PPOLL
+static void iv_fd_poll_ppoll(struct iv_state *st,
+			     struct iv_list_head *active, struct timespec *to)
+{
+	struct pollfd *fds = st->u.poll.pfds;
+	int nfds = st->u.poll.num_regd_fds;
+
+	int ret;
+
+#ifdef __NR_ppoll
+	ret = syscall(__NR_ppoll, fds, nfds, to, NULL);
+#else
+	ret = ppoll(fds, nfds, to, NULL);
+#endif
+	if (ret < 0) {
+		if (errno == EINTR)
+			return;
+
+		if (errno == ENOSYS) {
+			method = &iv_fd_poll_method_poll;
+			return iv_fd_poll_poll(st, active, to);
+		}
+
+		iv_fatal("iv_fd_poll_ppoll: got error %d[%s]", errno,
+			 strerror(errno));
+	}
+
+	iv_fd_poll_activate_fds(st, active);
+}
+
+struct iv_fd_poll_method iv_fd_poll_method_ppoll = {
+	.name		= "ppoll",
+	.init		= iv_fd_poll_init,
+	.poll		= iv_fd_poll_ppoll,
+	.register_fd	= iv_fd_poll_register_fd,
+	.notify_fd	= iv_fd_poll_notify_fd,
+	.notify_fd_sync	= iv_fd_poll_notify_fd_sync,
+	.deinit		= iv_fd_poll_deinit,
+};
+#endif

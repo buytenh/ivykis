@@ -115,6 +115,9 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 #ifdef HAVE_KQUEUE
 	consider_poll_method(st, exclude, &iv_fd_poll_method_kqueue);
 #endif
+#ifdef HAVE_PPOLL
+	consider_poll_method(st, exclude, &iv_fd_poll_method_ppoll);
+#endif
 	consider_poll_method(st, exclude, &iv_fd_poll_method_poll);
 
 	if (method == NULL)

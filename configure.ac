@@ -306,6 +306,7 @@ AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([lwp_gettid])
 AC_CHECK_FUNCS([pipe2])
 AC_CHECK_FUNCS([port_create])
+AC_CHECK_FUNCS([ppoll])
 AC_CHECK_FUNCS([pthread_spin_lock])
 AC_CHECK_FUNCS([thr_self])
 

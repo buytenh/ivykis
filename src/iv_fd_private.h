@@ -108,6 +108,7 @@ extern struct iv_fd_poll_method iv_fd_poll_method_epoll;
 extern struct iv_fd_poll_method iv_fd_poll_method_kqueue;
 extern struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern struct iv_fd_poll_method iv_fd_poll_method_port;
+extern struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 
 /* iv_event_posix.c */
 void iv_event_run_pending_events(void);
