@@ -78,6 +78,8 @@ static void iv_signal_child(void)
 	int last_signum;
 	struct iv_avl_node *an;
 
+	spin_init(&sig_interests_lock);
+
 	sa.sa_handler = SIG_DFL;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -95,7 +97,7 @@ static void iv_signal_child(void)
 
 	sig_interests.root = NULL;
 
-	iv_signal_parent();
+	pthread_sigmask(SIG_SETMASK, &sig_mask_fork, NULL);
 }
 
 static void iv_signal_init(void) __attribute__((constructor));
