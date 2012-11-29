@@ -60,21 +60,14 @@ void iv_quit(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	if (!st->quit) {
-		st->quit = 1;
-		iv_handle_quit(st);
-	}
+	st->quit = 1;
 }
 
 void iv_main(void)
 {
 	struct iv_state *st = iv_get_state();
 
-	if (st->quit) {
-		st->quit = 0;
-		iv_handle_unquit(st);
-	}
-
+	st->quit = 0;
 	while (1) {
 		struct timespec to;
 
