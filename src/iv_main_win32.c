@@ -44,6 +44,7 @@ void iv_init(void)
 	iv_task_init(st);
 	iv_time_init(st);
 	iv_timer_init(st);
+
 	iv_tls_thread_init(st);
 }
 
@@ -94,9 +95,10 @@ void iv_main(void)
 
 static void __iv_deinit(struct iv_state *st)
 {
+	iv_tls_thread_deinit(st);
+
 	iv_handle_deinit(st);
 	iv_timer_deinit(st);
-	iv_tls_thread_deinit(st);
 
 	TlsSetValue(iv_state_index, NULL);
 

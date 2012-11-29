@@ -31,9 +31,10 @@ __thread struct iv_state	*__st;
 
 static void __iv_deinit(struct iv_state *st)
 {
+	iv_tls_thread_deinit(st);
+
 	iv_fd_deinit(st);
 	iv_timer_deinit(st);
-	iv_tls_thread_deinit(st);
 
 	pthread_setspecific(iv_state_key, NULL);
 #ifdef HAVE_THREAD
@@ -73,6 +74,7 @@ void iv_init(void)
 	iv_fd_init(st);
 	iv_task_init(st);
 	iv_timer_init(st);
+
 	iv_tls_thread_init(st);
 }
 
