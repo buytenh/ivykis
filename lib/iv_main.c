@@ -138,10 +138,10 @@ void				(*fatal_msg_handler)(const char *msg);
 
 static void __iv_deinit(struct iv_state *st)
 {
-	method->deinit(st);
-
-	iv_timer_deinit(st);
 	iv_tls_thread_deinit(st);
+
+	method->deinit(st);
+	iv_timer_deinit(st);
 
 	pthread_setspecific(iv_state_key, NULL);
 #ifdef HAVE_THREAD
@@ -196,6 +196,7 @@ void iv_init(void)
 
 	iv_task_init(st);
 	iv_timer_init(st);
+
 	iv_tls_thread_init(st);
 }
 
