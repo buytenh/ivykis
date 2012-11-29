@@ -40,8 +40,6 @@ struct work_pool_priv {
 	void			*cookie;
 	void			(*thread_start)(void *cookie);
 	void			(*thread_stop)(void *cookie);
-	uint32_t		seq_head;
-	uint32_t		seq_tail;
 	struct iv_list_head	work_items;
 	struct iv_list_head	work_done;
 };
@@ -74,14 +72,13 @@ static void __iv_work_thread_die(struct work_pool_thread *thr)
 		pool->thread_stop(pool->cookie);
 
 	if (pool->shutting_down && !pool->started_threads)
-		iv_event_post(&pool->ev);
+		iv_event_set_active(&pool->ev);
 }
 
 static void iv_work_thread_got_event(void *_thr)
 {
 	struct work_pool_thread *thr = _thr;
 	struct work_pool_priv *pool = thr->pool;
-	uint32_t last_seq;
 
 	mutex_lock(&pool->lock);
 
@@ -90,11 +87,9 @@ static void iv_work_thread_got_event(void *_thr)
 		iv_timer_unregister(&thr->idle_timer);
 	}
 
-	last_seq = pool->seq_tail;
-	while ((int32_t)(last_seq - pool->seq_head) > 0) {
+	if (!iv_list_empty(&pool->work_items)) {
 		struct iv_work_item *work;
 
-		pool->seq_head++;
 		work = iv_container_of(pool->work_items.next,
 				       struct iv_work_item, list);
 		iv_list_del(&work->list);
@@ -105,13 +100,14 @@ static void iv_work_thread_got_event(void *_thr)
 		mutex_lock(&pool->lock);
 
 		if (iv_list_empty(&pool->work_done))
-			iv_event_post(&pool->ev);
+			iv_event_set_active(&pool->ev);
 		iv_list_add_tail(&work->list, &pool->work_done);
-	}
+	} else {
+		iv_event_set_inactive(&thr->kick);
 
-	if (pool->seq_head == pool->seq_tail) {
 		if (!pool->shutting_down) {
 			iv_list_add(&thr->list, &pool->idle_threads);
+
 			iv_validate_now();
 			thr->idle_timer.expires = iv_now;
 			thr->idle_timer.expires.tv_sec += 10;
@@ -119,17 +115,6 @@ static void iv_work_thread_got_event(void *_thr)
 		} else {
 			__iv_work_thread_die(thr);
 		}
-	} else {
-		/*
-		 * If we're already at the maximum number of pool
-		 * threads, and none of those threads were idle when
-		 * more work arrived, then there may have been no
-		 * kick sent for the new work item(s) (and no new
-		 * pool thread started either), so if we're leaving
-		 * with work items still pending, make sure we get
-		 * called again, so that we don't deadlock.
-		 */
-		iv_event_post(&thr->kick);
 	}
 
 	mutex_unlock(&pool->lock);
@@ -175,7 +160,7 @@ static void iv_work_thread(void *_thr)
 	if (pool->thread_start != NULL)
 		pool->thread_start(pool->cookie);
 
-	iv_event_post(&thr->kick);
+	iv_event_set_active(&thr->kick);
 
 	iv_main();
 
@@ -187,31 +172,26 @@ static void iv_work_thread(void *_thr)
 static void iv_work_event(void *_pool)
 {
 	struct work_pool_priv *pool = _pool;
-	struct iv_list_head items;
+	struct iv_work_item *work;
 
 	mutex_lock(&pool->lock);
-	__iv_list_steal_elements(&pool->work_done, &items);
+	if (!iv_list_empty(&pool->work_done)) {
+		work = iv_container_of(pool->work_done.next,
+				       struct iv_work_item, list);
+		iv_list_del(&work->list);
+	} else {
+		work = NULL;
+	}
 	mutex_unlock(&pool->lock);
 
-	while (!iv_list_empty(&items)) {
-		struct iv_work_item *work;
-
-		work = iv_container_of(items.next, struct iv_work_item, list);
-		iv_list_del(&work->list);
-
+	if (work != NULL) {
 		work->completion(work->cookie);
-	}
-
-	if (pool->shutting_down) {
-		mutex_lock(&pool->lock);
-		if (!pool->started_threads && iv_list_empty(&pool->work_done)) {
-			mutex_unlock(&pool->lock);
-			mutex_destroy(&pool->lock);
-			iv_event_unregister(&pool->ev);
-			free(pool);
-			return;
-		}
-		mutex_unlock(&pool->lock);
+	} else if (pool->shutting_down && !pool->started_threads) {
+		mutex_destroy(&pool->lock);
+		iv_event_unregister(&pool->ev);
+		free(pool);
+	} else {
+		iv_event_set_inactive(&pool->ev);
 	}
 }
 
@@ -241,8 +221,6 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	pool->cookie = this->cookie;
 	pool->thread_start = this->thread_start;
 	pool->thread_stop = this->thread_stop;
-	pool->seq_head = 0;
-	pool->seq_tail = 0;
 	INIT_IV_LIST_HEAD(&pool->work_items);
 	INIT_IV_LIST_HEAD(&pool->work_done);
 
@@ -263,7 +241,7 @@ void iv_work_pool_put(struct iv_work_pool *this)
 
 	if (!pool->started_threads) {
 		mutex_unlock(&pool->lock);
-		iv_event_post(&pool->ev);
+		iv_event_set_active(&pool->ev);
 		return;
 	}
 
@@ -271,7 +249,7 @@ void iv_work_pool_put(struct iv_work_pool *this)
 		struct work_pool_thread *thr;
 
 		thr = iv_container_of(ilh, struct work_pool_thread, list);
-		iv_event_post(&thr->kick);
+		iv_event_set_active(&thr->kick);
 	}
 
 	mutex_unlock(&pool->lock);
@@ -309,7 +287,6 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 
 	mutex_lock(&pool->lock);
 
-	pool->seq_tail++;
 	iv_list_add_tail(&work->list, &pool->work_items);
 
 	if (!iv_list_empty(&pool->idle_threads)) {
@@ -317,7 +294,7 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 
 		thr = iv_container_of(pool->idle_threads.next,
 				      struct work_pool_thread, list);
-		iv_event_post(&thr->kick);
+		iv_event_set_active(&thr->kick);
 	} else if (pool->started_threads < this->max_threads) {
 		iv_work_start_thread(pool);
 	}
