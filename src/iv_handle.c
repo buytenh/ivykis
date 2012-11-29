@@ -33,7 +33,7 @@ void iv_handle_init(struct iv_state *st)
 	InitializeCriticalSection(&st->active_handle_list_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
 	INIT_IV_LIST_HEAD(&st->active_without_handler);
-	st->handled_handle = INVALID_HANDLE_VALUE;
+	st->handled_handle = NULL;
 }
 
 void iv_handle_deinit(struct iv_state *st)
@@ -79,7 +79,7 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 		h->handler(h->cookie);
 		if (st->handled_handle == h) {
 			SetEvent(h->signal_handle);
-			st->handled_handle = INVALID_HANDLE_VALUE;
+			st->handled_handle = NULL;
 		}
 	}
 }
@@ -105,7 +105,7 @@ iv_handle_stop_poll_thread(struct iv_state *st, struct iv_handle_ *h)
 	h->thr_handle = INVALID_HANDLE_VALUE;
 
 	if (st->handled_handle == h)
-		st->handled_handle = INVALID_HANDLE_VALUE;
+		st->handled_handle = NULL;
 }
 
 void iv_handle_quit(struct iv_state *st)

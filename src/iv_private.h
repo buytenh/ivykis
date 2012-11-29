@@ -44,7 +44,7 @@ struct iv_state {
 	CRITICAL_SECTION	active_handle_list_lock;
 	struct iv_list_head	active_with_handler;
 	struct iv_list_head	active_without_handler;
-	HANDLE			handled_handle;
+	struct iv_handle_	*handled_handle;
 #endif
 
 	/* iv_task.c  */
