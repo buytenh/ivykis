@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -21,45 +21,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <inttypes.h>
 #include <iv.h>
 #include <iv_event_raw.h>
-#include <inttypes.h>
 #include <string.h>
-#include <unistd.h>
-#include "config.h"
 #include "iv_private.h"
 #include "iv_fd_private.h"
 
-/* eventfd syscall **********************************************************/
-#ifdef HAVE_SYS_EVENTFD_H
-#include <sys/eventfd.h>
-#endif
-
-#if defined(HAVE_EVENTFD) && defined(EFD_NONBLOCK) && defined(EFD_CLOEXEC)
-static int grab_eventfd(void)
-{
-	int fd;
-
-	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-	if (fd < 0) {
-		if (errno != ENOSYS)
-			perror("eventfd");
-		return -errno;
-	}
-
-	return fd;
-}
+#ifdef linux
+#include "eventfd-linux.h"
 #else
-static int grab_eventfd(void)
-{
-	return -ENOSYS;
-}
+#include "eventfd-stub.h"
 #endif
 
-
-/* implementation ***********************************************************/
-static int eventfd_unavailable;
 
 static void iv_event_raw_got_event(void *_this)
 {
@@ -68,7 +42,7 @@ static void iv_event_raw_got_event(void *_this)
 	char buf[1024];
 	int ret;
 
-	toread = eventfd_unavailable ? sizeof(buf) : 8;
+	toread = !eventfd_in_use ? sizeof(buf) : 8;
 
 	do {
 		ret = read(this->event_rfd.fd, buf, toread);
@@ -93,21 +67,19 @@ int iv_event_raw_register(struct iv_event_raw *this)
 {
 	int fd[2];
 
-	if (!eventfd_unavailable) {
+	if (eventfd_in_use) {
 		int ret;
 
-		ret = grab_eventfd();
-		if (ret < 0) {
-			if (ret != -ENOSYS)
-				return -1;
-			eventfd_unavailable = 1;
-		} else {
+		ret = eventfd_grab();
+		if (ret >= 0) {
 			fd[0] = ret;
 			fd[1] = ret;
+		} else if (ret != -ENOSYS) {
+			return -1;
 		}
 	}
 
-	if (eventfd_unavailable) {
+	if (!eventfd_in_use) {
 		if (pipe(fd) < 0) {
 			perror("pipe");
 			return -1;
@@ -121,7 +93,7 @@ int iv_event_raw_register(struct iv_event_raw *this)
 	iv_fd_register(&this->event_rfd);
 
 	this->event_wfd = fd[1];
-	if (eventfd_unavailable) {
+	if (!eventfd_in_use) {
 		iv_fd_set_cloexec(fd[1]);
 		iv_fd_set_nonblock(fd[1]);
 	}
@@ -134,13 +106,13 @@ void iv_event_raw_unregister(struct iv_event_raw *this)
 	iv_fd_unregister(&this->event_rfd);
 	close(this->event_rfd.fd);
 
-	if (eventfd_unavailable)
+	if (!eventfd_in_use)
 		close(this->event_wfd);
 }
 
 void iv_event_raw_post(struct iv_event_raw *this)
 {
-	if (eventfd_unavailable) {
+	if (!eventfd_in_use) {
 		write(this->event_wfd, "", 1);
 	} else {
 		uint64_t x = 1;
