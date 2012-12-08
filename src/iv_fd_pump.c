@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <iv.h>
+#include <iv_fd_pump.h>
 #include <iv_list.h>
 #include <iv_tls.h>
 #include <string.h>
@@ -30,7 +31,6 @@
 #include <sys/syscall.h>
 #endif
 #include "config.h"
-#include "iv_fd_pump.h"
 #include "iv_private.h"
 #include "iv_fd_private.h"
 
