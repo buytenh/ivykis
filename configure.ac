@@ -50,41 +50,6 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE(
 if test $ac_cv_host_system = posix
 then
 
-# Check for __thread.
-AC_MSG_CHECKING([for working __thread])
-case $host_os-$host_cpu in
-aix*)
-	#
-	# On at least AIX 5.1 and 7.1, __thread seems to be silently
-	# ignored, and different threads get the same storage location
-	# for __thread variables.
-	#
-	AC_MSG_RESULT([no])
-	;;
-netbsd*)
-	#
-	# Unspecified brokenness on NetBSD 5.1.
-	#
-	AC_MSG_RESULT([no])
-	;;
-solaris*-sparc)
-	#
-	# On at least Solaris 10 for SPARC, use of __thread produces
-	# the following linker error: "ld: fatal: relocation error:
-	# R_SPARC_TLS_DTPOFF32: file lib/.libs/libivykis.a(iv_main.o):
-	# symbol __st: offset 0xfeee01e5 is non-aligned".
-	#
-	AC_MSG_RESULT([no])
-	;;
-*)
-	_AC_COMPILE_IFELSE([AC_LANG_SOURCE(static __thread int p = 0;)],
-		[AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler
-					   supports __thread.)
-		 AC_MSG_RESULT([yes])],
-		[AC_MSG_RESULT([no])])
-	;;
-esac
-
 # OS-specific preprocessor defines.
 case $host_os in
 hpux*)
@@ -193,6 +158,64 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
 	AC_SEARCH_LIBS([__pthread_create], [pthread], [],
 	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
 		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
+
+#
+# Check for a working implementation of __thread.  This has to be a
+# runtime test, to catch platforms where the __thread keyword appears
+# to be accepted but different threads still share the same storage
+# location for variables marked with __thread.
+#
+AC_CACHE_CHECK([for __thread support],
+	ac_cv_keyword_thread,
+	[ac_cv_keyword_thread=no
+	 _AC_RUN_IFELSE([AC_LANG_SOURCE(
+		#include <stdio.h>
+		#include <pthread.h>
+		#include <unistd.h>
+
+		static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+		static int done;
+		static __thread int var;
+
+		static void *thr(void *dummy)
+		{
+			pthread_mutex_lock(&mutex);
+			done = 1;
+			var = 23456;
+			pthread_mutex_unlock(&mutex);
+
+			return NULL;
+		}
+
+		int main()
+		{
+			int ret;
+			pthread_t id;
+
+			alarm(1);
+
+			pthread_mutex_lock(&mutex);
+			done = 0;
+			var = 12345;
+			pthread_mutex_unlock(&mutex);
+
+			ret = 1;
+			if (!pthread_create(&id, NULL, thr, NULL) &&
+			    !pthread_join(id, NULL)) {
+				pthread_mutex_lock(&mutex);
+				if (done && var == 12345)
+					ret = 0;
+				pthread_mutex_unlock(&mutex);
+			}
+
+			return ret;
+		}
+	 )], [ac_cv_keyword_thread=yes], [], [])
+	])
+if test $ac_cv_keyword_thread = yes
+then
+	AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler supports __thread.)
+fi
 
 #
 # Check for __sync_lock_test_and_set().  We can't use AC_CHECK_FUNCS
