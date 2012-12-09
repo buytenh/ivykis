@@ -23,31 +23,56 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/syscall.h>
 #include "iv_private.h"
 #include "iv_fd_private.h"
+
+static int epoll_support = 2;
+
+static int epollfd_grab(int maxfd)
+{
+#if (defined(__NR_epoll_create1) || defined(HAVE_EPOLL_CREATE1)) && \
+     defined(EPOLL_CLOEXEC)
+	if (epoll_support == 2) {
+		int ret;
+
+#ifdef __NR_epoll_create1
+		ret = syscall(__NR_epoll_create1, EPOLL_CLOEXEC);
+#else
+		ret = epoll_create1(EPOLL_CLOEXEC);
+#endif
+		if (ret >= 0 || errno != ENOSYS)
+			return ret;
+
+		epoll_support = 1;
+	}
+#endif
+
+	if (epoll_support) {
+		int ret;
+
+		ret = epoll_create(maxfd);
+		if (ret >= 0 || errno != ENOSYS) {
+			if (ret >= 0)
+				iv_fd_set_cloexec(ret);
+			return ret;
+		}
+
+		epoll_support = 0;
+	}
+
+	return -1;
+}
 
 static int iv_fd_epoll_init(struct iv_state *st)
 {
 	int fd;
 
-	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
-
-#ifdef HAVE_EPOLL_CREATE1
-	fd = epoll_create1(EPOLL_CLOEXEC);
-	if (fd >= 0) {
-		st->u.epoll.epoll_fd = fd;
-		return 0;
-	} else if (errno != ENOSYS) {
-		return -1;
-	}
-#endif
-
-	fd = epoll_create(maxfd);
+	fd = epollfd_grab(maxfd);
 	if (fd < 0)
 		return -1;
 
-	iv_fd_set_cloexec(fd);
-
+	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
 	st->u.epoll.epoll_fd = fd;
 
 	return 0;
