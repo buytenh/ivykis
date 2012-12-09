@@ -41,7 +41,7 @@ static int grab_eventfd(void)
 
 	fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 	if (fd < 0) {
-		if (errno != ENOSYS)
+		if (errno != EINVAL && errno != ENOSYS)
 			perror("eventfd");
 		return -errno;
 	}
@@ -96,7 +96,7 @@ int iv_event_raw_register(struct iv_event_raw *this)
 
 		ret = grab_eventfd();
 		if (ret < 0) {
-			if (ret != -ENOSYS)
+			if (ret != -EINVAL && ret != -ENOSYS)
 				return -1;
 			eventfd_unavailable = 1;
 		} else {
