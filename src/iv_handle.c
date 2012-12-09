@@ -75,6 +75,8 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 {
 	struct iv_list_head handles;
 
+	__iv_invalidate_now(st);
+
 	EnterCriticalSection(&st->active_handle_list_lock);
 	if (iv_list_empty(&st->active_with_handler)) {
 		DWORD msec;
@@ -92,8 +94,6 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 				 "WaitForSingleObjectEx returned %x",
 				 (int)ret);
 		}
-
-		__iv_invalidate_now(st);
 	}
 	__iv_list_steal_elements(&st->active_with_handler, &handles);
 	LeaveCriticalSection(&st->active_handle_list_lock);
