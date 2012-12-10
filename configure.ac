@@ -3,6 +3,7 @@ AC_INIT([ivykis], [0.36], [libivykis-discuss@lists.sourceforge.net])
 AC_CONFIG_SRCDIR([src/iv_avl.c])
 AC_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([foreign])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 
 #
 # On AIX 7.1, prevent AC_PROG_CC from adding -g to CFLAGS, as that
