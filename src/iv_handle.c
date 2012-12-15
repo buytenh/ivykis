@@ -113,6 +113,11 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 	}
 }
 
+const char *iv_poll_method_name(void)
+{
+	return "simple";
+}
+
 void IV_HANDLE_INIT(struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;

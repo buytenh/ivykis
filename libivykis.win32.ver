@@ -33,6 +33,7 @@ global:
 	iv_quit;
 	iv_main;
 	iv_deinit;
+	iv_poll_method_name;
 
 	# iv_task
 	IV_TASK_INIT;

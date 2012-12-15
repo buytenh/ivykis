@@ -44,6 +44,7 @@ int iv_inited(void);
 void iv_main(void);
 void iv_quit(void);
 void iv_deinit(void);
+const char *iv_poll_method_name(void);
 void iv_fatal(const char *fmt, ...) __attribute__((noreturn))
 	__attribute__((format(printf, 1, 2)));
 void iv_set_fatal_msg_handler(void (*handler)(const char *msg));
@@ -72,7 +73,6 @@ struct iv_fd {
 	void	*pad[11];
 };
 
-const char *iv_poll_method_name(void);
 void IV_FD_INIT(struct iv_fd *);
 void iv_fd_register(struct iv_fd *);
 int iv_fd_register_try(struct iv_fd *);
