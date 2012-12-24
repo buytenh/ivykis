@@ -78,13 +78,10 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 
 	EnterCriticalSection(&st->active_handle_list_lock);
 	if (iv_list_empty(&st->active_with_handler)) {
-		DWORD msec;
 		DWORD ret;
 
-		msec = 1000 * to->tv_sec + (to->tv_nsec + 999999) / 1000000;
-
 		LeaveCriticalSection(&st->active_handle_list_lock);
-		ret = WaitForSingleObjectEx(st->wait, msec, TRUE);
+		ret = WaitForSingleObjectEx(st->wait, to_msec(to), TRUE);
 		EnterCriticalSection(&st->active_handle_list_lock);
 
 		if (ret != WAIT_OBJECT_0 && ret != WAIT_IO_COMPLETION &&

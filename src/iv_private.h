@@ -110,3 +110,8 @@ static inline int iv_pending_tasks(struct iv_state *st)
 {
 	return !iv_list_empty(&st->tasks);
 }
+
+static inline int to_msec(struct timespec *to)
+{
+	return 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
+}

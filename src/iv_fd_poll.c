@@ -78,8 +78,7 @@ static void iv_fd_poll_poll(struct iv_state *st,
 	errno = EINTR;
 #endif
 
-	ret = poll(st->u.poll.pfds, st->u.poll.num_regd_fds,
-		   1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000));
+	ret = poll(st->u.poll.pfds, st->u.poll.num_regd_fds, to_msec(to));
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
