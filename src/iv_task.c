@@ -27,11 +27,6 @@ void iv_task_init(struct iv_state *st)
 	INIT_IV_LIST_HEAD(&st->tasks);
 }
 
-int iv_pending_tasks(struct iv_state *st)
-{
-	return !iv_list_empty(&st->tasks);
-}
-
 void iv_run_tasks(struct iv_state *st)
 {
 	struct iv_list_head tasks;

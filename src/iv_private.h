@@ -71,7 +71,6 @@ struct iv_timer_ {
 
 /* iv_task.c */
 void iv_task_init(struct iv_state *st);
-int iv_pending_tasks(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
 /* iv_time_{posix,win32}.c */
@@ -105,4 +104,9 @@ __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 
 	oldh->next = oldh;
 	oldh->prev = oldh;
+}
+
+static inline int iv_pending_tasks(struct iv_state *st)
+{
+	return !iv_list_empty(&st->tasks);
 }
