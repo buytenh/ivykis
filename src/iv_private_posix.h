@@ -18,9 +18,69 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <pthread.h>
+
 #define MASKIN		1
 #define MASKOUT		2
 #define MASKERR		4
+
+struct iv_state {
+	/* iv_main_posix.c  */
+	int			quit;
+	int			numobjs;
+
+	/* iv_fd.c  */
+	int			numfds;
+	struct iv_fd_		*handled_fd;
+
+	/* iv_task.c  */
+	struct iv_list_head	tasks;
+
+	/* iv_timer.c  */
+	struct timespec		time;
+	int			time_valid;
+	int			num_timers;
+	int			rat_depth;
+	struct ratnode		*timer_root;
+
+	/* poll methods  */
+	union {
+#ifdef HAVE_SYS_DEVPOLL_H
+		struct {
+			struct iv_avl_tree	fds;
+			int			poll_fd;
+			struct iv_list_head	notify;
+		} dev_poll;
+#endif
+
+#ifdef HAVE_EPOLL_CREATE
+		struct {
+			int			epoll_fd;
+			struct iv_list_head	notify;
+		} epoll;
+#endif
+
+#ifdef HAVE_KQUEUE
+		struct {
+			int			kqueue_fd;
+			struct iv_list_head	notify;
+		} kqueue;
+#endif
+
+		struct {
+			struct pollfd		*pfds;
+			struct iv_fd_		**fds;
+			int			num_regd_fds;
+		} poll;
+
+#ifdef HAVE_PORT_CREATE
+		struct {
+			int			port_fd;
+			struct iv_list_head	notify;
+		} port;
+#endif
+	} u;
+};
 
 struct iv_fd_ {
 	/*
@@ -114,7 +174,27 @@ extern struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 void iv_event_run_pending_events(void);
 
 /* iv_fd.c */
+void iv_fd_init(struct iv_state *st);
+void iv_fd_deinit(struct iv_state *st);
+void iv_fd_poll_and_run(struct iv_state *st, struct timespec *to);
 void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
 void iv_fd_set_cloexec(int fd);
 void iv_fd_set_nonblock(int fd);
+
+
+#ifdef HAVE_THREAD
+extern __thread struct iv_state *__st;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return __st;
+}
+#else
+extern pthread_key_t iv_state_key;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return pthread_getspecific(iv_state_key);
+}
+#endif

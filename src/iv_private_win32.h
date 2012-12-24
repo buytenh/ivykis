@@ -18,6 +18,30 @@
  * Boston, MA 02110-1301, USA.
  */
 
+struct iv_state {
+	/* iv_main_win32.c  */
+	int			quit;
+	int			numobjs;
+
+	/* iv_handle.c  */
+	HANDLE			wait;
+	struct iv_list_head	handles;
+	CRITICAL_SECTION	active_handle_list_lock;
+	struct iv_list_head	active_with_handler;
+	struct iv_list_head	active_without_handler;
+	struct iv_handle_	*handled_handle;
+
+	/* iv_task.c  */
+	struct iv_list_head	tasks;
+
+	/* iv_timer.c  */
+	struct timespec		time;
+	int			time_valid;
+	int			num_timers;
+	int			rat_depth;
+	struct ratnode		*timer_root;
+};
+
 struct iv_handle_ {
 	/*
 	 * User data.
@@ -35,3 +59,19 @@ struct iv_handle_ {
 	HANDLE			signal_handle;
 	HANDLE			thr_handle;
 };
+
+/* iv_handle.c */
+void iv_handle_init(struct iv_state *st);
+void iv_handle_deinit(struct iv_state *st);
+void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to);
+
+/* iv_time_win32.c */
+void iv_time_init(struct iv_state *st);
+
+
+extern DWORD iv_state_index;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return TlsGetValue(iv_state_index);
+}
