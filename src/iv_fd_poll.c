@@ -23,9 +23,6 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/poll.h>
-#ifdef HAVE_SYS_SYSCALL_H
-#include <sys/syscall.h>
-#endif
 #include "iv_private.h"
 #include "iv_fd_private.h"
 
@@ -191,14 +188,9 @@ static void iv_fd_poll_ppoll(struct iv_state *st,
 {
 	struct pollfd *fds = st->u.poll.pfds;
 	int nfds = st->u.poll.num_regd_fds;
-
 	int ret;
 
-#ifdef __NR_ppoll
-	ret = syscall(__NR_ppoll, fds, nfds, to, NULL);
-#else
 	ret = ppoll(fds, nfds, to, NULL);
-#endif
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
