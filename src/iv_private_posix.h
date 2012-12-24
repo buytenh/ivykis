@@ -99,20 +99,20 @@ struct iv_fd_ {
 	 * active.
 	 */
 	struct iv_list_head	list_active;
-	unsigned		ready_bands:3;
+	uint8_t			ready_bands;
 
 	/*
 	 * Reflects whether the fd has been registered with
 	 * iv_fd_register().  Will be zero in ->notify_fd() if the
 	 * fd is being unregistered.
 	 */
-	unsigned		registered:1;
+	uint8_t			registered;
 
 	/*
 	 * ->wanted_bands is set by the ivykis core to indicate
 	 * which bands currenty have handlers registered for them.
 	 */
-	unsigned		wanted_bands:3;
+	uint8_t			wanted_bands;
 
 	/*
 	 * ->registered_bands is maintained by the poll method to
@@ -120,7 +120,7 @@ struct iv_fd_ {
 	 * kernel, so that the ivykis core knows when to call
 	 * the poll method's ->notify_fd() on an fd.
 	 */
-	unsigned		registered_bands:3;
+	uint8_t			registered_bands;
 
 #if defined(HAVE_SYS_DEVPOLL_H) || defined(HAVE_EPOLL_CREATE) ||	\
     defined(HAVE_KQUEUE) || defined(HAVE_PORT_CREATE)
