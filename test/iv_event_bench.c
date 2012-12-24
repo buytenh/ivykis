@@ -23,9 +23,10 @@
 #include <iv.h>
 #include <iv_event.h>
 #include <iv_thread.h>
-#include <unistd.h>
+#ifdef USE_SIGNAL
+#include <signal.h>
+#endif
 
-static struct iv_timer timeout;
 static int die;
 static int ev_received;
 static struct iv_event ev_parent;
@@ -33,10 +34,19 @@ static struct iv_event ev_child;
 static struct timespec tim_start;
 static struct timespec tim_end;
 
-static void got_timeout(void *_dummy)
+#ifdef USE_SIGNAL
+static void got_signal_timeout(int sigh)
 {
 	die = 1;
 }
+#else
+static struct iv_timer timeout;
+
+static void got_timer_timeout(void *_dummy)
+{
+	die = 1;
+}
+#endif
 
 static void got_ev_parent(void *_dummy)
 {
@@ -91,12 +101,17 @@ int main()
 
 	iv_init();
 
+#ifdef USE_SIGNAL
+	signal(SIGALRM, got_signal_timeout);
+	alarm(5);
+#else
 	IV_TIMER_INIT(&timeout);
 	iv_validate_now();
 	timeout.expires = iv_now;
 	timeout.expires.tv_sec += 5;
-	timeout.handler = got_timeout;
+	timeout.handler = got_timer_timeout;
 	iv_timer_register(&timeout);
+#endif
 
 	IV_EVENT_INIT(&ev_parent);
 	ev_parent.handler = got_ev_parent;
