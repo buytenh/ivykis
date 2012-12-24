@@ -27,9 +27,6 @@
 #include <iv_tls.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#ifdef HAVE_SYS_SYSCALL_H
-#include <sys/syscall.h>
-#endif
 #include "config.h"
 #include "iv_private.h"
 #include "iv_fd_private.h"
@@ -71,6 +68,10 @@ static void iv_fd_pump_tls_init(void)
 
 
 /* pipe acquisition *********************************************************/
+#ifdef HAVE_SYS_SYSCALL_H
+#include <sys/syscall.h>
+#endif
+
 #if (defined(__NR_pipe2) || defined(HAVE_PIPE2)) && defined(O_CLOEXEC)
 static int pipe2_support = 1;
 #endif
