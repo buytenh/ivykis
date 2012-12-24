@@ -70,7 +70,7 @@ void iv_handle_deinit(struct iv_state *st)
 	DeleteCriticalSection(&st->active_handle_list_lock);
 }
 
-void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
+void iv_handle_poll_and_run(struct iv_state *st, struct timespec *abs)
 {
 	struct iv_list_head handles;
 
@@ -81,7 +81,7 @@ void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to)
 		DWORD ret;
 
 		LeaveCriticalSection(&st->active_handle_list_lock);
-		ret = WaitForSingleObjectEx(st->wait, to_msec(to), TRUE);
+		ret = WaitForSingleObjectEx(st->wait, to_msec(st, abs), TRUE);
 		EnterCriticalSection(&st->active_handle_list_lock);
 
 		if (ret != WAIT_OBJECT_0 && ret != WAIT_IO_COMPLETION &&

@@ -161,7 +161,7 @@ static struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 
 static void
 iv_fd_dev_poll_poll(struct iv_state *st,
-		    struct iv_list_head *active, struct timespec *to)
+		    struct iv_list_head *active, struct timespec *abs)
 {
 	struct pollfd batch[st->numfds ? : 1];
 	struct dvpoll dvp;
@@ -172,9 +172,12 @@ iv_fd_dev_poll_poll(struct iv_state *st,
 
 	dvp.dp_fds = batch;
 	dvp.dp_nfds = ARRAY_SIZE(batch);
-	dvp.dp_timeout = to_msec(to);
+	dvp.dp_timeout = to_msec(st, abs);
 
 	ret = ioctl(st->u.dev_poll.poll_fd, DP_POLL, &dvp);
+
+	__iv_invalidate_now(st);
+
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;

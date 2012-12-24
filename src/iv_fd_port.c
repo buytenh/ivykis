@@ -97,8 +97,10 @@ static void iv_fd_port_upload(struct iv_state *st)
 }
 
 static void iv_fd_port_poll(struct iv_state *st,
-			    struct iv_list_head *active, struct timespec *to)
+			    struct iv_list_head *active, struct timespec *abs)
 {
+	struct timespec _rel;
+	struct timespec *rel;
 	int run_events;
 	unsigned int nget;
 	port_event_t pe[PORTEV_NUM];
@@ -107,6 +109,7 @@ static void iv_fd_port_poll(struct iv_state *st,
 
 	iv_fd_port_upload(st);
 
+	rel = to_relative(st, &_rel, abs);
 	run_events = 0;
 
 poll_more:
@@ -119,7 +122,10 @@ poll_more:
 	 * of events in the array, and we need to process those
 	 * events as usual.
 	 */
-	ret = port_getn(st->u.port.port_fd, pe, PORTEV_NUM, &nget, to);
+	ret = port_getn(st->u.port.port_fd, pe, PORTEV_NUM, &nget, rel);
+
+	__iv_invalidate_now(st);
+
 	if (ret < 0 && errno != ETIME) {
 		if (errno == EINTR)
 			return;
@@ -164,8 +170,9 @@ poll_more:
 	}
 
 	if (nget == PORTEV_NUM) {
-		to->tv_sec = 0;
-		to->tv_nsec = 0;
+		rel = &_rel;
+		rel->tv_sec = 0;
+		rel->tv_nsec = 0;
 		goto poll_more;
 	}
 

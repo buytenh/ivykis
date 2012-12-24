@@ -79,8 +79,7 @@ void iv_time_get(struct timespec *time);
 /* iv_timer.c */
 void __iv_invalidate_now(struct iv_state *st);
 void iv_timer_init(struct iv_state *st);
-struct timespec *iv_get_soonest_timeout(struct iv_state *st,
-					struct timespec *to);
+struct timespec *iv_get_soonest_timeout(struct iv_state *st);
 void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
 
@@ -112,10 +111,48 @@ static inline int iv_pending_tasks(struct iv_state *st)
 	return !iv_list_empty(&st->tasks);
 }
 
-static inline int to_msec(struct timespec *to)
+static inline int timespec_gt(struct timespec *a, struct timespec *b)
 {
-	if (to != NULL)
-		return 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
+        return !!((a->tv_sec > b->tv_sec) ||
+                  (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
+}
+
+static inline struct timespec *
+to_relative(struct iv_state *st, struct timespec *rel, struct timespec *abs)
+{
+	if (abs != NULL) {
+		if (!st->time_valid) {
+			st->time_valid = 1;
+			iv_time_get(&st->time);
+		}
+
+		if (timespec_gt(abs, &st->time)) {
+			rel->tv_sec = abs->tv_sec - st->time.tv_sec;
+			rel->tv_nsec = abs->tv_nsec - st->time.tv_nsec;
+
+			if (rel->tv_nsec < 0) {
+				rel->tv_sec--;
+				rel->tv_nsec += 1000000000;
+			}
+		} else {
+			rel->tv_sec = 0;
+			rel->tv_nsec = 0;
+		}
+
+		return rel;
+	}
+
+	return NULL;
+}
+
+static inline int to_msec(struct iv_state *st, struct timespec *abs)
+{
+	if (abs != NULL) {
+		struct timespec rel;
+
+		to_relative(st, &rel, abs);
+		return 1000 * rel.tv_sec + ((rel.tv_nsec + 999999) / 1000000);
+	}
 
 	return -1;
 }

@@ -63,7 +63,7 @@ struct iv_handle_ {
 /* iv_handle.c */
 void iv_handle_init(struct iv_state *st);
 void iv_handle_deinit(struct iv_state *st);
-void iv_handle_poll_and_run(struct iv_state *st, struct timespec *to);
+void iv_handle_poll_and_run(struct iv_state *st, struct timespec *abs);
 
 /* iv_time_win32.c */
 void iv_time_init(struct iv_state *st);

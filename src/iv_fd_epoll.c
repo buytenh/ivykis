@@ -141,7 +141,7 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 }
 
 static void iv_fd_epoll_poll(struct iv_state *st,
-			     struct iv_list_head *active, struct timespec *to)
+			     struct iv_list_head *active, struct timespec *abs)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
@@ -150,7 +150,10 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 	iv_fd_epoll_flush_pending(st);
 
 	ret = epoll_wait(st->u.epoll.epoll_fd, batch, ARRAY_SIZE(batch),
-			 to_msec(to));
+			 to_msec(st, abs));
+
+	__iv_invalidate_now(st);
+
 	if (ret < 0) {
 		if (errno == EINTR)
 			return;
