@@ -20,7 +20,6 @@
 
 #include "config.h"
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 #if defined(HAVE_PTHREAD_SPIN_LOCK)
 #define spinlock_t		pthread_spinlock_t

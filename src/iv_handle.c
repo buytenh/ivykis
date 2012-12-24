@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "iv_private.h"
-#include "iv_handle_private.h"
 
 void iv_handle_init(struct iv_state *st)
 {

@@ -26,7 +26,6 @@
 #include <sys/event.h>
 #include <sys/time.h>
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 #ifndef EVFILT_USER
 #define EVFILT_USER	(-11)

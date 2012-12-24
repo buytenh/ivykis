@@ -19,8 +19,6 @@
  */
 
 #ifndef _WIN32
-#include "iv_fd_private.h"
-
 static inline int event_rx_on(struct iv_state *st)
 {
 	if (method->event_rx_on != NULL)

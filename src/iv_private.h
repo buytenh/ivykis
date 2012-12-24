@@ -213,3 +213,10 @@ int iv_tls_total_state_size(void);
 void iv_tls_thread_init(struct iv_state *st);
 void iv_tls_thread_deinit(struct iv_state *st);
 void *__iv_tls_user_ptr(struct iv_state *st, struct iv_tls_user *itu);
+
+
+#ifndef _WIN32
+#include "iv_fd_private.h"
+#else
+#include "iv_handle_private.h"
+#endif

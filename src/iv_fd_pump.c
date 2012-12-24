@@ -29,7 +29,6 @@
 #include <sys/ioctl.h>
 #include "config.h"
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 /* thread state handling ****************************************************/
 struct iv_fd_pump_thr_info {

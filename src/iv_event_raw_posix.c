@@ -26,7 +26,6 @@
 #include <iv_event_raw.h>
 #include <string.h>
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 #ifdef linux
 #include "eventfd-linux.h"

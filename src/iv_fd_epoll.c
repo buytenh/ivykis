@@ -25,7 +25,6 @@
 #include <sys/epoll.h>
 #include <sys/syscall.h>
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 static int epoll_support = 2;
 

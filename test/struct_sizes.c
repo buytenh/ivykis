@@ -22,11 +22,6 @@
 #include <stdlib.h>
 #include <iv.h>
 #include "../iv_private.h"
-#ifndef _WIN32
-#include "../iv_fd_private.h"
-#else
-#include "../iv_handle_private.h"
-#endif
 
 int main()
 {

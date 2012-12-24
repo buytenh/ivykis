@@ -24,7 +24,6 @@
 #include <string.h>
 #include <sys/devpoll.h>
 #include "iv_private.h"
-#include "iv_fd_private.h"
 
 #define UPLOAD_BATCH		1024
 
