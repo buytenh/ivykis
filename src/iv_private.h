@@ -216,7 +216,7 @@ void *__iv_tls_user_ptr(struct iv_state *st, struct iv_tls_user *itu);
 
 
 #ifndef _WIN32
-#include "iv_fd_private.h"
+#include "iv_private_posix.h"
 #else
-#include "iv_handle_private.h"
+#include "iv_private_win32.h"
 #endif
