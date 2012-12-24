@@ -79,7 +79,8 @@ void iv_time_get(struct timespec *time);
 /* iv_timer.c */
 void __iv_invalidate_now(struct iv_state *st);
 void iv_timer_init(struct iv_state *st);
-int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to);
+struct timespec *iv_get_soonest_timeout(struct iv_state *st,
+					struct timespec *to);
 void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
 
@@ -113,5 +114,8 @@ static inline int iv_pending_tasks(struct iv_state *st)
 
 static inline int to_msec(struct timespec *to)
 {
-	return 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
+	if (to != NULL)
+		return 1000 * to->tv_sec + ((to->tv_nsec + 999999) / 1000000);
+
+	return -1;
 }

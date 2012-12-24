@@ -101,7 +101,8 @@ void iv_main(void)
 
 	st->quit = 0;
 	while (1) {
-		struct timespec to;
+		struct timespec _to;
+		struct timespec *to;
 
 		iv_run_tasks(st);
 		iv_run_timers(st);
@@ -109,12 +110,15 @@ void iv_main(void)
 		if (st->quit || !st->numobjs)
 			break;
 
-		if (iv_pending_tasks(st) || iv_get_soonest_timeout(st, &to)) {
-			to.tv_sec = 0;
-			to.tv_nsec = 0;
+		if (iv_pending_tasks(st)) {
+			_to.tv_sec = 0;
+			_to.tv_nsec = 0;
+			to = &_to;
+		} else {
+			to = iv_get_soonest_timeout(st, &_to);
 		}
 
-		iv_fd_poll_and_run(st, &to);
+		iv_fd_poll_and_run(st, to);
 	}
 }
 

@@ -104,7 +104,8 @@ static struct iv_timer_ **iv_timer_get_node(struct iv_state *st, int index)
 	return (struct iv_timer_ **)(r->child + (index & (SPLIT_NODES - 1)));
 }
 
-int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
+struct timespec *
+iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 {
 	if (st->num_timers) {
 		struct iv_timer_ *t = *iv_timer_get_node(st, 1);
@@ -112,19 +113,21 @@ int iv_get_soonest_timeout(struct iv_state *st, struct timespec *to)
 		iv_validate_now();
 		to->tv_sec = t->expires.tv_sec - st->time.tv_sec;
 		to->tv_nsec = t->expires.tv_nsec - st->time.tv_nsec;
+
 		if (to->tv_nsec < 0) {
 			to->tv_sec--;
 			to->tv_nsec += 1000000000;
 		}
 
-		return !!(to->tv_sec < 0 ||
-			  (to->tv_sec == 0 && to->tv_nsec == 0));
+		if (to->tv_sec < 0) {
+			to->tv_sec = 0;
+			to->tv_nsec = 0;
+		}
+
+		return to;
 	}
 
-	to->tv_sec = 3600;
-	to->tv_nsec = 0;
-
-	return 0;
+	return NULL;
 }
 
 static inline int timespec_gt(struct timespec *a, struct timespec *b)
