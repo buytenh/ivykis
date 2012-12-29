@@ -39,6 +39,7 @@ struct iv_signal {
 	struct iv_avl_node	an;
 	uint8_t			active;
 	struct iv_event_raw	ev;
+	struct iv_fd		sigfd;
 };
 
 static inline void IV_SIGNAL_INIT(struct iv_signal *this)

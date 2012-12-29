@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2012 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include <iv_list.h>
 #include <iv_signal.h>
 #include <string.h>
+#include <sys/signalfd.h>
 #include "spinlock.h"
 
 static pid_t sig_owner_pid;
@@ -182,10 +183,31 @@ void iv_signal_child_reset_postfork(void)
 	sig_interests.root = NULL;
 }
 
+static void iv_signal_event_sigfd(void *_this)
+{
+	struct iv_signal *this = _this;
+	struct signalfd_siginfo ssi;
+	int ret;
+
+	ret = read(this->sigfd.fd, &ssi, sizeof(ssi));
+	if (ret <= 0) {
+		if (ret < 0) {
+			if (errno == EAGAIN)
+				return;
+			perror("read");
+		}
+		exit(1);
+	}
+
+	this->handler(this->cookie);
+}
+
 int iv_signal_register(struct iv_signal *this)
 {
 	pid_t mypid;
 	sigset_t mask;
+	sigset_t set;
+	int fd;
 
 	spin_lock_sigmask(&sig_interests_lock, &mask);
 
@@ -196,6 +218,21 @@ int iv_signal_register(struct iv_signal *this)
 	} else if (sig_owner_pid == 0) {
 		sig_owner_pid = mypid;
 	}
+
+	sigemptyset(&set);
+	sigaddset(&set, this->signum);
+
+	fd = signalfd(-1, &set, 0);
+	if (fd < 0) {
+		perror("signalfd");
+		exit(-1);
+	}
+
+	IV_FD_INIT(&this->sigfd);
+	this->sigfd.fd = fd;
+	this->sigfd.cookie = this;
+	this->sigfd.handler_in = iv_signal_event_sigfd;
+	iv_fd_register(&this->sigfd);
 
 	IV_EVENT_RAW_INIT(&this->ev);
 	this->ev.cookie = this;
@@ -218,6 +255,8 @@ int iv_signal_register(struct iv_signal *this)
 			iv_fatal("iv_signal_register: sigaction got "
 				 "error %d[%s]", errno, strerror(errno));
 		}
+
+		sigaddset(&mask, this->signum);
 	}
 	iv_avl_tree_insert(&sig_interests, &this->an);
 
@@ -240,6 +279,8 @@ void iv_signal_unregister(struct iv_signal *this)
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = 0;
 		sigaction(this->signum, &sa, NULL);
+
+		sigdelset(&mask, this->signum);
 	} else if ((this->flags & IV_SIGNAL_FLAG_EXCLUSIVE) && this->active) {
 		__iv_signal_do_wake(this->signum);
 	}
@@ -247,4 +288,7 @@ void iv_signal_unregister(struct iv_signal *this)
 	spin_unlock_sigmask(&sig_interests_lock, &mask);
 
 	iv_event_raw_unregister(&this->ev);
+
+	iv_fd_unregister(&this->sigfd);
+	close(this->sigfd.fd);
 }
