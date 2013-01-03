@@ -68,8 +68,10 @@ struct iv_state {
 
 #ifdef HAVE_KQUEUE
 		struct {
-			int			kqueue_fd;
 			struct iv_list_head	notify;
+			int			kqueue_fd;
+			int			timeout_pending;
+			const struct timespec	*timeout;
 		} kqueue;
 #endif
 
