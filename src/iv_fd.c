@@ -138,12 +138,13 @@ void iv_fd_deinit(struct iv_state *st)
 	method->deinit(st);
 }
 
-void iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs)
+int iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs)
 {
 	struct iv_list_head active;
+	int run_timers;
 
 	INIT_IV_LIST_HEAD(&active);
-	method->poll(st, &active, abs);
+	run_timers = method->poll(st, &active, abs);
 
 	while (!iv_list_empty(&active)) {
 		struct iv_fd_ *fd;
@@ -165,6 +166,8 @@ void iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs)
 			if (fd->handler_out != NULL)
 				fd->handler_out(fd->cookie);
 	}
+
+	return run_timers;
 }
 
 void iv_fd_make_ready(struct iv_list_head *active, struct iv_fd_ *fd, int bands)

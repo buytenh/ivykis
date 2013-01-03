@@ -64,9 +64,9 @@ iv_fd_poll_activate_fds(struct iv_state *st, struct iv_list_head *active)
 	}
 }
 
-static void iv_fd_poll_poll(struct iv_state *st,
-			    struct iv_list_head *active,
-			    const struct timespec *abs)
+static int iv_fd_poll_poll(struct iv_state *st,
+			   struct iv_list_head *active,
+			   const struct timespec *abs)
 {
 	int ret;
 
@@ -84,13 +84,15 @@ static void iv_fd_poll_poll(struct iv_state *st,
 
 	if (ret < 0) {
 		if (errno == EINTR)
-			return;
+			return 1;
 
 		iv_fatal("iv_fd_poll_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
 
 	iv_fd_poll_activate_fds(st, active);
+
+	return 1;
 }
 
 static void iv_fd_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
@@ -179,9 +181,9 @@ const struct iv_fd_poll_method iv_fd_poll_method_poll = {
 
 
 #ifdef HAVE_PPOLL
-static void iv_fd_poll_ppoll(struct iv_state *st,
-			     struct iv_list_head *active,
-			     const struct timespec *abs)
+static int iv_fd_poll_ppoll(struct iv_state *st,
+			    struct iv_list_head *active,
+			    const struct timespec *abs)
 {
 	struct pollfd *fds = st->u.poll.pfds;
 	int nfds = st->u.poll.num_regd_fds;
@@ -194,7 +196,7 @@ static void iv_fd_poll_ppoll(struct iv_state *st,
 
 	if (ret < 0) {
 		if (errno == EINTR)
-			return;
+			return 1;
 
 		if (errno == ENOSYS) {
 			method = &iv_fd_poll_method_poll;
@@ -206,6 +208,8 @@ static void iv_fd_poll_ppoll(struct iv_state *st,
 	}
 
 	iv_fd_poll_activate_fds(st, active);
+
+	return 1;
 }
 
 const struct iv_fd_poll_method iv_fd_poll_method_ppoll = {

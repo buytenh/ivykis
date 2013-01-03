@@ -142,9 +142,9 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 	}
 }
 
-static void iv_fd_epoll_poll(struct iv_state *st,
-			     struct iv_list_head *active,
-			     const struct timespec *abs)
+static int iv_fd_epoll_poll(struct iv_state *st,
+			    struct iv_list_head *active,
+			    const struct timespec *abs)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
@@ -160,7 +160,7 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 
 	if (ret < 0) {
 		if (errno == EINTR)
-			return;
+			return 1;
 
 		iv_fatal("iv_fd_epoll_poll: got error %d[%s]", errno,
 			 strerror(errno));
@@ -190,6 +190,8 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 
 	if (run_events)
 		iv_event_run_pending_events();
+
+	return 1;
 }
 
 static void iv_fd_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)

@@ -96,12 +96,13 @@ static void iv_fd_port_upload(struct iv_state *st)
 	}
 }
 
-static void iv_fd_port_poll(struct iv_state *st,
-			    struct iv_list_head *active,
-			    const struct timespec *abs)
+static int iv_fd_port_poll(struct iv_state *st,
+			   struct iv_list_head *active,
+			   const struct timespec *abs)
 {
 	struct timespec _rel;
 	struct timespec *rel;
+	int run_timers;
 	int run_events;
 	unsigned int nget;
 	port_event_t pe[PORTEV_NUM];
@@ -111,6 +112,11 @@ static void iv_fd_port_poll(struct iv_state *st,
 	iv_fd_port_upload(st);
 
 	rel = to_relative(st, &_rel, abs);
+
+	run_timers = 0;
+	if (rel != NULL && rel->tv_sec == 0 && rel->tv_nsec == 0)
+		run_timers = 1;
+
 	run_events = 0;
 
 poll_more:
@@ -129,11 +135,14 @@ poll_more:
 
 	if (ret < 0 && errno != ETIME) {
 		if (errno == EINTR)
-			return;
+			return run_timers;
 
 		iv_fatal("iv_fd_port_poll: got error %d[%s]", errno,
 			 strerror(errno));
 	}
+
+	if (ret < 0 && errno == ETIME)
+		run_timers = 1;
 
 	for (i = 0; i < nget; i++) {
 		int source;
@@ -171,6 +180,7 @@ poll_more:
 	}
 
 	if (nget == PORTEV_NUM) {
+		run_timers = 1;
 		rel = &_rel;
 		rel->tv_sec = 0;
 		rel->tv_nsec = 0;
@@ -179,6 +189,8 @@ poll_more:
 
 	if (run_events)
 		iv_event_run_pending_events();
+
+	return run_timers;
 }
 
 static void iv_fd_port_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)

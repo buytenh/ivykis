@@ -162,9 +162,9 @@ static struct iv_fd_ *iv_fd_avl_find(const struct iv_avl_tree *root, int fd)
 	return NULL;
 }
 
-static void iv_fd_dev_poll_poll(struct iv_state *st,
-				struct iv_list_head *active,
-				const struct timespec *abs)
+static int iv_fd_dev_poll_poll(struct iv_state *st,
+			       struct iv_list_head *active,
+			       const struct timespec *abs)
 {
 	struct pollfd batch[st->numfds ? : 1];
 	struct dvpoll dvp;
@@ -183,7 +183,7 @@ static void iv_fd_dev_poll_poll(struct iv_state *st,
 
 	if (ret < 0) {
 		if (errno == EINTR)
-			return;
+			return 1;
 
 		iv_fatal("iv_fd_dev_poll_poll: got error %d[%s]",
 			 errno, strerror(errno));
@@ -210,6 +210,8 @@ static void iv_fd_dev_poll_poll(struct iv_state *st,
 		if (revents & (POLLERR | POLLHUP))
 			iv_fd_make_ready(active, fd, MASKERR);
 	}
+
+	return 1;
 }
 
 static void iv_fd_dev_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)

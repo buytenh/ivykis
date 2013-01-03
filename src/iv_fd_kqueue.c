@@ -130,9 +130,9 @@ iv_fd_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 	}
 }
 
-static void iv_fd_kqueue_poll(struct iv_state *st,
-			      struct iv_list_head *active,
-			      const struct timespec *abs)
+static int iv_fd_kqueue_poll(struct iv_state *st,
+			     struct iv_list_head *active,
+			     const struct timespec *abs)
 {
 	struct kevent kev[UPLOAD_BATCH];
 	int num;
@@ -151,7 +151,7 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 
 	if (ret < 0) {
 		if (errno == EINTR)
-			return;
+			return 1;
 
 		iv_fatal("iv_fd_kqueue_poll: got error %d[%s]", errno,
 			 strerror(errno));
@@ -187,6 +187,8 @@ static void iv_fd_kqueue_poll(struct iv_state *st,
 
 	if (run_events)
 		iv_event_run_pending_events();
+
+	return 1;
 }
 
 static void iv_fd_kqueue_upload_all(struct iv_state *st)
