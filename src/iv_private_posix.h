@@ -83,8 +83,9 @@ struct iv_state {
 
 #ifdef HAVE_PORT_CREATE
 		struct {
-			int			port_fd;
 			struct iv_list_head	notify;
+			int			port_fd;
+			timer_t			timer_id;
 		} port;
 #endif
 	} u;
@@ -193,6 +194,7 @@ extern const struct iv_fd_poll_method iv_fd_poll_method_epoll_timerfd;
 extern const struct iv_fd_poll_method iv_fd_poll_method_kqueue;
 extern const struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern const struct iv_fd_poll_method iv_fd_poll_method_port;
+extern const struct iv_fd_poll_method iv_fd_poll_method_port_timer;
 extern const struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 
 /* iv_fd.c */

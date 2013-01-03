@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2011 Lennert Buytenhek
+ * Copyright (C) 2011, 2012, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <port.h>
+#include <siginfo.h>
 #include <string.h>
 #include "iv_private.h"
 
@@ -37,8 +38,9 @@ static int iv_fd_port_init(struct iv_state *st)
 
 	iv_fd_set_cloexec(fd);
 
-	st->u.port.port_fd = fd;
 	INIT_IV_LIST_HEAD(&st->u.port.notify);
+	st->u.port.port_fd = fd;
+	st->u.port.timer_id = -1;
 
 	return 0;
 }
@@ -171,6 +173,8 @@ poll_more:
 				iv_list_add_tail(&fd->list_notify,
 						 &st->u.port.notify);
 			}
+		} else if (source == PORT_SOURCE_TIMER) {
+			run_timers = 1;
 		} else if (source == PORT_SOURCE_USER) {
 			run_events = 1;
 		} else {
@@ -213,6 +217,8 @@ static int iv_fd_port_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_fd_port_deinit(struct iv_state *st)
 {
+	if (st->u.port.timer_id != -1)
+		timer_delete(st->u.port.timer_id);
 	close(st->u.port.port_fd);
 }
 
@@ -247,4 +253,87 @@ const struct iv_fd_poll_method iv_fd_poll_method_port = {
 	.event_rx_on	= iv_fd_port_event_rx_on,
 	.event_rx_off	= iv_fd_port_event_rx_off,
 	.event_send	= iv_fd_port_event_send,
+};
+
+
+static int iv_fd_port_timer_create(struct iv_state *st)
+{
+	port_notify_t pn;
+	struct sigevent se;
+	timer_t id;
+	int ret;
+
+	se.sigev_notify = SIGEV_PORT;
+	se.sigev_value.sival_ptr = &pn;
+	pn.portnfy_port = st->u.port.port_fd;
+	pn.portnfy_user = NULL;
+
+	ret = timer_create(CLOCK_MONOTONIC, &se, &id);
+	if (ret < 0) {
+		if (errno == EPERM)
+			return 0;
+
+		iv_fatal("iv_fd_port_timer_create: got error %d[%s]",
+			 errno, strerror(errno));
+	}
+
+	st->u.port.timer_id = id;
+
+	return 1;
+}
+
+static int
+iv_fd_port_set_poll_timeout(struct iv_state *st, const struct timespec *abs)
+{
+	struct itimerspec val;
+	int ret;
+
+	if (st->u.port.timer_id == -1 && !iv_fd_port_timer_create(st)) {
+		method = &iv_fd_poll_method_port;
+		return 0;
+	}
+
+	val.it_interval.tv_sec = 0;
+	val.it_interval.tv_nsec = 0;
+	val.it_value = *abs;
+
+	ret = timer_settime(st->u.port.timer_id, TIMER_ABSTIME, &val, NULL);
+	if (ret < 0) {
+		iv_fatal("iv_fd_port_set_poll_timeout: got error %d[%s]",
+			 errno, strerror(errno));
+	}
+
+	return 1;
+}
+
+static void iv_fd_port_clear_poll_timeout(struct iv_state *st)
+{
+	struct itimerspec val;
+	int ret;
+
+	val.it_interval.tv_sec = 0;
+	val.it_interval.tv_nsec = 0;
+	val.it_value.tv_sec = 0;
+	val.it_value.tv_nsec = 0;
+
+	ret = timer_settime(st->u.port.timer_id, TIMER_ABSTIME, &val, NULL);
+	if (ret < 0) {
+		iv_fatal("iv_fd_port_clear_poll_timeout: got error %d[%s]",
+			 errno, strerror(errno));
+	}
+}
+
+const struct iv_fd_poll_method iv_fd_poll_method_port_timer = {
+	.name			= "port-timer",
+	.init			= iv_fd_port_init,
+	.set_poll_timeout	= iv_fd_port_set_poll_timeout,
+	.clear_poll_timeout	= iv_fd_port_clear_poll_timeout,
+	.poll			= iv_fd_port_poll,
+	.unregister_fd		= iv_fd_port_unregister_fd,
+	.notify_fd		= iv_fd_port_notify_fd,
+	.notify_fd_sync		= iv_fd_port_notify_fd_sync,
+	.deinit			= iv_fd_port_deinit,
+	.event_rx_on		= iv_fd_port_event_rx_on,
+	.event_rx_off		= iv_fd_port_event_rx_off,
+	.event_send		= iv_fd_port_event_send,
 };

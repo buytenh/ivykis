@@ -103,6 +103,7 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 		exclude = NULL;
 
 #ifdef HAVE_PORT_CREATE
+	consider_poll_method(st, exclude, &iv_fd_poll_method_port_timer);
 	consider_poll_method(st, exclude, &iv_fd_poll_method_port);
 #endif
 #ifdef HAVE_SYS_DEVPOLL_H
