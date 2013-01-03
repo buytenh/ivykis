@@ -32,6 +32,8 @@ struct iv_state {
 	/* iv_fd.c  */
 	int			numfds;
 	struct iv_fd_		*handled_fd;
+	int			last_abs_count;
+	struct timespec		last_abs;
 
 	/* iv_task.c  */
 	struct iv_list_head	tasks;
@@ -151,6 +153,9 @@ struct iv_fd_ {
 struct iv_fd_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st);
+	int	(*set_poll_timeout)(struct iv_state *st,
+				    const struct timespec *abs);
+	void	(*clear_poll_timeout)(struct iv_state *st);
 	int	(*poll)(struct iv_state *st, struct iv_list_head *active,
 			const struct timespec *abs);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);

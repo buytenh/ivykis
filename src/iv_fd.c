@@ -138,13 +138,69 @@ void iv_fd_deinit(struct iv_state *st)
 	method->deinit(st);
 }
 
+static int timespec_cmp(const struct timespec *a, const struct timespec *b)
+{
+	if (a != NULL) {
+		if (a->tv_sec < b->tv_sec)
+			return -1;
+
+		if (a->tv_sec > b->tv_sec)
+			return 1;
+
+		if (a->tv_nsec < b->tv_nsec)
+			return -1;
+
+		if (a->tv_nsec > b->tv_nsec)
+			return 1;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+static int iv_fd_timeout_check(struct iv_state *st, const struct timespec *abs)
+{
+	int cmp;
+
+	cmp = timespec_cmp(abs, &st->last_abs);
+
+	if (st->last_abs_count == 5) {
+		if (cmp >= 0)
+			return 1;
+
+		method->clear_poll_timeout(st);
+	}
+
+	if (cmp == 0) {
+		if (st->last_abs_count < 5)
+			st->last_abs_count++;
+
+		if (st->last_abs_count == 5)
+			return method->set_poll_timeout(st, abs);
+	} else if (abs != NULL) {
+		st->last_abs_count = 1;
+		st->last_abs = *abs;
+	} else {
+		st->last_abs_count = 0;
+	}
+
+	return 0;
+}
+
 int iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs)
 {
 	struct iv_list_head active;
 	int run_timers;
 
 	INIT_IV_LIST_HEAD(&active);
-	run_timers = method->poll(st, &active, abs);
+	if (method->set_poll_timeout != NULL && iv_fd_timeout_check(st, abs)) {
+		run_timers = method->poll(st, &active, NULL);
+		if (run_timers)
+			st->last_abs_count = 0;
+	} else {
+		run_timers = method->poll(st, &active, abs);
+	}
 
 	while (!iv_list_empty(&active)) {
 		struct iv_fd_ *fd;
