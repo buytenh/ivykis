@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009, 2013 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2012, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -75,6 +75,7 @@ static int iv_fd_epoll_init(struct iv_state *st)
 
 	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
 	st->u.epoll.epoll_fd = fd;
+	st->u.epoll.timer_fd = -1;
 
 	return 0;
 }
@@ -214,6 +215,8 @@ static int iv_fd_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_fd_epoll_deinit(struct iv_state *st)
 {
+	if (st->u.epoll.timer_fd != -1)
+		close(st->u.epoll.timer_fd);
 	close(st->u.epoll.epoll_fd);
 }
 
@@ -333,3 +336,166 @@ const struct iv_fd_poll_method iv_fd_poll_method_epoll = {
 	.event_rx_off	= iv_fd_epoll_event_rx_off,
 	.event_send	= iv_fd_epoll_event_send,
 };
+
+
+#ifdef HAVE_TIMERFD_CREATE
+#include <sys/timerfd.h>
+
+static int iv_fd_epoll_timerfd_create(struct iv_state *st)
+{
+	int ret;
+	struct epoll_event event;
+
+	ret = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
+	if (ret < 0) {
+		if (errno != ENOSYS) {
+			iv_fatal("iv_fd_epoll_timerfd_create: "
+				 "got error %d[%s]", errno, strerror(errno));
+		}
+
+		return 0;
+	}
+
+	st->u.epoll.timer_fd = ret;
+
+	event.data.ptr = &st->time;
+	event.events = EPOLLIN;
+	do {
+		ret = epoll_ctl(st->u.epoll.epoll_fd, EPOLL_CTL_ADD,
+				st->u.epoll.timer_fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		iv_fatal("iv_fd_epoll_timerfd_create: got error %d[%s]",
+			 errno, strerror(errno));
+	}
+
+	return 1;
+}
+
+static int
+iv_fd_epoll_timerfd_set_poll_timeout(struct iv_state *st,
+				     const struct timespec *abs)
+{
+	struct itimerspec val;
+	int ret;
+
+	if (st->u.epoll.timer_fd == -1 && !iv_fd_epoll_timerfd_create(st)) {
+		method = &iv_fd_poll_method_epoll;
+		return 0;
+	}
+
+	val.it_interval.tv_sec = 0;
+	val.it_interval.tv_nsec = 0;
+	val.it_value = *abs;
+
+	ret = timerfd_settime(st->u.epoll.timer_fd,
+			      TFD_TIMER_ABSTIME, &val, NULL);
+	if (ret < 0) {
+		iv_fatal("iv_fd_epoll_timerfd_set_poll_timeout: "
+			 "got error %d[%s]", errno, strerror(errno));
+	}
+
+	return 1;
+}
+
+static void iv_fd_epoll_timerfd_clear_poll_timeout(struct iv_state *st)
+{
+	struct itimerspec val;
+	int ret;
+
+	val.it_interval.tv_sec = 0;
+	val.it_interval.tv_nsec = 0;
+	val.it_value.tv_sec = 0;
+	val.it_value.tv_nsec = 0;
+
+	ret = timerfd_settime(st->u.epoll.timer_fd,
+			      TFD_TIMER_ABSTIME, &val, NULL);
+	if (ret < 0) {
+		iv_fatal("iv_fd_epoll_timerfd_clear_poll_timeout: "
+			 "got error %d[%s]", errno, strerror(errno));
+	}
+}
+
+static int iv_fd_epoll_timerfd_poll(struct iv_state *st,
+				    struct iv_list_head *active,
+				    const struct timespec *abs)
+{
+	int run_timers;
+	struct epoll_event batch[st->numfds + 1];
+	int ret;
+	int run_events;
+	int i;
+
+	iv_fd_epoll_flush_pending(st);
+
+	run_timers = !!(abs != NULL);
+
+	ret = epoll_wait(st->u.epoll.epoll_fd, batch, ARRAY_SIZE(batch),
+			 to_msec(st, abs));
+
+	__iv_invalidate_now(st);
+
+	if (ret < 0) {
+		if (errno == EINTR)
+			return run_timers;
+
+		iv_fatal("iv_fd_epoll_timerfd_poll: got error %d[%s]",
+			 errno, strerror(errno));
+	}
+
+	run_events = 0;
+	for (i = 0; i < ret; i++) {
+		if (batch[i].data.ptr == st) {
+			run_events = 1;
+		} else if (batch[i].data.ptr == &st->time) {
+			uint64_t cnt;
+			int ret;
+
+			ret = read(st->u.epoll.timer_fd, &cnt, sizeof(cnt));
+			if (ret < 0) {
+				iv_fatal("iv_fd_epoll_timerfd_poll: got "
+					 "timerfd read error %d[%s]",
+					 errno, strerror(errno));
+			}
+
+			run_timers = 1;
+		} else {
+			struct iv_fd_ *fd;
+			uint32_t events;
+
+			fd = batch[i].data.ptr;
+			events = batch[i].events;
+
+			if (events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKIN);
+
+			if (events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKOUT);
+
+			if (events & (EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKERR);
+		}
+	}
+
+	if (run_events)
+		iv_event_run_pending_events();
+
+	return run_timers;
+}
+
+const struct iv_fd_poll_method iv_fd_poll_method_epoll_timerfd = {
+	.name			= "epoll-timerfd",
+	.init			= iv_fd_epoll_init,
+	.set_poll_timeout	= iv_fd_epoll_timerfd_set_poll_timeout,
+	.clear_poll_timeout	= iv_fd_epoll_timerfd_clear_poll_timeout,
+	.poll			= iv_fd_epoll_timerfd_poll,
+	.unregister_fd		= iv_fd_epoll_unregister_fd,
+	.notify_fd		= iv_fd_epoll_notify_fd,
+	.notify_fd_sync		= iv_fd_epoll_notify_fd_sync,
+	.deinit			= iv_fd_epoll_deinit,
+	.event_rx_on		= iv_fd_epoll_event_rx_on,
+	.event_rx_off		= iv_fd_epoll_event_rx_off,
+	.event_send		= iv_fd_epoll_event_send,
+};
+#endif

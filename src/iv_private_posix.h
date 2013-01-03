@@ -60,8 +60,9 @@ struct iv_state {
 
 #ifdef HAVE_EPOLL_CREATE
 		struct {
-			int			epoll_fd;
 			struct iv_list_head	notify;
+			int			epoll_fd;
+			int			timer_fd;
 		} epoll;
 #endif
 
@@ -186,6 +187,7 @@ extern const struct iv_fd_poll_method *method;
 
 extern const struct iv_fd_poll_method iv_fd_poll_method_dev_poll;
 extern const struct iv_fd_poll_method iv_fd_poll_method_epoll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_epoll_timerfd;
 extern const struct iv_fd_poll_method iv_fd_poll_method_kqueue;
 extern const struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern const struct iv_fd_poll_method iv_fd_poll_method_port;

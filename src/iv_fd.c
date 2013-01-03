@@ -108,6 +108,9 @@ static void iv_fd_init_first_thread(struct iv_state *st)
 #ifdef HAVE_SYS_DEVPOLL_H
 	consider_poll_method(st, exclude, &iv_fd_poll_method_dev_poll);
 #endif
+#if defined(HAVE_EPOLL_CREATE) && defined(HAVE_TIMERFD_CREATE)
+	consider_poll_method(st, exclude, &iv_fd_poll_method_epoll_timerfd);
+#endif
 #ifdef HAVE_EPOLL_CREATE
 	consider_poll_method(st, exclude, &iv_fd_poll_method_epoll);
 #endif

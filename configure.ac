@@ -281,6 +281,7 @@ AC_CHECK_FUNCS([pipe2])
 AC_CHECK_FUNCS([port_create])
 AC_CHECK_FUNCS([ppoll])
 AC_CHECK_FUNCS([thr_self])
+AC_CHECK_FUNCS([timerfd_create])
 
 #
 # Only test for splice(2) on Linux, to avoid confusing it with a
