@@ -37,9 +37,6 @@ void iv_init(void)
 	st = calloc(1, iv_tls_total_state_size());
 	TlsSetValue(iv_state_index, st);
 
-	st->quit = 0;
-	st->numobjs = 0;
-
 	iv_handle_init(st);
 	iv_task_init(st);
 	iv_time_init(st);

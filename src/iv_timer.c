@@ -74,7 +74,6 @@ static struct ratnode *iv_timer_allocate_ratnode(void)
 
 void iv_timer_init(struct iv_state *st)
 {
-	st->rat_depth = 0;
 	st->timer_root = iv_timer_allocate_ratnode();
 }
 

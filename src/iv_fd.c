@@ -130,7 +130,6 @@ void iv_fd_init(struct iv_state *st)
 	else if (method->init(st) < 0)
 		iv_fatal("iv_init: can't initialize event dispatcher");
 
-	st->numfds = 0;
 	st->handled_fd = NULL;
 }
 

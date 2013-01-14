@@ -69,8 +69,6 @@ void iv_init(void)
 	__st = st;
 #endif
 
-	st->numobjs = 0;
-
 	iv_fd_init(st);
 	iv_task_init(st);
 	iv_timer_init(st);
