@@ -12,8 +12,7 @@ SRC			= iv_avl.c			\
 			  iv_tls.c			\
 			  iv_work.c
 
-INC			= include/iv.h			\
-			  include/iv_avl.h		\
+INC			= include/iv_avl.h		\
 			  include/iv_event.h		\
 			  include/iv_event_raw.h	\
 			  include/iv_list.h		\
@@ -81,11 +80,20 @@ LINKFLAGS = -version-info 0:0:0						\
 
 endif
 
+EXTRA_DIST		= include/iv.h.in
+
 libivykis_la_SOURCES	= $(SRC)
 libivykis_la_LDFLAGS	= $(LINKFLAGS)
 
 include_HEADERS		= $(INC)
 
-noinst_HEADERS		= iv_private.h			\
+nodist_include_HEADERS	= include/iv.h
+
+noinst_HEADERS		= eventfd-linux.h		\
+			  eventfd-stub.h		\
+			  iv_event_private.h		\
+			  iv_private.h			\
+			  iv_private_posix.h		\
+			  iv_private_win32.h		\
 			  mutex.h			\
 			  spinlock.h

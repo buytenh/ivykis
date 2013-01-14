@@ -6,4 +6,4 @@ SUBDIRS += man3
 endif
 endif
 
-EXTRA_DIST = DEDICATION
+EXTRA_DIST = DEDICATION libivykis.posix.ver libivykis.win32.ver
