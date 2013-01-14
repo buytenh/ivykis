@@ -87,5 +87,8 @@ libivykis_la_LDFLAGS	= $(LINKFLAGS)
 include_HEADERS		= $(INC)
 
 noinst_HEADERS		= iv_private.h			\
+			  iv_event_private.h		\
+			  iv_fd_private.h		\
+			  iv_handle_private.h		\
 			  mutex.h			\
 			  spinlock.h
