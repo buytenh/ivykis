@@ -19,6 +19,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_fd_pump_is_done.3			\
 		  iv_fd_pump_pump.3			\
 		  iv_fd_register.3			\
+		  iv_fd_registered.3			\
 		  iv_fd_register_try.3			\
 		  iv_fd_set_handler_err.3		\
 		  iv_fd_set_handler_in.3		\
@@ -40,6 +41,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_signal_unregister.3		\
 		  iv_task.3				\
 		  iv_task_register.3			\
+		  iv_task_registered.3			\
 		  iv_task_unregister.3			\
 		  iv_thread.3				\
 		  iv_thread_create.3			\
@@ -47,6 +49,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_time.3				\
 		  iv_timer.3				\
 		  iv_timer_register.3			\
+		  iv_timer_registered.3			\
 		  iv_timer_unregister.3			\
 		  iv_tls.3				\
 		  iv_tls_user_ptr.3			\
