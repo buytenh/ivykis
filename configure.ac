@@ -299,6 +299,22 @@ then
 			  Define to 1 if system has CLOCK_MONOTONIC)
 	fi
 
+	AC_CACHE_CHECK(for CLOCK_MONOTONIC_FAST,
+		ac_cv_define_clock_monotonic_fast,
+		[ac_cv_define_clock_monotonic_fast=no
+		 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+			#include <sys/time.h>
+			#include <time.h>
+			int p = CLOCK_MONOTONIC_FAST;
+		 )], [ac_cv_define_clock_monotonic_fast=yes], [])
+		])
+
+	if test $ac_cv_define_clock_monotonic_fast = yes
+	then
+		AC_DEFINE(HAVE_CLOCK_MONOTONIC_FAST, 1,
+			  Define to 1 if system has CLOCK_MONOTONIC_FAST)
+	fi
+
 	AC_CACHE_CHECK(for CLOCK_REALTIME, ac_cv_define_clock_realtime,
 		[ac_cv_define_clock_realtime=no
 		 _AC_COMPILE_IFELSE([AC_LANG_SOURCE(

@@ -32,19 +32,27 @@ void iv_time_get(struct timespec *time)
 {
 	struct timeval tv;
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_MONOTONIC)
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_MONOTONIC_FAST)
 	if (clock_source < 1) {
-		if (clock_gettime(CLOCK_MONOTONIC, time) >= 0)
+		if (clock_gettime(CLOCK_MONOTONIC_FAST, time) >= 0)
 			return;
 		clock_source = 1;
 	}
 #endif
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_REALTIME)
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_MONOTONIC)
 	if (clock_source < 2) {
-		if (clock_gettime(CLOCK_REALTIME, time) >= 0)
+		if (clock_gettime(CLOCK_MONOTONIC, time) >= 0)
 			return;
 		clock_source = 2;
+	}
+#endif
+
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CLOCK_REALTIME)
+	if (clock_source < 3) {
+		if (clock_gettime(CLOCK_REALTIME, time) >= 0)
+			return;
+		clock_source = 3;
 	}
 #endif
 
