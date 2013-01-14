@@ -26,11 +26,6 @@
 #include "iv_private.h"
 
 /* time handling ************************************************************/
-void __iv_invalidate_now(struct iv_state *st)
-{
-	st->time_valid = 0;
-}
-
 void iv_invalidate_now(void)
 {
 	struct iv_state *st = iv_get_state();
