@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2002, 2003, 2009 Lennert Buytenhek
+ * Copyright (C) 2002, 2003, 2009, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #include <sys/syscall.h>
 #include "iv_private.h"
+#include "eventfd-linux.h"
 
 static int epoll_support = 2;
 
@@ -145,6 +146,7 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
+	int run_events;
 	int i;
 
 	iv_fd_epoll_flush_pending(st);
@@ -162,22 +164,30 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 			 strerror(errno));
 	}
 
+	run_events = 0;
 	for (i = 0; i < ret; i++) {
-		struct iv_fd_ *fd;
-		uint32_t events;
+		if (batch[i].data.ptr != st) {
+			struct iv_fd_ *fd;
+			uint32_t events;
 
-		fd = batch[i].data.ptr;
-		events = batch[i].events;
+			fd = batch[i].data.ptr;
+			events = batch[i].events;
 
-		if (events & (EPOLLIN | EPOLLERR | EPOLLHUP))
-			iv_fd_make_ready(active, fd, MASKIN);
+			if (events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKIN);
 
-		if (events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
-			iv_fd_make_ready(active, fd, MASKOUT);
+			if (events & (EPOLLOUT | EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKOUT);
 
-		if (events & (EPOLLERR | EPOLLHUP))
-			iv_fd_make_ready(active, fd, MASKERR);
+			if (events & (EPOLLERR | EPOLLHUP))
+				iv_fd_make_ready(active, fd, MASKERR);
+		} else {
+			run_events = 1;
+		}
 	}
+
+	if (run_events)
+		iv_event_run_pending_events();
 }
 
 static void iv_fd_epoll_unregister_fd(struct iv_state *st, struct iv_fd_ *fd)
@@ -203,6 +213,109 @@ static void iv_fd_epoll_deinit(struct iv_state *st)
 	close(st->u.epoll.epoll_fd);
 }
 
+static int iv_fd_epoll_create_active_fd(void)
+{
+	int fd;
+	int ret;
+
+	fd = eventfd_grab();
+	if (fd >= 0) {
+		uint64_t one = 1;
+
+		ret = write(fd, &one, sizeof(one));
+		if (ret < 0) {
+			iv_fatal("iv_fd_epoll_create_active_fd: eventfd "
+				 "write returned error %d[%s]", errno,
+				 strerror(errno));
+		} else if (ret != sizeof(one)) {
+			iv_fatal("iv_fd_epoll_create_active_fd: eventfd "
+				 "write returned %d", ret);
+		}
+	} else {
+		int pfd[2];
+
+		if (pipe(pfd) < 0) {
+			iv_fatal("iv_fd_epoll_create_active_fd: pipe() "
+				 "returned error %d[%s]", errno,
+				 strerror(errno));
+		}
+
+		fd = pfd[0];
+		close(pfd[1]);
+	}
+
+	return fd;
+}
+
+static pthread_mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int iv_active_fd_refcount;
+static int iv_active_fd;
+
+static int iv_fd_epoll_event_rx_on(struct iv_state *st)
+{
+	struct epoll_event event;
+	int ret;
+
+	pthread_mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	if (!iv_active_fd_refcount++)
+		iv_active_fd = iv_fd_epoll_create_active_fd();
+	pthread_mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+
+	event.data.ptr = st;
+	event.events = 0;
+	do {
+		ret = epoll_ctl(st->u.epoll.epoll_fd, EPOLL_CTL_ADD,
+				iv_active_fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret == 0)
+		st->numobjs++;
+
+	return ret;
+}
+
+static void iv_fd_epoll_event_rx_off(struct iv_state *st)
+{
+	struct epoll_event event;
+	int ret;
+
+	event.data.ptr = st;
+	event.events = 0;
+	do {
+		ret = epoll_ctl(st->u.epoll.epoll_fd, EPOLL_CTL_DEL,
+				iv_active_fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		iv_fatal("iv_fd_epoll_event_rx_off: epoll_ctl returned "
+			 "error %d[%s]", errno, strerror(errno));
+	}
+
+	pthread_mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	if (!--iv_active_fd_refcount)
+		close(iv_active_fd);
+	pthread_mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+
+	st->numobjs--;
+}
+
+static void iv_fd_epoll_event_send(struct iv_state *dest)
+{
+	struct epoll_event event;
+	int ret;
+
+	event.data.ptr = dest;
+	event.events = EPOLLIN | EPOLLONESHOT;
+	do {
+		ret = epoll_ctl(dest->u.epoll.epoll_fd, EPOLL_CTL_MOD,
+				iv_active_fd, &event);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret < 0) {
+		iv_fatal("iv_fd_epoll_event_send: epoll_ctl returned "
+			 "error %d[%s]", errno, strerror(errno));
+	}
+}
 
 struct iv_fd_poll_method iv_fd_poll_method_epoll = {
 	.name		= "epoll",
@@ -212,4 +325,7 @@ struct iv_fd_poll_method iv_fd_poll_method_epoll = {
 	.notify_fd	= iv_fd_epoll_notify_fd,
 	.notify_fd_sync	= iv_fd_epoll_notify_fd_sync,
 	.deinit		= iv_fd_epoll_deinit,
+	.event_rx_on	= iv_fd_epoll_event_rx_on,
+	.event_rx_off	= iv_fd_epoll_event_rx_off,
+	.event_send	= iv_fd_epoll_event_send,
 };
