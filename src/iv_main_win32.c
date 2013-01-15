@@ -69,8 +69,8 @@ void iv_main(void)
 		struct timespec _abs;
 		struct timespec *abs;
 
-		iv_run_tasks(st);
 		iv_run_timers(st);
+		iv_run_tasks(st);
 
 		if (st->quit || !st->numobjs)
 			break;

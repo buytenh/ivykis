@@ -13,7 +13,8 @@ TESTS			= avl				\
 			  iv_event_raw_test		\
 			  struct_sizes			\
 			  timer				\
-			  timer_order
+			  timer_order			\
+			  timer_past
 
 if HAVE_POSIX
 PROGS			+= client			\
