@@ -73,6 +73,9 @@ struct iv_timer_ {
 void iv_task_init(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
 
+/* iv_tid_{posix,win32}.c */
+unsigned long __iv_get_thread_id(void);
+
 /* iv_time_{posix,win32}.c */
 void iv_time_get(struct timespec *time);
 

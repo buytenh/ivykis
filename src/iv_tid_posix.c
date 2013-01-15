@@ -37,7 +37,7 @@
 #include <thread.h>
 #endif
 
-unsigned long iv_get_thread_id(void)
+unsigned long __iv_get_thread_id(void)
 {
 	unsigned long thread_id;
 
@@ -54,7 +54,7 @@ unsigned long iv_get_thread_id(void)
 #elif defined(HAVE_THR_SELF) && defined(HAVE_THREAD_H)
 	thread_id = thr_self();
 #else
-#warning using pthread_self for get_thread_id
+#warning using pthread_self for iv_get_thread_id
 	thread_id = (unsigned long)pthread_self();
 #endif
 

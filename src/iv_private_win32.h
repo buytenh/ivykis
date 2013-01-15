@@ -22,6 +22,7 @@ struct iv_state {
 	/* iv_main_win32.c  */
 	int			quit;
 	int			numobjs;
+	unsigned long		tid;
 
 	/* iv_handle.c  */
 	HANDLE			wait;

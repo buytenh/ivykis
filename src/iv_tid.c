@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010, 2012 Lennert Buytenhek
+ * Copyright (C) 2010, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,8 +19,18 @@
  */
 
 #include <iv.h>
+#include "iv_private.h"
 
-unsigned long __iv_get_thread_id(void)
+unsigned long iv_get_thread_id(void)
 {
-	return GetCurrentThreadId();
+	struct iv_state *st = iv_get_state();
+
+	if (st != NULL) {
+		if (st->tid == 0)
+			st->tid = __iv_get_thread_id();
+
+		return st->tid;
+	}
+
+	return __iv_get_thread_id();
 }
