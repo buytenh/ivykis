@@ -13,6 +13,7 @@ TESTS			= avl				\
 			  iv_event_raw_test		\
 			  struct_sizes			\
 			  timer				\
+			  timer_fairness		\
 			  timer_order			\
 			  timer_past
 
