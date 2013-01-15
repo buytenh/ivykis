@@ -70,17 +70,37 @@ const struct timespec *iv_get_soonest_timeout(const struct iv_state *st)
 
 void iv_run_timers(struct iv_state *st)
 {
+	struct iv_list_head timers;
+
+	if (!st->num_timers)
+		return;
+
+	INIT_IV_LIST_HEAD(&timers);
+
+	if (!st->time_valid) {
+		st->time_valid = 1;
+		iv_time_get(&st->time);
+	}
+
 	while (st->num_timers) {
 		struct iv_timer_ *t = st->ratnode.first_leaf.child[1];
-
-		if (!st->time_valid) {
-			st->time_valid = 1;
-			iv_time_get(&st->time);
-		}
 
 		if (timespec_gt(&t->expires, &st->time))
 			break;
 		iv_timer_unregister((struct iv_timer *)t);
+
+		iv_list_add_tail(&t->list_expired, &timers);
+		t->index = 0;
+	}
+
+	while (!iv_list_empty(&timers)) {
+		struct iv_timer_ *t;
+
+		t = iv_list_entry(timers.next, struct iv_timer_, list_expired);
+
+		iv_list_del(&t->list_expired);
+		t->index = -1;
+
 		t->handler(t->cookie);
 	}
 }
@@ -278,35 +298,41 @@ void iv_timer_unregister(struct iv_timer *_t)
 			 "on the heap");
 	}
 
-	if (t->index > st->num_timers) {
-		iv_fatal("iv_timer_unregister: timer index %d > %d",
-			 t->index, st->num_timers);
-	}
+	if (t->index) {
+		if (t->index > st->num_timers) {
+			iv_fatal("iv_timer_unregister: timer index %d > %d",
+				 t->index, st->num_timers);
+		}
 
-	p = iv_timer_get_node(st, t->index);
-	if (*p != t) {
-		iv_fatal("iv_timer_unregister: unregistered timer "
-			 "index belonging to other timer");
-	}
+		p = iv_timer_get_node(st, t->index);
+		if (*p != t) {
+			iv_fatal("iv_timer_unregister: unregistered timer "
+				 "index belonging to other timer");
+		}
 
-	st->numobjs--;
+		m = iv_timer_get_node(st, st->num_timers);
+		*p = *m;
+		(*p)->index = t->index;
+		*m = NULL;
 
-	m = iv_timer_get_node(st, st->num_timers);
-	*p = *m;
-	(*p)->index = t->index;
-	*m = NULL;
+		if (st->rat_depth > 0 &&
+		    st->num_timers == (1 << (st->rat_depth *
+					     IV_TIMER_SPLIT_BITS))) {
+			iv_timer_radix_tree_remove_level(st);
+		}
+		st->num_timers--;
 
-	if (st->rat_depth > 0 &&
-	    st->num_timers == (1 << (st->rat_depth * IV_TIMER_SPLIT_BITS)))
-		iv_timer_radix_tree_remove_level(st);
-	st->num_timers--;
-
-	if (p != m) {
-		pull_up(st, (*p)->index, p);
-		push_down(st, (*p)->index, p);
+		if (p != m) {
+			pull_up(st, (*p)->index, p);
+			push_down(st, (*p)->index, p);
+		}
+	} else {
+		iv_list_del(&t->list_expired);
 	}
 
 	t->index = -1;
+
+	st->numobjs--;
 }
 
 int iv_timer_registered(const struct iv_timer *_t)

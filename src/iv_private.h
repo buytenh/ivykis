@@ -67,6 +67,7 @@ struct iv_timer_ {
 	/*
 	 * Private data.
 	 */
+	struct iv_list_head	list_expired;
 	int			index;
 };
 
