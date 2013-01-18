@@ -142,7 +142,8 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 }
 
 static void iv_fd_epoll_poll(struct iv_state *st,
-			     struct iv_list_head *active, struct timespec *abs)
+			     struct iv_list_head *active,
+			     const struct timespec *abs)
 {
 	struct epoll_event batch[st->numfds ? : 1];
 	int ret;
@@ -317,7 +318,7 @@ static void iv_fd_epoll_event_send(struct iv_state *dest)
 	}
 }
 
-struct iv_fd_poll_method iv_fd_poll_method_epoll = {
+const struct iv_fd_poll_method iv_fd_poll_method_epoll = {
 	.name		= "epoll",
 	.init		= iv_fd_epoll_init,
 	.poll		= iv_fd_epoll_poll,

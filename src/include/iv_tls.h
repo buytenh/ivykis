@@ -37,7 +37,7 @@ struct iv_tls_user {
 };
 
 void iv_tls_user_register(struct iv_tls_user *);
-void *iv_tls_user_ptr(struct iv_tls_user *);
+void *iv_tls_user_ptr(const struct iv_tls_user *);
 
 #ifdef __cplusplus
 }

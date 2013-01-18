@@ -78,7 +78,7 @@ void iv_time_get(struct timespec *time);
 
 /* iv_timer.c */
 void iv_timer_init(struct iv_state *st);
-struct timespec *iv_get_soonest_timeout(struct iv_state *st);
+const struct timespec *iv_get_soonest_timeout(const struct iv_state *st);
 void iv_run_timers(struct iv_state *st);
 void iv_timer_deinit(struct iv_state *st);
 
@@ -86,7 +86,8 @@ void iv_timer_deinit(struct iv_state *st);
 int iv_tls_total_state_size(void);
 void iv_tls_thread_init(struct iv_state *st);
 void iv_tls_thread_deinit(struct iv_state *st);
-void *__iv_tls_user_ptr(struct iv_state *st, struct iv_tls_user *itu);
+void *__iv_tls_user_ptr(const struct iv_state *st,
+			const struct iv_tls_user *itu);
 
 
 static inline void __iv_invalidate_now(struct iv_state *st)
@@ -110,19 +111,21 @@ __iv_list_steal_elements(struct iv_list_head *oldh, struct iv_list_head *newh)
 	oldh->prev = oldh;
 }
 
-static inline int iv_pending_tasks(struct iv_state *st)
+static inline int iv_pending_tasks(const struct iv_state *st)
 {
 	return !iv_list_empty(&st->tasks);
 }
 
-static inline int timespec_gt(struct timespec *a, struct timespec *b)
+static inline int
+timespec_gt(const struct timespec *a, const struct timespec *b)
 {
         return !!((a->tv_sec > b->tv_sec) ||
                   (a->tv_sec == b->tv_sec && a->tv_nsec > b->tv_nsec));
 }
 
 static inline struct timespec *
-to_relative(struct iv_state *st, struct timespec *rel, struct timespec *abs)
+to_relative(struct iv_state *st, struct timespec *rel,
+	    const struct timespec *abs)
 {
 	if (abs != NULL) {
 		if (!st->time_valid) {
@@ -149,7 +152,7 @@ to_relative(struct iv_state *st, struct timespec *rel, struct timespec *abs)
 	return NULL;
 }
 
-static inline int to_msec(struct iv_state *st, struct timespec *abs)
+static inline int to_msec(struct iv_state *st, const struct timespec *abs)
 {
 	if (abs != NULL) {
 		struct timespec rel;

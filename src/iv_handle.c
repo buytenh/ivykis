@@ -70,7 +70,7 @@ void iv_handle_deinit(struct iv_state *st)
 	DeleteCriticalSection(&st->active_handle_list_lock);
 }
 
-void iv_handle_poll_and_run(struct iv_state *st, struct timespec *abs)
+void iv_handle_poll_and_run(struct iv_state *st, const struct timespec *abs)
 {
 	struct iv_list_head handles;
 
@@ -224,7 +224,7 @@ void iv_handle_unregister(struct iv_handle *_h)
 		st->handled_handle = NULL;
 }
 
-int iv_handle_registered(struct iv_handle *_h)
+int iv_handle_registered(const struct iv_handle *_h)
 {
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
 

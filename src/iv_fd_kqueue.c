@@ -131,7 +131,8 @@ iv_fd_kqueue_upload(struct iv_state *st, struct kevent *kev, int size, int *num)
 }
 
 static void iv_fd_kqueue_poll(struct iv_state *st,
-			      struct iv_list_head *active, struct timespec *abs)
+			      struct iv_list_head *active,
+			      const struct timespec *abs)
 {
 	struct kevent kev[UPLOAD_BATCH];
 	int num;
@@ -280,7 +281,7 @@ static void iv_fd_kqueue_event_send(struct iv_state *dest)
 	kevent_retry("iv_fd_kqueue_event_send", dest, &send, 1);
 }
 
-struct iv_fd_poll_method iv_fd_poll_method_kqueue = {
+const struct iv_fd_poll_method iv_fd_poll_method_kqueue = {
 	.name		= "kqueue",
 	.init		= iv_fd_kqueue_init,
 	.poll		= iv_fd_kqueue_poll,

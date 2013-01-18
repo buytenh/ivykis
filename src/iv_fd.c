@@ -28,7 +28,7 @@
 
 /* internal use *************************************************************/
 int				maxfd;
-struct iv_fd_poll_method	*method;
+const struct iv_fd_poll_method	*method;
 
 static void sanitise_nofile_rlimit(int euid)
 {
@@ -61,7 +61,7 @@ static void sanitise_nofile_rlimit(int euid)
 	}
 }
 
-static int method_is_excluded(char *exclude, char *name)
+static int method_is_excluded(const char *exclude, const char *name)
 {
 	if (exclude != NULL) {
 		char method_name[64];
@@ -77,8 +77,8 @@ static int method_is_excluded(char *exclude, char *name)
 	return 0;
 }
 
-static void consider_poll_method(struct iv_state *st, char *exclude,
-				 struct iv_fd_poll_method *m)
+static void consider_poll_method(struct iv_state *st, const char *exclude,
+				 const struct iv_fd_poll_method *m)
 {
 	if (method == NULL && !method_is_excluded(exclude, m->name)) {
 		if (m->init(st) >= 0)
@@ -138,7 +138,7 @@ void iv_fd_deinit(struct iv_state *st)
 	method->deinit(st);
 }
 
-void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs)
+void iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs)
 {
 	struct iv_list_head active;
 
@@ -348,7 +348,7 @@ void iv_fd_unregister(struct iv_fd *_fd)
 		st->handled_fd = NULL;
 }
 
-int iv_fd_registered(struct iv_fd *_fd)
+int iv_fd_registered(const struct iv_fd *_fd)
 {
 	struct iv_fd_ *fd = (struct iv_fd_ *)_fd;
 

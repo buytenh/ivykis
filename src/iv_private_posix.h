@@ -148,8 +148,8 @@ struct iv_fd_ {
 struct iv_fd_poll_method {
 	char	*name;
 	int	(*init)(struct iv_state *st);
-	void	(*poll)(struct iv_state *st,
-			struct iv_list_head *active, struct timespec *abs);
+	void	(*poll)(struct iv_state *st, struct iv_list_head *active,
+			const struct timespec *abs);
 	void	(*register_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*unregister_fd)(struct iv_state *st, struct iv_fd_ *fd);
 	void	(*notify_fd)(struct iv_state *st, struct iv_fd_ *fd);
@@ -161,14 +161,14 @@ struct iv_fd_poll_method {
 };
 
 extern int maxfd;
-extern struct iv_fd_poll_method *method;
+extern const struct iv_fd_poll_method *method;
 
-extern struct iv_fd_poll_method iv_fd_poll_method_dev_poll;
-extern struct iv_fd_poll_method iv_fd_poll_method_epoll;
-extern struct iv_fd_poll_method iv_fd_poll_method_kqueue;
-extern struct iv_fd_poll_method iv_fd_poll_method_poll;
-extern struct iv_fd_poll_method iv_fd_poll_method_port;
-extern struct iv_fd_poll_method iv_fd_poll_method_ppoll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_dev_poll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_epoll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_kqueue;
+extern const struct iv_fd_poll_method iv_fd_poll_method_poll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_port;
+extern const struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 
 /* iv_event_posix.c */
 void iv_event_run_pending_events(void);
@@ -176,7 +176,7 @@ void iv_event_run_pending_events(void);
 /* iv_fd.c */
 void iv_fd_init(struct iv_state *st);
 void iv_fd_deinit(struct iv_state *st);
-void iv_fd_poll_and_run(struct iv_state *st, struct timespec *abs);
+void iv_fd_poll_and_run(struct iv_state *st, const struct timespec *abs);
 void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
 void iv_fd_set_cloexec(int fd);

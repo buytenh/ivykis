@@ -106,7 +106,7 @@ static void iv_thread_died(void *_thr)
 	free(thr);
 }
 
-int iv_thread_create(char *name, void (*start_routine)(void *), void *arg)
+int iv_thread_create(const char *name, void (*start_routine)(void *), void *arg)
 {
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_thread *thr;

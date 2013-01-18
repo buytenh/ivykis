@@ -65,7 +65,8 @@ iv_fd_poll_activate_fds(struct iv_state *st, struct iv_list_head *active)
 }
 
 static void iv_fd_poll_poll(struct iv_state *st,
-			    struct iv_list_head *active, struct timespec *abs)
+			    struct iv_list_head *active,
+			    const struct timespec *abs)
 {
 	int ret;
 
@@ -171,7 +172,7 @@ static void iv_fd_poll_deinit(struct iv_state *st)
 	free(st->u.poll.pfds);
 }
 
-struct iv_fd_poll_method iv_fd_poll_method_poll = {
+const struct iv_fd_poll_method iv_fd_poll_method_poll = {
 	.name		= "poll",
 	.init		= iv_fd_poll_init,
 	.poll		= iv_fd_poll_poll,
@@ -184,7 +185,8 @@ struct iv_fd_poll_method iv_fd_poll_method_poll = {
 
 #ifdef HAVE_PPOLL
 static void iv_fd_poll_ppoll(struct iv_state *st,
-			     struct iv_list_head *active, struct timespec *abs)
+			     struct iv_list_head *active,
+			     const struct timespec *abs)
 {
 	struct pollfd *fds = st->u.poll.pfds;
 	int nfds = st->u.poll.num_regd_fds;
@@ -211,7 +213,7 @@ static void iv_fd_poll_ppoll(struct iv_state *st,
 	iv_fd_poll_activate_fds(st, active);
 }
 
-struct iv_fd_poll_method iv_fd_poll_method_ppoll = {
+const struct iv_fd_poll_method iv_fd_poll_method_ppoll = {
 	.name		= "ppoll",
 	.init		= iv_fd_poll_init,
 	.poll		= iv_fd_poll_ppoll,

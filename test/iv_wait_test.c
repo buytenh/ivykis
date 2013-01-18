@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <time.h>
 
-static void handler(void *cookie, int status, struct rusage *rusage)
+static void handler(void *cookie, int status, const struct rusage *rusage)
 {
 	struct iv_wait_interest *this = cookie;
 

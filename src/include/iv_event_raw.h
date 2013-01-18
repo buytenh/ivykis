@@ -45,7 +45,7 @@ static inline void IV_EVENT_RAW_INIT(struct iv_event_raw *this)
 
 int iv_event_raw_register(struct iv_event_raw *this);
 void iv_event_raw_unregister(struct iv_event_raw *this);
-void iv_event_raw_post(struct iv_event_raw *this);
+void iv_event_raw_post(const struct iv_event_raw *this);
 
 #ifdef __cplusplus
 }

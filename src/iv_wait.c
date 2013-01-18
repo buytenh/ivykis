@@ -43,19 +43,19 @@ struct wait_event {
 #endif
 };
 
-static int
-iv_wait_interest_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+static int iv_wait_interest_compare(const struct iv_avl_node *_a,
+				    const struct iv_avl_node *_b)
 {
-	struct iv_wait_interest *a;
-	struct iv_wait_interest *b;
-
-	a = iv_container_of(_a, struct iv_wait_interest, avl_node);
-	b = iv_container_of(_b, struct iv_wait_interest, avl_node);
+	const struct iv_wait_interest *a =
+		iv_container_of(_a, struct iv_wait_interest, avl_node);
+	const struct iv_wait_interest *b =
+		iv_container_of(_b, struct iv_wait_interest, avl_node);
 
 	if (a->pid < b->pid)
 		return -1;
 	if (a->pid > b->pid)
 		return 1;
+
 	return 0;
 }
 
@@ -323,7 +323,7 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 	__iv_wait_interest_unregister(tinfo, this);
 }
 
-int iv_wait_interest_kill(struct iv_wait_interest *this, int sig)
+int iv_wait_interest_kill(const struct iv_wait_interest *this, int sig)
 {
 	int ret;
 

@@ -42,8 +42,8 @@ struct iv_popen_running_child {
 	int				num_kills;
 };
 
-static void
-iv_popen_running_child_wait(void *_ch, int status, struct rusage *rusage)
+static void iv_popen_running_child_wait(void *_ch, int status,
+					const struct rusage *rusage)
 {
 	struct iv_popen_running_child *ch = _ch;
 

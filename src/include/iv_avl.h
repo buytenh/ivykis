@@ -35,8 +35,8 @@ struct iv_avl_node {
 };
 
 struct iv_avl_tree {
-	int			(*compare)(struct iv_avl_node *a,
-					   struct iv_avl_node *b);
+	int			(*compare)(const struct iv_avl_node *a,
+					   const struct iv_avl_node *b);
 
 	struct iv_avl_node	*root;
 };
@@ -55,12 +55,13 @@ void iv_avl_tree_delete(struct iv_avl_tree *tree, struct iv_avl_node *an);
 struct iv_avl_node *iv_avl_tree_next(struct iv_avl_node *an);
 struct iv_avl_node *iv_avl_tree_prev(struct iv_avl_node *an);
 
-static inline int iv_avl_tree_empty(struct iv_avl_tree *tree)
+static inline int iv_avl_tree_empty(const struct iv_avl_tree *tree)
 {
 	return tree->root == NULL;
 }
 
-static inline struct iv_avl_node *iv_avl_tree_min(struct iv_avl_tree *tree)
+static inline struct iv_avl_node *
+iv_avl_tree_min(const struct iv_avl_tree *tree)
 {
 	if (tree->root != NULL) {
 		struct iv_avl_node *an;
@@ -75,7 +76,8 @@ static inline struct iv_avl_node *iv_avl_tree_min(struct iv_avl_tree *tree)
 	return NULL;
 }
 
-static inline struct iv_avl_node *iv_avl_tree_max(struct iv_avl_tree *tree)
+static inline struct iv_avl_node *
+iv_avl_tree_max(const struct iv_avl_tree *tree)
 {
 	if (tree->root != NULL) {
 		struct iv_avl_node *an;

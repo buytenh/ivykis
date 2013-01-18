@@ -67,7 +67,7 @@ void iv_main(void)
 	st->quit = 0;
 	while (1) {
 		struct timespec _abs;
-		struct timespec *abs;
+		const struct timespec *abs;
 
 		iv_run_timers(st);
 		iv_run_tasks(st);

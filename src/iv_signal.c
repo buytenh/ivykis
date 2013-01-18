@@ -31,10 +31,13 @@ static spinlock_t sig_interests_lock;
 static struct iv_avl_tree sig_interests;
 static sigset_t sig_mask_fork;
 
-static int iv_signal_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+static int
+iv_signal_compare(const struct iv_avl_node *_a, const struct iv_avl_node *_b)
 {
-	struct iv_signal *a = iv_container_of(_a, struct iv_signal, an);
-	struct iv_signal *b = iv_container_of(_b, struct iv_signal, an);
+	const struct iv_signal *a =
+		iv_container_of(_a, struct iv_signal, an);
+	const struct iv_signal *b =
+		iv_container_of(_b, struct iv_signal, an);
 
 	if (a->signum < b->signum)
 		return -1;

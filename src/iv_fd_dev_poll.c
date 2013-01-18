@@ -27,10 +27,13 @@
 
 #define UPLOAD_BATCH		1024
 
-static int iv_fd_avl_compare(struct iv_avl_node *_a, struct iv_avl_node *_b)
+static int
+iv_fd_avl_compare(const struct iv_avl_node *_a, const struct iv_avl_node *_b)
 {
-	struct iv_fd_ *a = iv_container_of(_a, struct iv_fd_, u.avl_node);
-	struct iv_fd_ *b = iv_container_of(_b, struct iv_fd_, u.avl_node);
+	const struct iv_fd_ *a =
+		iv_container_of(_a, struct iv_fd_, u.avl_node);
+	const struct iv_fd_ *b =
+		iv_container_of(_b, struct iv_fd_, u.avl_node);
 
 	if (a->fd < b->fd)
 		return -1;
@@ -138,7 +141,7 @@ static void iv_fd_dev_poll_flush_pending(struct iv_state *st)
 		xwrite(poll_fd, pfd, num * sizeof(pfd[0]));
 }
 
-static struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
+static struct iv_fd_ *iv_fd_avl_find(const struct iv_avl_tree *root, int fd)
 {
 	struct iv_avl_node *an;
 
@@ -159,9 +162,9 @@ static struct iv_fd_ *iv_fd_avl_find(struct iv_avl_tree *root, int fd)
 	return NULL;
 }
 
-static void
-iv_fd_dev_poll_poll(struct iv_state *st,
-		    struct iv_list_head *active, struct timespec *abs)
+static void iv_fd_dev_poll_poll(struct iv_state *st,
+				struct iv_list_head *active,
+				const struct timespec *abs)
 {
 	struct pollfd batch[st->numfds ? : 1];
 	struct dvpoll dvp;
@@ -261,7 +264,7 @@ static void iv_fd_dev_poll_deinit(struct iv_state *st)
 }
 
 
-struct iv_fd_poll_method iv_fd_poll_method_dev_poll = {
+const struct iv_fd_poll_method iv_fd_poll_method_dev_poll = {
 	.name		= "dev_poll",
 	.init		= iv_fd_dev_poll_init,
 	.poll		= iv_fd_dev_poll_poll,

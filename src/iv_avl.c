@@ -22,7 +22,7 @@
 #include <iv.h>
 #include "iv_avl.h"
 
-static int height(struct iv_avl_node *an)
+static int height(const struct iv_avl_node *an)
 {
 	return an != NULL ? an->height : 0;
 }
@@ -189,7 +189,7 @@ static void rotate_right_left(struct iv_avl_node **root)
 	*root = d;
 }
 
-static int balance(struct iv_avl_node *an)
+static int balance(const struct iv_avl_node *an)
 {
 	return height(an->right) - height(an->left);
 }
@@ -217,7 +217,7 @@ static void rebalance_node(struct iv_avl_node **_root)
  * Find the address of the (child) pointer that points to an.
  */
 static struct iv_avl_node **
-find_reference(struct iv_avl_tree *tree, struct iv_avl_node *an)
+find_reference(struct iv_avl_tree *tree, const struct iv_avl_node *an)
 {
 	if (an->parent != NULL) {
 		if (an->parent->left == an)
@@ -229,9 +229,9 @@ find_reference(struct iv_avl_tree *tree, struct iv_avl_node *an)
 	}
 }
 
-static void
-replace_reference(struct iv_avl_tree *tree,
-		  struct iv_avl_node *an, struct iv_avl_node *new_child)
+static void replace_reference(struct iv_avl_tree *tree,
+			      const struct iv_avl_node *an,
+			      struct iv_avl_node *new_child)
 {
 	*find_reference(tree, an) = new_child;
 }

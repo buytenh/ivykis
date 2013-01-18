@@ -77,7 +77,7 @@ static inline void iv_list_del_init(struct iv_list_head *ilh)
 	INIT_IV_LIST_HEAD(ilh);
 }
 
-static inline int iv_list_empty(struct iv_list_head *head)
+static inline int iv_list_empty(const struct iv_list_head *head)
 {
 	return head->next == head;
 }

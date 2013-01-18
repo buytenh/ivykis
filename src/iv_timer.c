@@ -43,7 +43,7 @@ void iv_validate_now(void)
 	}
 }
 
-struct timespec *__iv_now_location(void)
+const struct timespec *__iv_now_location(void)
 {
 	struct iv_state *st = iv_get_state();
 
@@ -72,36 +72,22 @@ void iv_timer_init(struct iv_state *st)
 	st->timer_root = iv_timer_allocate_ratnode();
 }
 
-static struct iv_timer_ **iv_timer_get_node(struct iv_state *st, int index)
+static struct iv_timer_ *iv_timer_get_first(const struct iv_state *st)
 {
 	struct ratnode *r;
 	int i;
 
-	if (index >> ((st->rat_depth + 1) * SPLIT_BITS) != 0) {
-		st->rat_depth++;
-
-		r = iv_timer_allocate_ratnode();
-		r->child[0] = st->timer_root;
-		st->timer_root = r;
-	}
-
 	r = st->timer_root;
-	for (i = st->rat_depth; i > 0; i--) {
-		int bits;
+	for (i = 0; i < st->rat_depth; i++)
+		r = r->child[0];
 
-		bits = (index >> (i * SPLIT_BITS)) & (SPLIT_NODES - 1);
-		if (r->child[bits] == NULL)
-			r->child[bits] = iv_timer_allocate_ratnode();
-		r = r->child[bits];
-	}
-
-	return (struct iv_timer_ **)(r->child + (index & (SPLIT_NODES - 1)));
+	return (struct iv_timer_ *)r->child[1];
 }
 
-struct timespec *iv_get_soonest_timeout(struct iv_state *st)
+const struct timespec *iv_get_soonest_timeout(const struct iv_state *st)
 {
 	if (st->num_timers)
-		return &(*iv_timer_get_node(st, 1))->expires;
+		return &iv_timer_get_first(st)->expires;
 
 	return NULL;
 }
@@ -109,7 +95,7 @@ struct timespec *iv_get_soonest_timeout(struct iv_state *st)
 void iv_run_timers(struct iv_state *st)
 {
 	while (st->num_timers) {
-		struct iv_timer_ *t = *iv_timer_get_node(st, 1);
+		struct iv_timer_ *t = iv_timer_get_first(st);
 
 		if (!st->time_valid) {
 			st->time_valid = 1;
@@ -171,7 +157,34 @@ void IV_TIMER_INIT(struct iv_timer *_t)
 	t->index = -1;
 }
 
-static inline int timer_ptr_gt(struct iv_timer_ *a, struct iv_timer_ *b)
+static struct iv_timer_ **iv_timer_get_node(struct iv_state *st, int index)
+{
+	struct ratnode *r;
+	int i;
+
+	if (index >> ((st->rat_depth + 1) * SPLIT_BITS) != 0) {
+		st->rat_depth++;
+
+		r = iv_timer_allocate_ratnode();
+		r->child[0] = st->timer_root;
+		st->timer_root = r;
+	}
+
+	r = st->timer_root;
+	for (i = st->rat_depth; i > 0; i--) {
+		int bits;
+
+		bits = (index >> (i * SPLIT_BITS)) & (SPLIT_NODES - 1);
+		if (r->child[bits] == NULL)
+			r->child[bits] = iv_timer_allocate_ratnode();
+		r = r->child[bits];
+	}
+
+	return (struct iv_timer_ **)(r->child + (index & (SPLIT_NODES - 1)));
+}
+
+static inline int
+timer_ptr_gt(const struct iv_timer_ *a, const struct iv_timer_ *b)
 {
 	return timespec_gt(&a->expires, &b->expires);
 }
@@ -305,7 +318,7 @@ void iv_timer_unregister(struct iv_timer *_t)
 	t->index = -1;
 }
 
-int iv_timer_registered(struct iv_timer *_t)
+int iv_timer_registered(const struct iv_timer *_t)
 {
 	struct iv_timer_ *t = (struct iv_timer_ *)_t;
 

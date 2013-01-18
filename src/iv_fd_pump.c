@@ -407,7 +407,7 @@ int iv_fd_pump_pump(struct iv_fd_pump *ip)
 	return ret;
 }
 
-int iv_fd_pump_is_done(struct iv_fd_pump *ip)
+int iv_fd_pump_is_done(const struct iv_fd_pump *ip)
 {
 	return !!(ip->saw_fin == 2);
 }

@@ -53,7 +53,7 @@ void iv_set_fatal_msg_handler(void (*handler)(const char *msg));
 /*
  * Time handling.
  */
-struct timespec *__iv_now_location();
+const struct timespec *__iv_now_location();
 void iv_validate_now(void);
 void iv_invalidate_now(void);
 
@@ -77,7 +77,7 @@ void IV_FD_INIT(struct iv_fd *);
 void iv_fd_register(struct iv_fd *);
 int iv_fd_register_try(struct iv_fd *);
 void iv_fd_unregister(struct iv_fd *);
-int iv_fd_registered(struct iv_fd *);
+int iv_fd_registered(const struct iv_fd *);
 void iv_fd_set_handler_in(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_out(struct iv_fd *, void (*)(void *));
 void iv_fd_set_handler_err(struct iv_fd *, void (*)(void *));
@@ -98,7 +98,7 @@ struct iv_handle {
 void IV_HANDLE_INIT(struct iv_handle *);
 void iv_handle_register(struct iv_handle *);
 void iv_handle_unregister(struct iv_handle *);
-int iv_handle_registered(struct iv_handle *);
+int iv_handle_registered(const struct iv_handle *);
 void iv_handle_set_handler(struct iv_handle *, void (*)(void *));
 #endif
 
@@ -115,7 +115,7 @@ struct iv_task {
 void IV_TASK_INIT(struct iv_task *);
 void iv_task_register(struct iv_task *);
 void iv_task_unregister(struct iv_task *);
-int iv_task_registered(struct iv_task *);
+int iv_task_registered(const struct iv_task *);
 
 
 /*
@@ -131,7 +131,7 @@ struct iv_timer {
 void IV_TIMER_INIT(struct iv_timer *);
 void iv_timer_register(struct iv_timer *);
 void iv_timer_unregister(struct iv_timer *);
-int iv_timer_registered(struct iv_timer *);
+int iv_timer_registered(const struct iv_timer *);
 
 
 #ifdef __cplusplus

@@ -16,7 +16,7 @@ struct iv_wait_interest {
         pid_t           pid;
         void            *cookie;
         void            (*handler)(void *cookie, int status,
-                                   struct rusage *rusage);
+                                   const struct rusage *rusage);
 };
 .fi
 .sp
@@ -28,7 +28,7 @@ struct iv_wait_interest {
 .br
 .BI "void iv_wait_interest_unregister(struct iv_wait_interest *" this ");"
 .br
-.BI "int iv_wait_interest_kill(struct iv_wait_interest *" this ", int " sig ");"
+.BI "int iv_wait_interest_kill(const struct iv_wait_interest *" this ", int " sig ");"
 .br
 .SH DESCRIPTION
 .B iv_wait

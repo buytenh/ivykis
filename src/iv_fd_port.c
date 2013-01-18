@@ -97,7 +97,8 @@ static void iv_fd_port_upload(struct iv_state *st)
 }
 
 static void iv_fd_port_poll(struct iv_state *st,
-			    struct iv_list_head *active, struct timespec *abs)
+			    struct iv_list_head *active,
+			    const struct timespec *abs)
 {
 	struct timespec _rel;
 	struct timespec *rel;
@@ -223,7 +224,7 @@ static void iv_fd_port_event_send(struct iv_state *dest)
 	}
 }
 
-struct iv_fd_poll_method iv_fd_poll_method_port = {
+const struct iv_fd_poll_method iv_fd_poll_method_port = {
 	.name		= "port",
 	.init		= iv_fd_port_init,
 	.poll		= iv_fd_port_poll,

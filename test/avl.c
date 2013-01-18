@@ -33,7 +33,7 @@ struct node {
 
 static struct iv_avl_tree x;
 
-static void tree_node_print(int depth, struct iv_avl_node *an)
+static void tree_node_print(int depth, const struct iv_avl_node *an)
 {
 	struct node *f = iv_container_of(an, struct node, an);
 	int i;
@@ -49,7 +49,7 @@ static void tree_node_print(int depth, struct iv_avl_node *an)
 		tree_node_print(depth + 1, an->right);
 }
 
-static void tree_print(char *msg)
+static void tree_print(const char *msg)
 {
 	fprintf(stderr, "%s:\n", msg);
 	if (x.root != NULL)
@@ -74,9 +74,10 @@ static void __attribute__((noreturn)) fatal(const char *fmt, ...)
 }
 
 static int
-tree_node_verify(struct iv_avl_tree *this, struct iv_avl_node *an,
-		 struct iv_avl_node *parent,
-		 struct iv_avl_node *min, struct iv_avl_node *max, int *cnt)
+tree_node_verify(const struct iv_avl_tree *this, const struct iv_avl_node *an,
+		 const struct iv_avl_node *parent,
+		 const struct iv_avl_node *min, const struct iv_avl_node *max,
+		 int *cnt)
 {
 	int hl;
 	int hr;
@@ -120,7 +121,7 @@ tree_node_verify(struct iv_avl_tree *this, struct iv_avl_node *an,
 	return my;
 }
 
-static void tree_check(struct iv_avl_tree *this, int expected_count)
+static void tree_check(const struct iv_avl_tree *this, int expected_count)
 {
 	int count;
 
@@ -137,15 +138,16 @@ static void tree_check(struct iv_avl_tree *this, int expected_count)
 
 static struct node *f[NUM];
 
-static int docomp(struct iv_avl_node *_a, struct iv_avl_node *_b)
+static int docomp(const struct iv_avl_node *_a, const struct iv_avl_node *_b)
 {
-	struct node *a = iv_container_of(_a, struct node, an);
-	struct node *b = iv_container_of(_b, struct node, an);
+	const struct node *a = iv_container_of(_a, struct node, an);
+	const struct node *b = iv_container_of(_b, struct node, an);
 
 	if (a->num < b->num)
 		return -1;
 	if (a->num > b->num)
 		return 1;
+
 	return 0;
 }
 

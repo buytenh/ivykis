@@ -48,7 +48,7 @@ void iv_event_raw_unregister(struct iv_event_raw *this)
 	CloseHandle(this->h.handle);
 }
 
-void iv_event_raw_post(struct iv_event_raw *this)
+void iv_event_raw_post(const struct iv_event_raw *this)
 {
 	SetEvent(this->h.handle);
 }
