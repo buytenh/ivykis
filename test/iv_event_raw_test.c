@@ -52,6 +52,10 @@ static void gotev0(void *_x)
 	iv_validate_now();
 	ev1.expires = iv_now;
 	ev1.expires.tv_nsec += 100000000;
+	if (ev1.expires.tv_nsec >= 1000000000) {
+		ev1.expires.tv_sec++;
+		ev1.expires.tv_nsec -= 1000000000;
+	}
 	ev1.handler = gotev1;
 	iv_timer_register(&ev1);
 }
