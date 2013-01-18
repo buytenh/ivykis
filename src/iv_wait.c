@@ -144,7 +144,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 
 		p = __iv_wait_interest_find(pid);
 		if (p != NULL) {
-			iv_list_add_tail(&we->list, &p->events);
+			iv_list_add_tail(&we->list, &p->events_pending);
 			iv_event_post(&p->ev);
 		} else {
 			free(we);
@@ -206,7 +206,7 @@ static void iv_wait_completion(void *_this)
 	struct iv_list_head events;
 
 	pthread_mutex_lock(&iv_wait_lock);
-	__iv_list_steal_elements(&this->events, &events);
+	__iv_list_steal_elements(&this->events_pending, &events);
 	pthread_mutex_unlock(&iv_wait_lock);
 
 	tinfo->handled_wait_interest = this;
@@ -242,7 +242,7 @@ static void __iv_wait_interest_register(struct iv_wait_thr_info *tinfo,
 	this->ev.cookie = this;
 	iv_event_register(&this->ev);
 
-	INIT_IV_LIST_HEAD(&this->events);
+	INIT_IV_LIST_HEAD(&this->events_pending);
 
 	this->dummy = NULL;
 
@@ -265,10 +265,10 @@ static void __iv_wait_interest_unregister(struct iv_wait_thr_info *tinfo,
 {
 	iv_event_unregister(&this->ev);
 
-	while (!iv_list_empty(&this->events)) {
+	while (!iv_list_empty(&this->events_pending)) {
 		struct wait_event *we;
 
-		we = iv_container_of(this->events.next,
+		we = iv_container_of(this->events_pending.next,
 				     struct wait_event, list);
 		iv_list_del(&we->list);
 		free(we);
