@@ -49,7 +49,7 @@ int main()
 {
 	int i;
 
-	alarm(30);
+	alarm(120);
 
 	iv_init();
 
