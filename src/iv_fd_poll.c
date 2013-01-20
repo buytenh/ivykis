@@ -115,9 +115,6 @@ static int bits_to_poll_mask(int bits)
 
 static void iv_fd_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
-	if (fd->registered_bands == fd->wanted_bands)
-		return;
-
 	if (fd->u.index == -1 && fd->wanted_bands) {
 		fd->u.index = st->u.poll.num_regd_fds++;
 		st->u.poll.pfds[fd->u.index].fd = fd->fd;
@@ -142,8 +139,6 @@ static void iv_fd_poll_notify_fd(struct iv_state *st, struct iv_fd_ *fd)
 		st->u.poll.pfds[fd->u.index].events =
 			bits_to_poll_mask(fd->wanted_bands);
 	}
-
-	fd->registered_bands = fd->wanted_bands;
 }
 
 static int iv_fd_poll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
