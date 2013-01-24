@@ -24,6 +24,13 @@
 #include "iv_tls.h"
 #include "config.h"
 
+#define IV_TIMER_SPLIT_BITS	7
+#define IV_TIMER_SPLIT_NODES	(1 << IV_TIMER_SPLIT_BITS)
+
+struct iv_timer_ratnode {
+	void	*child[IV_TIMER_SPLIT_NODES];
+};
+
 #ifndef _WIN32
 #include "iv_private_posix.h"
 #else

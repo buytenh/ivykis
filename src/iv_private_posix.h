@@ -41,7 +41,10 @@ struct iv_state {
 	int			time_valid;
 	int			num_timers;
 	int			rat_depth;
-	struct ratnode		*timer_root;
+	union {
+		struct iv_timer_ratnode		*timer_root;
+		struct iv_timer_ratnode		first_leaf;
+	} ratnode;
 
 	/* poll methods  */
 	union {
