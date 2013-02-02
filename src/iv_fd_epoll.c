@@ -24,8 +24,8 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/syscall.h>
-#include "iv_private.h"
 #include "eventfd-linux.h"
+#include "iv_private.h"
 
 static int epoll_support = 2;
 

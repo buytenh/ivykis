@@ -18,12 +18,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "config.h"
+#include <errno.h>
 #ifdef HAVE_SYS_EVENTFD_H
 #include <sys/eventfd.h>
 #endif
 #include <sys/syscall.h>
 #include <unistd.h>
-#include "config.h"
 
 #ifdef __i386__
 #ifndef __NR_eventfd

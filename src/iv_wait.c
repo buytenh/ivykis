@@ -26,7 +26,6 @@
 #include <iv_wait.h>
 #include <pthread.h>
 #include "iv_private.h"
-#include "config.h"
 
 #ifndef WCONTINUED
 #define WCONTINUED		0

@@ -23,7 +23,6 @@
 #include <iv.h>
 #include <iv_event_raw.h>
 #include <unistd.h>
-#include "config.h"
 
 int iv_event_raw_register(struct iv_event_raw *this)
 {

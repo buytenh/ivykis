@@ -19,7 +19,6 @@
  */
 
 #include <unistd.h>
-#include "config.h"
 #include "iv_private.h"
 
 #ifdef HAVE_PTHREAD_SPIN_LOCK

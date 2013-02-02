@@ -27,7 +27,6 @@
 #include <iv_tls.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include "config.h"
 #include "iv_private.h"
 
 /* thread state handling ****************************************************/
