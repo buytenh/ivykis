@@ -189,3 +189,6 @@ void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
 void iv_fd_set_cloexec(int fd);
 void iv_fd_set_nonblock(int fd);
+
+/* iv_signal.c */
+void iv_signal_child_reset_postfork(void);

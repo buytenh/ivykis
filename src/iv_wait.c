@@ -298,6 +298,7 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 	}
 
 	if (pid == 0) {
+		iv_signal_child_reset_postfork();
 		fn(cookie);
 		exit(1);
 	} else {

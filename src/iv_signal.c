@@ -27,6 +27,7 @@
 #include <string.h>
 #include "spinlock.h"
 
+static pid_t sig_owner_pid;
 static spinlock_t sig_interests_lock;
 static struct iv_avl_tree sig_interests;
 static sigset_t sig_mask_fork;
@@ -77,28 +78,7 @@ static void iv_signal_parent(void)
 
 static void iv_signal_child(void)
 {
-	struct sigaction sa;
-	int last_signum;
-	struct iv_avl_node *an;
-
 	spin_init(&sig_interests_lock);
-
-	sa.sa_handler = SIG_DFL;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-
-	last_signum = -1;
-	iv_avl_tree_for_each (an, &sig_interests) {
-		struct iv_signal *is;
-
-		is = iv_container_of(an, struct iv_signal, an);
-		if (is->signum != last_signum) {
-			sigaction(is->signum, &sa, NULL);
-			last_signum = is->signum;
-		}
-	}
-
-	sig_interests.root = NULL;
 
 	pthread_sigmask(SIG_SETMASK, &sig_mask_fork, NULL);
 }
@@ -158,9 +138,11 @@ static void __iv_signal_do_wake(int signum)
 
 static void iv_signal_handler(int signum)
 {
-	spin_lock(&sig_interests_lock);
-	__iv_signal_do_wake(signum);
-	spin_unlock(&sig_interests_lock);
+	if (sig_owner_pid && sig_owner_pid == getpid()) {
+		spin_lock(&sig_interests_lock);
+		__iv_signal_do_wake(signum);
+		spin_unlock(&sig_interests_lock);
+	}
 }
 
 static void iv_signal_event(void *_this)
@@ -175,9 +157,46 @@ static void iv_signal_event(void *_this)
 	this->handler(this->cookie);
 }
 
+void iv_signal_child_reset_postfork(void)
+{
+	struct sigaction sa;
+	int last_signum;
+	struct iv_avl_node *an;
+
+	sa.sa_handler = SIG_DFL;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+
+	last_signum = -1;
+	iv_avl_tree_for_each (an, &sig_interests) {
+		struct iv_signal *is;
+
+		is = iv_container_of(an, struct iv_signal, an);
+		if (is->signum != last_signum) {
+			sigaction(is->signum, &sa, NULL);
+			last_signum = is->signum;
+		}
+	}
+
+	sig_owner_pid = 0;
+
+	sig_interests.root = NULL;
+}
+
 int iv_signal_register(struct iv_signal *this)
 {
+	pid_t mypid;
 	sigset_t mask;
+
+	spin_lock_sigmask(&sig_interests_lock, &mask);
+
+	mypid = getpid();
+	if (sig_owner_pid != 0 && sig_owner_pid != mypid) {
+		iv_signal_child_reset_postfork();
+		sig_owner_pid = mypid;
+	} else if (sig_owner_pid == 0) {
+		sig_owner_pid = mypid;
+	}
 
 	IV_EVENT_RAW_INIT(&this->ev);
 	this->ev.cookie = this;
@@ -185,8 +204,6 @@ int iv_signal_register(struct iv_signal *this)
 	iv_event_raw_register(&this->ev);
 
 	this->active = 0;
-
-	spin_lock_sigmask(&sig_interests_lock, &mask);
 
 	if (__iv_signal_find_first(this->signum) == NULL) {
 		struct sigaction sa;
