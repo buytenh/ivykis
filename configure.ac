@@ -161,64 +161,6 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
 		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
 
 #
-# Check for a working implementation of __thread.  This has to be a
-# runtime test, to catch platforms where the __thread keyword appears
-# to be accepted but different threads still share the same storage
-# location for variables marked with __thread.
-#
-AC_CACHE_CHECK([for __thread support],
-	ac_cv_keyword_thread,
-	[ac_cv_keyword_thread=no
-	 _AC_RUN_IFELSE([AC_LANG_SOURCE(
-		#include <stdio.h>
-		#include <pthread.h>
-		#include <unistd.h>
-
-		static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-		static int done;
-		static __thread int var;
-
-		static void *thr(void *dummy)
-		{
-			pthread_mutex_lock(&mutex);
-			done = 1;
-			var = 23456;
-			pthread_mutex_unlock(&mutex);
-
-			return NULL;
-		}
-
-		int main()
-		{
-			int ret;
-			pthread_t id;
-
-			alarm(1);
-
-			pthread_mutex_lock(&mutex);
-			done = 0;
-			var = 12345;
-			pthread_mutex_unlock(&mutex);
-
-			ret = 1;
-			if (!pthread_create(&id, NULL, thr, NULL) &&
-			    !pthread_join(id, NULL)) {
-				pthread_mutex_lock(&mutex);
-				if (done && var == 12345)
-					ret = 0;
-				pthread_mutex_unlock(&mutex);
-			}
-
-			return ret;
-		}
-	 )], [ac_cv_keyword_thread=yes], [], [])
-	])
-if test $ac_cv_keyword_thread = yes
-then
-	AC_DEFINE(HAVE_THREAD, 1, Define to 1 if compiler supports __thread.)
-fi
-
-#
 # Check for __sync_lock_test_and_set().  We can't use AC_CHECK_FUNCS
 # for this, as autoconf will spit out a dummy definition for the
 # function we are testing for, and call it without any arguments,

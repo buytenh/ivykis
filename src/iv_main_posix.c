@@ -23,11 +23,8 @@
 #include <pthread.h>
 #include "iv_private.h"
 
-int				iv_state_key_allocated;
-pthread_key_t			iv_state_key;
-#ifdef HAVE_THREAD
-__thread struct iv_state	*__st;
-#endif
+static int		iv_state_key_allocated;
+pthread_key_t		iv_state_key;
 
 static void __iv_deinit(struct iv_state *st)
 {
@@ -37,9 +34,6 @@ static void __iv_deinit(struct iv_state *st)
 	iv_timer_deinit(st);
 
 	pthread_setspecific(iv_state_key, NULL);
-#ifdef HAVE_THREAD
-	__st = NULL;
-#endif
 
 	free(st);
 }
@@ -65,9 +59,6 @@ void iv_init(void)
 	st = calloc(1, iv_tls_total_state_size());
 
 	pthread_setspecific(iv_state_key, st);
-#ifdef HAVE_THREAD
-	__st = st;
-#endif
 
 	iv_fd_init(st);
 	iv_task_init(st);
@@ -78,12 +69,7 @@ void iv_init(void)
 
 int iv_inited(void)
 {
-#ifndef HAVE_THREAD
-	if (!iv_state_key_allocated)
-		return 0;
-#endif
-
-	return iv_get_state() != NULL;
+	return iv_state_key_allocated && (iv_get_state() != NULL);
 }
 
 void iv_quit(void)

@@ -163,6 +163,14 @@ struct iv_fd_poll_method {
 	void	(*event_send)(struct iv_state *dest);
 };
 
+extern pthread_key_t iv_state_key;
+
+static inline struct iv_state *iv_get_state(void)
+{
+	return pthread_getspecific(iv_state_key);
+}
+
+
 extern int maxfd;
 extern const struct iv_fd_poll_method *method;
 
@@ -184,20 +192,3 @@ void iv_fd_make_ready(struct iv_list_head *active,
 		      struct iv_fd_ *fd, int bands);
 void iv_fd_set_cloexec(int fd);
 void iv_fd_set_nonblock(int fd);
-
-
-#ifdef HAVE_THREAD
-extern __thread struct iv_state *__st;
-
-static inline struct iv_state *iv_get_state(void)
-{
-	return __st;
-}
-#else
-extern pthread_key_t iv_state_key;
-
-static inline struct iv_state *iv_get_state(void)
-{
-	return pthread_getspecific(iv_state_key);
-}
-#endif
