@@ -181,9 +181,6 @@ extern const struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern const struct iv_fd_poll_method iv_fd_poll_method_port;
 extern const struct iv_fd_poll_method iv_fd_poll_method_ppoll;
 
-/* iv_event_posix.c */
-void iv_event_run_pending_events(void);
-
 /* iv_fd.c */
 void iv_fd_init(struct iv_state *st);
 void iv_fd_deinit(struct iv_state *st);

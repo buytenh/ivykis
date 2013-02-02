@@ -76,6 +76,9 @@ struct iv_timer_ {
  */
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
+/* iv_event.c */
+void iv_event_run_pending_events(void);
+
 /* iv_task.c */
 void iv_task_init(struct iv_state *st);
 void iv_run_tasks(struct iv_state *st);
