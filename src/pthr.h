@@ -33,8 +33,12 @@ static inline int pthreads_available(void)
 
 #ifdef HAVE_PRAGMA_WEAK
 #pragma weak pthread_atfork
+#pragma weak pthread_create
+#pragma weak pthread_detach
 #pragma weak pthread_getspecific
+#pragma weak pthread_join
 #pragma weak pthread_key_create
+#pragma weak pthread_self
 #pragma weak pthread_setspecific
 #pragma weak pthread_sigmask
 #endif
@@ -53,6 +57,25 @@ pthr_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
 	return ENOSYS;
 }
 
+static inline int pthr_create(pthread_t *thread, const pthread_attr_t *attr,
+			      void *(*start_routine)(void *), void *arg)
+{
+	if (pthreads_available())
+		return pthread_create(thread, attr, start_routine, arg);
+
+	return ENOSYS;
+}
+
+static inline int pthr_detach(pthread_t thread)
+{
+	if (pthreads_available())
+		return pthread_detach(thread);
+
+	iv_fatal("pthr_detach: called while pthreads isn't available");
+
+	return ENOSYS;
+}
+
 static inline void *pthr_getspecific(pthr_key_t *key)
 {
 	if (pthreads_available())
@@ -61,12 +84,30 @@ static inline void *pthr_getspecific(pthr_key_t *key)
 	return (void *)key->ptr;
 }
 
+static inline int pthr_join(pthread_t thread, void **retval)
+{
+	if (pthreads_available())
+		return pthread_join(thread, retval);
+
+	iv_fatal("pthr_join: called while pthreads isn't available");
+
+	return ENOSYS;
+}
+
 static inline int pthr_key_create(pthr_key_t *key, void (*destructor)(void*))
 {
 	if (pthreads_available())
 		return pthread_key_create(&key->pk, destructor);
 
 	return 0;
+}
+
+static inline unsigned long pthr_self(void)
+{
+	if (pthreads_available())
+		return (unsigned long)pthread_self();
+
+	return getpid();
 }
 
 static inline int pthr_setspecific(pthr_key_t *key, const void *value)

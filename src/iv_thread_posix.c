@@ -24,9 +24,16 @@
 #include <iv_event.h>
 #include <iv_thread.h>
 #include <iv_tls.h>
-#include <pthread.h>
 #include <string.h>
-#include "config.h"
+#include "iv_private.h"
+
+#ifdef HAVE_PRAGMA_WEAK
+#pragma weak __pthread_register_cancel
+#pragma weak __pthread_unregister_cancel
+#pragma weak _pthread_cleanup_pop
+#pragma weak _pthread_cleanup_push
+#endif
+
 
 /* thread ID ****************************************************************/
 #ifdef HAVE_PROCESS_H
@@ -62,7 +69,7 @@ static unsigned long get_thread_id(void)
 	thread_id = thr_self();
 #else
 #warning using pthread_self for get_thread_id
-	thread_id = (unsigned long)pthread_self();
+	thread_id = pthr_self();
 #endif
 
 	return thread_id;
@@ -104,7 +111,7 @@ static void iv_thread_tls_deinit_thread(void *_tinfo)
 		struct iv_thread *thr;
 
 		thr = iv_list_entry(ilh, struct iv_thread, list);
-		pthread_detach(thr->thread_id);
+		pthr_detach(thr->thread_id);
 	}
 }
 
@@ -157,7 +164,7 @@ static void iv_thread_died(void *_thr)
 {
 	struct iv_thread *thr = _thr;
 
-	pthread_join(thr->thread_id, NULL);
+	pthr_join(thr->thread_id, NULL);
 
 	if (iv_thread_debug)
 		fprintf(stderr, "iv_thread: [%s] joined\n", thr->name);
@@ -188,7 +195,7 @@ int iv_thread_create(const char *name, void (*start_routine)(void *), void *arg)
 	thr->start_routine = start_routine;
 	thr->arg = arg;
 
-	ret = pthread_create(&thr->thread_id, NULL, iv_thread_handler, thr);
+	ret = pthr_create(&thr->thread_id, NULL, iv_thread_handler, thr);
 	if (ret)
 		goto out;
 
@@ -205,7 +212,7 @@ out:
 	free(thr);
 
 	if (iv_thread_debug) {
-		fprintf(stderr, "iv_thread: pthread_create for [%s] "
+		fprintf(stderr, "iv_thread: pthr_create for [%s] "
 				"failed with error %d[%s]\n", name, ret,
 					strerror(ret));
 	}
