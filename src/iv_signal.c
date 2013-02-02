@@ -23,7 +23,6 @@
 #include <inttypes.h>
 #include <iv_list.h>
 #include <iv_signal.h>
-#include <pthread.h>
 #include <string.h>
 #include "spinlock.h"
 
@@ -80,7 +79,7 @@ static void iv_signal_child(void)
 {
 	spin_init(&sig_interests_lock);
 
-	pthread_sigmask(SIG_SETMASK, &sig_mask_fork, NULL);
+	pthr_sigmask(SIG_SETMASK, &sig_mask_fork, NULL);
 }
 
 static void iv_signal_init(void) __attribute__((constructor));
@@ -90,7 +89,7 @@ static void iv_signal_init(void)
 
 	INIT_IV_AVL_TREE(&sig_interests, iv_signal_compare);
 
-	pthread_atfork(iv_signal_prepare, iv_signal_parent, iv_signal_child);
+	pthr_atfork(iv_signal_prepare, iv_signal_parent, iv_signal_child);
 }
 
 static struct iv_avl_node *__iv_signal_find_first(int signum)

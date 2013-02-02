@@ -32,15 +32,26 @@ static inline int pthreads_available(void)
 
 
 #ifdef HAVE_PRAGMA_WEAK
+#pragma weak pthread_atfork
 #pragma weak pthread_getspecific
 #pragma weak pthread_key_create
 #pragma weak pthread_setspecific
+#pragma weak pthread_sigmask
 #endif
 
 typedef union {
 	pthread_key_t	pk;
 	const void	*ptr;
 } pthr_key_t;
+
+static inline int
+pthr_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
+{
+	if (pthreads_available())
+		return pthread_atfork(prepare, parent, child);
+
+	return ENOSYS;
+}
 
 static inline void *pthr_getspecific(pthr_key_t *key)
 {
@@ -66,4 +77,12 @@ static inline int pthr_setspecific(pthr_key_t *key, const void *value)
 	key->ptr = value;
 
 	return 0;
+}
+
+static inline int pthr_sigmask(int how, const sigset_t *set, sigset_t *oldset)
+{
+	if (pthreads_available())
+		return pthread_sigmask(how, set, oldset);
+
+	return sigprocmask(how, set, oldset);
 }
