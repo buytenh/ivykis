@@ -178,6 +178,9 @@ AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
 	 )], [ac_cv_header_linux_netfilter_ipv4_h=yes], [])
 	])
 
+# Check for pthread_spinlock_t.
+AC_CHECK_TYPES([pthread_spinlock_t], [], [], [[#include <pthread.h>]])
+
 # Check which header file defines 'struct timespec'.
 for hdr in sys/time.h sys/timers.h time.h pthread.h
 do
@@ -277,7 +280,6 @@ AC_CHECK_FUNCS([lwp_gettid])
 AC_CHECK_FUNCS([pipe2])
 AC_CHECK_FUNCS([port_create])
 AC_CHECK_FUNCS([ppoll])
-AC_CHECK_FUNCS([pthread_spin_lock])
 AC_CHECK_FUNCS([thr_self])
 
 #
