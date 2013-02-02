@@ -18,10 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <unistd.h>
 #include "config.h"
 #include "iv_private.h"
 
-#if defined(HAVE_PTHREAD_SPIN_LOCK)
+#ifdef HAVE_PTHREAD_SPIN_LOCK
 #define spinlock_t		pthread_spinlock_t
 
 static inline void spin_init(spinlock_t *lock)
@@ -38,27 +39,7 @@ static inline void spin_unlock(spinlock_t *lock)
 {
 	pthread_spin_unlock(lock);
 }
-#elif defined(HAVE_SYNC_LOCK_TEST_AND_SET)
-typedef unsigned long spinlock_t;
-
-static inline void spin_init(spinlock_t *lock)
-{
-	*lock = 0;
-}
-
-static inline void spin_lock(spinlock_t *lock)
-{
-	while (__sync_lock_test_and_set(lock, 1) == 1)
-		;
-}
-
-static inline void spin_unlock(spinlock_t *lock)
-{
-	__sync_lock_release(lock);
-}
 #else
-#include <unistd.h>
-
 typedef struct {
 	int	fd[2];
 } spinlock_t;
