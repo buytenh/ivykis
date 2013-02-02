@@ -193,6 +193,19 @@ fi
 AC_SUBST(ac_cv_timespec_hdr)
 
 #
+# Check for working support for #pragma weak.  This doesn't work
+# quite right on HP-UX.
+#
+case $host_os in
+hpux*)
+	;;
+*)
+	AC_DEFINE(HAVE_PRAGMA_WEAK, 1,
+		  Define to 1 if system has a working pragma weak)
+	;;
+esac
+
+#
 # Check for clock_gettime() and available time sources.  (We cannot
 # test for the CLOCK_* constants by using #ifdef, as they are enums
 # and not defines on at least HP-UX 11.)

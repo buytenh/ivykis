@@ -20,11 +20,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include "iv_private.h"
 
-static int		iv_state_key_allocated;
-pthread_key_t		iv_state_key;
+static int	iv_state_key_allocated;
+pthr_key_t	iv_state_key;
 
 static void __iv_deinit(struct iv_state *st)
 {
@@ -33,7 +32,7 @@ static void __iv_deinit(struct iv_state *st)
 	iv_fd_deinit(st);
 	iv_timer_deinit(st);
 
-	pthread_setspecific(iv_state_key, NULL);
+	pthr_setspecific(&iv_state_key, NULL);
 
 	free(st);
 }
@@ -42,7 +41,7 @@ static void iv_state_destructor(void *data)
 {
 	struct iv_state *st = data;
 
-	pthread_setspecific(iv_state_key, st);
+	pthr_setspecific(&iv_state_key, st);
 	__iv_deinit(st);
 }
 
@@ -51,14 +50,14 @@ void iv_init(void)
 	struct iv_state *st;
 
 	if (!iv_state_key_allocated) {
-		if (pthread_key_create(&iv_state_key, iv_state_destructor))
+		if (pthr_key_create(&iv_state_key, iv_state_destructor))
 			iv_fatal("iv_init: failed to allocate TLS key");
 		iv_state_key_allocated = 1;
 	}
 
 	st = calloc(1, iv_tls_total_state_size());
 
-	pthread_setspecific(iv_state_key, st);
+	pthr_setspecific(&iv_state_key, st);
 
 	iv_fd_init(st);
 	iv_task_init(st);

@@ -18,7 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <pthread.h>
+#include "pthr.h"
 
 #define MASKIN		1
 #define MASKOUT		2
@@ -163,11 +163,11 @@ struct iv_fd_poll_method {
 	void	(*event_send)(struct iv_state *dest);
 };
 
-extern pthread_key_t iv_state_key;
+extern pthr_key_t iv_state_key;
 
 static inline struct iv_state *iv_get_state(void)
 {
-	return pthread_getspecific(iv_state_key);
+	return pthr_getspecific(&iv_state_key);
 }
 
 
