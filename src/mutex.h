@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2012 Lennert Buytenhek
+ * Copyright (C) 2012, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -19,28 +19,39 @@
  */
 
 #ifndef _WIN32
-#include <pthread.h>
+#ifdef HAVE_PRAGMA_WEAK
+#pragma weak pthread_mutex_init
+#pragma weak pthread_mutex_destroy
+#pragma weak pthread_mutex_lock
+#pragma weak pthread_mutex_unlock
+#endif
 
 typedef pthread_mutex_t __mutex_t;
 
 static inline int mutex_init(__mutex_t *mutex)
 {
-	return pthread_mutex_init(mutex, NULL);
+	if (pthreads_available())
+		return pthread_mutex_init(mutex, NULL);
+
+	return 0;
 }
 
 static inline void mutex_destroy(__mutex_t *mutex)
 {
-	pthread_mutex_destroy(mutex);
+	if (pthreads_available())
+		pthread_mutex_destroy(mutex);
 }
 
 static inline void mutex_lock(__mutex_t *mutex)
 {
-	pthread_mutex_lock(mutex);
+	if (pthreads_available())
+		pthread_mutex_lock(mutex);
 }
 
 static inline void mutex_unlock(__mutex_t *mutex)
 {
-	pthread_mutex_unlock(mutex);
+	if (pthreads_available())
+		pthread_mutex_unlock(mutex);
 }
 #else
 typedef CRITICAL_SECTION __mutex_t;
