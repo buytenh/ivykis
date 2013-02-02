@@ -26,6 +26,7 @@
 #include <sys/syscall.h>
 #include "eventfd-linux.h"
 #include "iv_private.h"
+#include "mutex.h"
 
 static int epoll_support = 2;
 
@@ -248,7 +249,7 @@ static int iv_fd_epoll_create_active_fd(void)
 	return fd;
 }
 
-static pthread_mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
+static __mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int iv_active_fd_refcount;
 static int iv_active_fd;
 
@@ -257,10 +258,10 @@ static int iv_fd_epoll_event_rx_on(struct iv_state *st)
 	struct epoll_event event;
 	int ret;
 
-	pthread_mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!iv_active_fd_refcount++)
 		iv_active_fd = iv_fd_epoll_create_active_fd();
-	pthread_mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	event.data.ptr = st;
 	event.events = 0;
@@ -292,10 +293,10 @@ static void iv_fd_epoll_event_rx_off(struct iv_state *st)
 			 "error %d[%s]", errno, strerror(errno));
 	}
 
-	pthread_mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!--iv_active_fd_refcount)
 		close(iv_active_fd);
-	pthread_mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	st->numobjs--;
 }
