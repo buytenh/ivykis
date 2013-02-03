@@ -74,6 +74,11 @@ void iv_time_init(struct iv_state *st);
 
 extern DWORD iv_state_index;
 
+static inline int is_mt_app(void)
+{
+	return 1;
+}
+
 static inline struct iv_state *iv_get_state(void)
 {
 	return TlsGetValue(iv_state_index);

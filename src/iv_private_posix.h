@@ -165,6 +165,11 @@ struct iv_fd_poll_method {
 
 extern pthr_key_t iv_state_key;
 
+static inline int is_mt_app(void)
+{
+	return pthreads_available();
+}
+
 static inline struct iv_state *iv_get_state(void)
 {
 	return pthr_getspecific(&iv_state_key);
