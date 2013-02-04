@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010, 2012 Lennert Buytenhek
+ * Copyright (C) 2010, 2012, 2013 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -24,152 +24,254 @@
 #include <iv_thread.h>
 #include <iv_tls.h>
 #include <string.h>
+#include "iv_thread_private.h"
+
 
 /* data structures and global data ******************************************/
-struct iv_thread {
-	struct iv_list_head	list;
-	DWORD			thread_id;
-	struct iv_handle	thread_handle;
-	char			*name;
-	void			(*start_routine)(void *);
-	void			*arg;
-};
-
-static int iv_thread_debug;
+static DWORD iv_thread_index = -1;
 
 
-/* tls **********************************************************************/
-struct iv_thread_thr_info {
-	struct iv_list_head	child_threads;
-};
-
-static void iv_thread_tls_init_thread(void *_tinfo)
+/* thread state handling ****************************************************/
+static void iv_thread_child_died(void *_thr)
 {
-	struct iv_thread_thr_info *tinfo = _tinfo;
+	struct iv_thread *thr = _thr;
 
-	INIT_IV_LIST_HEAD(&tinfo->child_threads);
+	___mutex_lock(&iv_thread_lock);
+
+	if (iv_thread_debug) {
+		struct iv_thread *me;
+
+		me = thr->parent;
+		fprintf(stderr, "iv_thread: [%lx:%s] joined [%lx:%s]\n",
+			me->tid, me->name, thr->tid, thr->name);
+		fflush(stderr);
+	}
+
+	while (!iv_list_empty(&thr->children)) {
+		struct iv_thread *child;
+
+		child = iv_container_of(thr->children.prev,
+					struct iv_thread, list);
+
+		iv_list_del(&child->list);
+		iv_list_add(&child->list, &thr->list);
+
+		child->parent = thr->parent;
+
+		iv_handle_register(&child->thr_handle);
+	}
+	iv_list_del(&thr->list);
+
+	___mutex_unlock(&iv_thread_lock);
+
+	free(thr->name);
+
+	iv_handle_unregister(&thr->thr_handle);
+	CloseHandle(thr->thr_handle.handle);
+
+	free(thr);
 }
 
-static void iv_thread_tls_deinit_thread(void *_tinfo)
+static struct iv_thread *
+iv_thread_new(struct iv_thread *parent, const char *name)
 {
-	struct iv_thread_thr_info *tinfo = _tinfo;
+	struct iv_thread *thr;
+
+	thr = calloc(1, sizeof(struct iv_thread));
+	if (thr == NULL)
+		return NULL;
+
+	thr->parent = parent;
+	thr->name = strdup(name);
+
+	INIT_IV_LIST_HEAD(&thr->children);
+
+	IV_HANDLE_INIT(&thr->thr_handle);
+	thr->thr_handle.cookie = thr;
+	thr->thr_handle.handler = iv_thread_child_died;
+
+	return thr;
+}
+
+struct iv_thread *iv_thread_get_self(void)
+{
+	struct iv_thread *me;
+
+	if (iv_thread_index == -1) {
+		iv_thread_index = TlsAlloc();
+		if (iv_thread_index == TLS_OUT_OF_INDEXES) {
+			iv_fatal("iv_thread_tls_init_thread: failed "
+				 "to allocate TLS key");
+		}
+	}
+
+	me = TlsGetValue(iv_thread_index);
+	if (me != NULL)
+		return me;
+
+	me = iv_thread_new(NULL, "root");
+	if (me == NULL)
+		return NULL;
+
+	TlsSetValue(iv_thread_index, me);
+
+	me->tid = iv_get_thread_id();
+
+	___mutex_lock(&iv_thread_lock);
+	iv_list_add_tail(&me->list, &iv_thread_roots);
+	___mutex_unlock(&iv_thread_lock);
+
+	return me;
+}
+
+
+/* initialization and deinitialization **************************************/
+static void iv_thread_tls_init_thread(void *_dummy)
+{
+	struct iv_thread *me = iv_thread_get_self();
 	struct iv_list_head *ilh;
 
-	iv_list_for_each (ilh, &tinfo->child_threads) {
+	iv_list_for_each (ilh, &me->children) {
 		struct iv_thread *thr;
 
-		thr = iv_list_entry(ilh, struct iv_thread, list);
+		thr = iv_container_of(ilh, struct iv_thread, list);
+		iv_handle_register(&thr->thr_handle);
+	}
+}
 
-		iv_handle_unregister(&thr->thread_handle);
-		CloseHandle(thr->thread_handle.handle);
-		thr->thread_handle.handle = INVALID_HANDLE_VALUE;
+static void iv_thread_tls_deinit_thread(void *_dummy)
+{
+	struct iv_thread *me = iv_thread_get_self();
+	struct iv_list_head *ilh;
+
+	iv_list_for_each (ilh, &me->children) {
+		struct iv_thread *thr;
+
+		thr = iv_container_of(ilh, struct iv_thread, list);
+		iv_handle_unregister(&thr->thr_handle);
 	}
 }
 
 static struct iv_tls_user iv_thread_tls_user = {
-	.sizeof_state	= sizeof(struct iv_thread_thr_info),
 	.init_thread	= iv_thread_tls_init_thread,
 	.deinit_thread	= iv_thread_tls_deinit_thread,
 };
 
-static void iv_thread_tls_init(void) __attribute__((constructor));
-static void iv_thread_tls_init(void)
+static void iv_thread_init(void) __attribute__((constructor));
+static void iv_thread_init(void)
 {
+	___mutex_init(&iv_thread_lock);
+	INIT_IV_LIST_HEAD(&iv_thread_roots);
+
+	iv_thread_debug = 0;
+
 	iv_tls_user_register(&iv_thread_tls_user);
 }
 
-
-/* callee thread ************************************************************/
-static DWORD WINAPI iv_thread_handler(void *_thr)
+void iv_thread_deinit(void)
 {
-	struct iv_thread *thr = _thr;
+	if (iv_thread_index != -1) {
+		TlsFree(iv_thread_index);
+		iv_thread_index = -1;
+	}
 
-	thr->start_routine(thr->arg);
+	___mutex_destroy(&iv_thread_lock);
+}
 
-	return 0;
+void iv_thread_deinit_this_thread(void)
+{
+	struct iv_thread *me;
+
+	if (iv_thread_index == -1)
+		return;
+
+	me = TlsGetValue(iv_thread_index);
+	if (me == NULL || me->parent != NULL)
+		return;
+
+	___mutex_lock(&iv_thread_lock);
+
+	while (!iv_list_empty(&me->children)) {
+		struct iv_thread *thr;
+
+		thr = iv_container_of(me->children.prev,
+				      struct iv_thread, list);
+
+		iv_list_del(&thr->list);
+		iv_list_add(&thr->list, &me->list);
+
+		thr->parent = NULL;
+
+		CloseHandle(thr->thr_handle.handle);
+		thr->thr_handle.handle = INVALID_HANDLE_VALUE;
+	}
+
+	iv_list_del(&me->list);
+
+	___mutex_unlock(&iv_thread_lock);
+
+	free(me->name);
+	free(me);
 }
 
 
-/* calling thread ***********************************************************/
-static void iv_thread_died(void *_thr)
+/* public API ***************************************************************/
+static DWORD WINAPI iv_thread_handler(void *_me)
 {
-	struct iv_thread *thr = _thr;
+	struct iv_thread *me = _me;
 
-	iv_handle_unregister(&thr->thread_handle);
-	CloseHandle(thr->thread_handle.handle);
+	TlsSetValue(iv_thread_index, me);
 
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] terminated\n", thr->name);
+	me->start_routine(me->arg);
 
-	iv_list_del(&thr->list);
-	free(thr->name);
-	free(thr);
+	return 0;
 }
 
 int iv_thread_create(const char *name, void (*start_routine)(void *), void *arg)
 {
-	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
+	struct iv_thread *me;
 	struct iv_thread *thr;
 	HANDLE h;
 
-	thr = malloc(sizeof(*thr));
+	me = iv_thread_get_self();
+	if (me == NULL)
+		return -1;
+
+	thr = iv_thread_new(me, name);
 	if (thr == NULL)
 		return -1;
 
-	IV_HANDLE_INIT(&thr->thread_handle);
-	thr->thread_handle.cookie = thr;
-	thr->thread_handle.handler = iv_thread_died;
-	thr->name = strdup(name);
 	thr->start_routine = start_routine;
 	thr->arg = arg;
+	thr->tid = 0;
 
-	h = CreateThread(NULL, 0, iv_thread_handler, thr, 0, &thr->thread_id);
-	if (h == NULL)
-		goto out;
+	___mutex_lock(&iv_thread_lock);
 
-	thr->thread_handle.handle = h;
-	iv_handle_register(&thr->thread_handle);
-	iv_list_add_tail(&thr->list, &tinfo->child_threads);
+	h = CreateThread(NULL, 0, iv_thread_handler, thr, 0, &thr->tid);
+	if (h != NULL) {
+		if (iv_thread_debug) {
+			fprintf(stderr, "iv_thread: [%lx:%s] started "
+					"[%lx:%s]\n", me->tid, me->name,
+				thr->tid, name);
+			fflush(stderr);
+		}
 
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] started\n", name);
+		thr->thr_handle.handle = h;
+		iv_handle_register(&thr->thr_handle);
 
-	return 0;
+		iv_list_add_tail(&thr->list, &me->children);
+	} else {
+		if (iv_thread_debug) {
+			fprintf(stderr, "iv_thread: [%lx:%s] starting [%s] "
+					"failed\n", me->tid, me->name, name);
+			fflush(stderr);
+		}
 
-out:
-	free(thr->name);
-	free(thr);
-
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] failed to start\n", name);
-
-	return -1;
-}
-
-
-/* misc functionality *******************************************************/
-void iv_thread_set_debug_state(int state)
-{
-	iv_thread_debug = !!state;
-}
-
-unsigned long iv_thread_get_id(void)
-{
-	return iv_get_thread_id();
-}
-
-void iv_thread_list_children(void)
-{
-	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
-	struct iv_list_head *ilh;
-
-	fprintf(stderr, "tid\tname\n");
-	fprintf(stderr, "%d\tself\n", (int)GetCurrentThreadId());
-
-	iv_list_for_each (ilh, &tinfo->child_threads) {
-		struct iv_thread *thr;
-
-		thr = iv_list_entry(ilh, struct iv_thread, list);
-		fprintf(stderr, "%d\t%s\n", (int)thr->thread_id, thr->name);
+		free(thr->name);
+		free(thr);
 	}
+
+	___mutex_unlock(&iv_thread_lock);
+
+	return (h != NULL) ? 0 : -1;
 }

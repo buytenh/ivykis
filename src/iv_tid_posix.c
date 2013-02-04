@@ -54,7 +54,7 @@ unsigned long iv_get_thread_id(void)
 	thread_id = thr_self();
 #else
 #warning using pthread_self for iv_get_thread_id
-	thread_id = pthr_self();
+	thread_id = pthr_id();
 #endif
 
 	return thread_id;

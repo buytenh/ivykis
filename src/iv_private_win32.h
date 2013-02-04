@@ -80,6 +80,10 @@ void iv_handle_init(struct iv_state *st);
 void iv_handle_deinit(struct iv_state *st);
 void iv_handle_poll_and_run(struct iv_state *st, const struct timespec *abs);
 
+/* iv_thread_win32.c */
+void iv_thread_deinit(void);
+void iv_thread_deinit_this_thread(void);
+
 /* iv_time_win32.c */
 void iv_time_init(struct iv_state *st);
 

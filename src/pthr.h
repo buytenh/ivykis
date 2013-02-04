@@ -105,6 +105,14 @@ static inline void *pthr_getspecific(pthr_key_t *key)
 	return (void *)key->ptr;
 }
 
+static inline unsigned long pthr_id(void)
+{
+	if (pthreads_available())
+		return (unsigned long)pthread_self();
+
+	return getpid();
+}
+
 static inline int pthr_join(pthread_t thread, void **retval)
 {
 	if (pthreads_available())

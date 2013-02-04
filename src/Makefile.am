@@ -8,6 +8,7 @@ SRC			= iv_avl.c			\
 			  iv_event.c			\
 			  iv_fatal.c			\
 			  iv_task.c			\
+			  iv_thread.c			\
 			  iv_timer.c			\
 			  iv_tls.c			\
 			  iv_work.c
