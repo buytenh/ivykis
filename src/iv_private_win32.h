@@ -25,6 +25,7 @@ struct iv_state {
 
 	/* iv_handle.c  */
 	HANDLE			wait;
+	HANDLE			thread_stop;
 	struct iv_list_head	handles;
 	CRITICAL_SECTION	active_handle_list_lock;
 	struct iv_list_head	active_with_handler;
@@ -60,7 +61,6 @@ struct iv_handle_ {
 	struct iv_list_head	list_active;
 	struct iv_state		*st;
 	HANDLE			signal_handle;
-	HANDLE			thr_handle;
 };
 
 /* iv_handle.c */
