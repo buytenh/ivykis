@@ -29,6 +29,10 @@ void iv_handle_init(struct iv_state *st)
 	if (st->wait == NULL)
 		iv_fatal("iv_handle_init: CreateEvent failed");
 
+	st->thread_stop = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (st->thread_stop == NULL)
+		iv_fatal("iv_handle_init: CreateEvent failed");
+
 	INIT_IV_LIST_HEAD(&st->handles);
 	InitializeCriticalSection(&st->active_handle_list_lock);
 	INIT_IV_LIST_HEAD(&st->active_with_handler);
@@ -44,16 +48,13 @@ iv_handle_stop_poll_thread(struct iv_state *st, struct iv_handle_ *h)
 	SetEvent(h->signal_handle);
 
 	do {
-		ret = WaitForSingleObjectEx(h->thr_handle, INFINITE, TRUE);
+		ret = WaitForSingleObjectEx(st->thread_stop, INFINITE, TRUE);
 	} while (ret == WAIT_IO_COMPLETION);
 
 	if (ret != WAIT_OBJECT_0) {
 		iv_fatal("iv_handle_stop_poll_thread: "
 			 "WaitForSingleObjectEx fail");
 	}
-
-	CloseHandle(h->thr_handle);
-	h->thr_handle = INVALID_HANDLE_VALUE;
 }
 
 void iv_handle_deinit(struct iv_state *st)
@@ -68,6 +69,7 @@ void iv_handle_deinit(struct iv_state *st)
 	}
 
 	CloseHandle(st->wait);
+	CloseHandle(st->thread_stop);
 	DeleteCriticalSection(&st->active_handle_list_lock);
 }
 
@@ -168,6 +170,8 @@ static DWORD WINAPI iv_handle_poll_thread(void *_h)
 	}
 	LeaveCriticalSection(&st->active_handle_list_lock);
 
+	SetEvent(st->thread_stop);
+
 	return 0;
 }
 
@@ -175,6 +179,7 @@ void iv_handle_register(struct iv_handle *_h)
 {
 	struct iv_state *st = iv_get_state();
 	struct iv_handle_ *h = (struct iv_handle_ *)_h;
+	HANDLE t;
 
 	if (!iv_list_empty(&h->list)) {
 		iv_fatal("iv_handle_register: called with handle "
@@ -189,10 +194,10 @@ void iv_handle_register(struct iv_handle *_h)
 	if (h->signal_handle == NULL)
 		iv_fatal("iv_handle_register: CreateEvent failed");
 
-	h->thr_handle = CreateThread(NULL, 0, iv_handle_poll_thread,
-				     (void *)h, 0, NULL);
-	if (h->thr_handle == NULL)
+	t = CreateThread(NULL, 0, iv_handle_poll_thread, (void *)h, 0, NULL);
+	if (t == NULL)
 		iv_fatal("iv_handle_register: CreateThread failed");
+	CloseHandle(t);
 
 	st->numobjs++;
 }
