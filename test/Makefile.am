@@ -67,7 +67,9 @@ null_SOURCES			= null.c
 server_SOURCES			= server.c
 struct_sizes_SOURCES		= struct_sizes.c
 timer_SOURCES			= timer.c
+timer_fairness_SOURCES		= timer_fairness.c
 timer_order_SOURCES		= timer_order.c
+timer_past_SOURCES		= timer_past.c
 
 iv_event_bench_signal_CPPFLAGS	= -D_GNU_SOURCE -I$(top_srcdir)/src/include -I$(top_builddir)/src/include -DUSE_SIGNAL
 iv_event_bench_signal_SOURCES	= iv_event_bench.c
