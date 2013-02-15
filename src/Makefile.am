@@ -96,4 +96,5 @@ noinst_HEADERS		= eventfd-linux.h		\
 			  iv_private_posix.h		\
 			  iv_private_win32.h		\
 			  mutex.h			\
+			  pthr.h			\
 			  spinlock.h
