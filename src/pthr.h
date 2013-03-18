@@ -18,6 +18,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef __PTHR_H
+#define __PTHR_H
+
 #include <pthread.h>
 #include <signal.h>
 
@@ -127,3 +130,6 @@ static inline int pthr_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 
 	return sigprocmask(how, set, oldset);
 }
+
+
+#endif

@@ -18,7 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef __MUTEX_H
+#define __MUTEX_H
+
 #ifndef _WIN32
+#include "pthr.h"
+
 #ifdef HAVE_PRAGMA_WEAK
 #pragma weak pthread_mutex_init
 #pragma weak pthread_mutex_destroy
@@ -77,4 +82,7 @@ static inline void mutex_unlock(__mutex_t *mutex)
 {
 	LeaveCriticalSection(mutex);
 }
+#endif
+
+
 #endif
