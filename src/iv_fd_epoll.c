@@ -21,8 +21,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <iv_list.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/signalfd.h>
 #include <sys/syscall.h>
 #include "eventfd-linux.h"
 #include "iv_private.h"
@@ -65,6 +67,10 @@ static int epollfd_grab(int maxfd)
 	return -1;
 }
 
+static __mutex_t iv_fd_epoll_mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct iv_list_head iv_fd_epoll_threads =
+	IV_LIST_HEAD_INIT(iv_fd_epoll_threads);
+
 static int iv_fd_epoll_init(struct iv_state *st)
 {
 	int fd;
@@ -73,8 +79,16 @@ static int iv_fd_epoll_init(struct iv_state *st)
 	if (fd < 0)
 		return -1;
 
+	mutex_lock(&iv_fd_epoll_mutex);
+
+	iv_list_add_tail(&st->u.epoll.threads, &iv_fd_epoll_threads);
+
 	INIT_IV_LIST_HEAD(&st->u.epoll.notify);
 	st->u.epoll.epoll_fd = fd;
+	st->u.epoll.signal_fd = -1;
+	sigemptyset(&st->u.epoll.sigmask);
+
+	mutex_unlock(&iv_fd_epoll_mutex);
 
 	return 0;
 }
@@ -142,6 +156,9 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 	}
 }
 
+static void iv_fd_epoll_got_signal(struct iv_state *st);
+static void iv_fd_epoll_update_signal_mask(struct iv_state *st);
+
 static void iv_fd_epoll_poll(struct iv_state *st,
 			     struct iv_list_head *active,
 			     const struct timespec *abs)
@@ -168,12 +185,21 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 
 	run_events = 0;
 	for (i = 0; i < ret; i++) {
-		if (batch[i].data.ptr != st) {
+		struct epoll_event *ev = &batch[i];
+		void *ptr = ev->data.ptr;
+
+		if (ptr == st) {
+			run_events = 1;
+		} else if (ptr == &st->u.epoll.signal_fd) {
+			iv_fd_epoll_got_signal(st);
+		} else if (ptr == &st->u.epoll.sigmask) {
+			iv_fd_epoll_update_signal_mask(st);
+		} else {
 			struct iv_fd_ *fd;
 			uint32_t events;
 
-			fd = batch[i].data.ptr;
-			events = batch[i].events;
+			fd = ptr;
+			events = ev->events;
 
 			if (events & (EPOLLIN | EPOLLERR | EPOLLHUP))
 				iv_fd_make_ready(active, fd, MASKIN);
@@ -183,8 +209,6 @@ static void iv_fd_epoll_poll(struct iv_state *st,
 
 			if (events & (EPOLLERR | EPOLLHUP))
 				iv_fd_make_ready(active, fd, MASKERR);
-		} else {
-			run_events = 1;
 		}
 	}
 
@@ -212,6 +236,10 @@ static int iv_fd_epoll_notify_fd_sync(struct iv_state *st, struct iv_fd_ *fd)
 
 static void iv_fd_epoll_deinit(struct iv_state *st)
 {
+	mutex_lock(&iv_fd_epoll_mutex);
+	iv_list_del(&st->u.epoll.threads);
+	mutex_unlock(&iv_fd_epoll_mutex);
+
 	close(st->u.epoll.epoll_fd);
 }
 
@@ -249,25 +277,24 @@ static int iv_fd_epoll_create_active_fd(void)
 	return fd;
 }
 
-static __mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int iv_active_fd_refcount;
-static int iv_active_fd;
+static int iv_event_fd_refcount;
+static int iv_event_fd;
 
 static int iv_fd_epoll_event_rx_on(struct iv_state *st)
 {
 	struct epoll_event event;
 	int ret;
 
-	mutex_lock(&iv_fd_epoll_active_fd_mutex);
-	if (!iv_active_fd_refcount++)
-		iv_active_fd = iv_fd_epoll_create_active_fd();
-	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	mutex_lock(&iv_fd_epoll_mutex);
+	if (!iv_event_fd_refcount++)
+		iv_event_fd = iv_fd_epoll_create_active_fd();
+	mutex_unlock(&iv_fd_epoll_mutex);
 
 	event.data.ptr = st;
 	event.events = 0;
 	do {
 		ret = epoll_ctl(st->u.epoll.epoll_fd, EPOLL_CTL_ADD,
-				iv_active_fd, &event);
+				iv_event_fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret == 0)
@@ -285,7 +312,7 @@ static void iv_fd_epoll_event_rx_off(struct iv_state *st)
 	event.events = 0;
 	do {
 		ret = epoll_ctl(st->u.epoll.epoll_fd, EPOLL_CTL_DEL,
-				iv_active_fd, &event);
+				iv_event_fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -293,10 +320,10 @@ static void iv_fd_epoll_event_rx_off(struct iv_state *st)
 			 "error %d[%s]", errno, strerror(errno));
 	}
 
-	mutex_lock(&iv_fd_epoll_active_fd_mutex);
-	if (!--iv_active_fd_refcount)
-		close(iv_active_fd);
-	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	mutex_lock(&iv_fd_epoll_mutex);
+	if (!--iv_event_fd_refcount)
+		close(iv_event_fd);
+	mutex_unlock(&iv_fd_epoll_mutex);
 
 	st->numobjs--;
 }
@@ -310,7 +337,7 @@ static void iv_fd_epoll_event_send(struct iv_state *dest)
 	event.events = EPOLLIN | EPOLLONESHOT;
 	do {
 		ret = epoll_ctl(dest->u.epoll.epoll_fd, EPOLL_CTL_MOD,
-				iv_active_fd, &event);
+				iv_event_fd, &event);
 	} while (ret < 0 && errno == EINTR);
 
 	if (ret < 0) {
@@ -319,15 +346,111 @@ static void iv_fd_epoll_event_send(struct iv_state *dest)
 	}
 }
 
+#define MAX_SIGS	32
+
+static int sigusers[MAX_SIGS];
+
+static void iv_fd_epoll_got_signal(struct iv_state *st)
+{
+	struct signalfd_siginfo ssi;
+	int ret;
+
+	ret = read(st->u.epoll.signal_fd, &ssi, sizeof(ssi));
+	if (ret < 0) {
+		if (errno != EAGAIN) {
+			iv_fatal("iv_fd_epoll_got_signal: read returned "
+				 "error %d[%s]", errno, strerror(errno));
+		}
+		return;
+	}
+
+	if (ret != sizeof(ssi)) {
+		iv_fatal("iv_fd_epoll_got_signal: read returned "
+			 "%d bytes (expected %d)", ret, (int)sizeof(ssi));
+	}
+
+	iv_signal_deliver(st, ssi.ssi_signo);
+}
+
+static void iv_fd_epoll_update_signal_mask(struct iv_state *st)
+{
+	sigset_t *my_mask = &st->u.epoll.sigmask;
+	sigset_t to_block;
+	int do_block;
+	sigset_t to_unblock;
+	int do_unblock;
+	int i;
+
+	sigemptyset(&to_block);
+	do_block = 0;
+
+	sigemptyset(&to_unblock);
+	do_unblock = 0;
+
+	mutex_lock(&iv_fd_epoll_mutex);
+	for (i = 1; i < MAX_SIGS; i++) {
+		if (sigusers[i] && !sigismember(my_mask, i)) {
+			sigaddset(my_mask, i);
+			sigaddset(&to_block, i);
+			do_block = 1;
+		} else if (!sigusers[i] && sigismember(my_mask, i)) {
+			sigdelset(my_mask, i);
+			sigaddset(&to_unblock, i);
+			do_unblock = 1;
+		}
+	}
+	mutex_unlock(&iv_fd_epoll_mutex);
+
+	if (do_block && pthr_sigmask(SIG_BLOCK, &to_block, NULL) < 0) {
+		iv_fatal("iv_fd_epoll_update_signal_mask: blocking signals "
+			 "returned error %d[%s]", errno, strerror(errno));
+	}
+
+	if (do_unblock && pthr_sigmask(SIG_UNBLOCK, &to_unblock, NULL) < 0) {
+		iv_fatal("iv_fd_epoll_update_signal_mask: unblocking signals "
+			 "returned error %d[%s]", errno, strerror(errno));
+	}
+}
+
+void iv_fd_epoll_signal_register(int signum)
+{
+	struct iv_state *st = iv_get_state();
+
+	if (signum < 0 || signum >= MAX_SIGS)
+		return;
+
+	mutex_lock(&iv_fd_epoll_mutex);
+	sigusers[signum]++;
+	mutex_unlock(&iv_fd_epoll_mutex);
+
+	iv_fd_epoll_update_signal_mask(st);
+}
+
+void iv_fd_epoll_signal_unregister(int signum)
+{
+	struct iv_state *st = iv_get_state();
+
+	if (signum < 0 || signum >= MAX_SIGS)
+		return;
+
+	mutex_lock(&iv_fd_epoll_mutex);
+	sigusers[signum]--;
+	mutex_unlock(&iv_fd_epoll_mutex);
+
+	iv_fd_epoll_update_signal_mask(st);
+}
+
 const struct iv_fd_poll_method iv_fd_poll_method_epoll = {
-	.name		= "epoll",
-	.init		= iv_fd_epoll_init,
-	.poll		= iv_fd_epoll_poll,
-	.unregister_fd	= iv_fd_epoll_unregister_fd,
-	.notify_fd	= iv_fd_epoll_notify_fd,
-	.notify_fd_sync	= iv_fd_epoll_notify_fd_sync,
-	.deinit		= iv_fd_epoll_deinit,
-	.event_rx_on	= iv_fd_epoll_event_rx_on,
-	.event_rx_off	= iv_fd_epoll_event_rx_off,
-	.event_send	= iv_fd_epoll_event_send,
+	.name			= "epoll",
+	.init			= iv_fd_epoll_init,
+	.poll			= iv_fd_epoll_poll,
+	.unregister_fd		= iv_fd_epoll_unregister_fd,
+	.notify_fd		= iv_fd_epoll_notify_fd,
+	.notify_fd_sync		= iv_fd_epoll_notify_fd_sync,
+	.deinit			= iv_fd_epoll_deinit,
+	.event_rx_on		= iv_fd_epoll_event_rx_on,
+	.event_rx_off		= iv_fd_epoll_event_rx_off,
+	.event_send		= iv_fd_epoll_event_send,
+	.signal_register	= iv_fd_epoll_signal_register,
+	.signal_unregister	= iv_fd_epoll_signal_unregister,
 };

@@ -58,8 +58,11 @@ struct iv_state {
 
 #ifdef HAVE_EPOLL_CREATE
 		struct {
-			int			epoll_fd;
+			struct iv_list_head	threads;
 			struct iv_list_head	notify;
+			int			epoll_fd;
+			int			signal_fd;
+			sigset_t		sigmask;
 		} epoll;
 #endif
 
@@ -161,6 +164,8 @@ struct iv_fd_poll_method {
 	int	(*event_rx_on)(struct iv_state *st);
 	void	(*event_rx_off)(struct iv_state *st);
 	void	(*event_send)(struct iv_state *dest);
+	void	(*signal_register)(int signum);
+	void	(*signal_unregister)(int signum);
 };
 
 extern pthr_key_t iv_state_key;
@@ -196,4 +201,5 @@ void iv_fd_set_cloexec(int fd);
 void iv_fd_set_nonblock(int fd);
 
 /* iv_signal.c */
+void iv_signal_deliver(struct iv_state *st, int signum);
 void iv_signal_child_reset_postfork(void);
