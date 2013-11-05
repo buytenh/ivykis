@@ -53,11 +53,12 @@ void iv_set_fatal_msg_handler(void (*handler)(const char *msg));
 /*
  * Time handling.
  */
-const struct timespec *__iv_now_location();
-void iv_validate_now(void);
-void iv_invalidate_now(void);
+const struct timespec *__iv_now_location_valid();
 
-#define iv_now		(*__iv_now_location())
+#define iv_now			(*__iv_now_location_valid())
+#define iv_validate_now()
+
+void iv_invalidate_now(void);
 
 
 #ifndef _WIN32

@@ -51,6 +51,7 @@ global:
 	iv_invalidate_now;
 	iv_validate_now;
 	__iv_now_location;
+	__iv_now_location_valid;
 	IV_TIMER_INIT;
 	iv_timer_register;
 	iv_timer_unregister;

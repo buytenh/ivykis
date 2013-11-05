@@ -25,6 +25,9 @@
 #include <time.h>
 #include "iv_private.h"
 
+#undef iv_validate_now
+
+
 /* time handling ************************************************************/
 void iv_invalidate_now(void)
 {
@@ -46,6 +49,18 @@ void iv_validate_now(void)
 const struct timespec *__iv_now_location(void)
 {
 	struct iv_state *st = iv_get_state();
+
+	return &st->time;
+}
+
+const struct timespec *__iv_now_location_valid(void)
+{
+	struct iv_state *st = iv_get_state();
+
+	if (!st->time_valid) {
+		st->time_valid = 1;
+		iv_time_get(&st->time);
+	}
 
 	return &st->time;
 }
