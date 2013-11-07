@@ -33,7 +33,7 @@
 
 typedef pthread_mutex_t __mutex_t;
 
-static inline int mutex_init(__mutex_t *mutex)
+static inline int __mutex_init(__mutex_t *mutex)
 {
 	if (pthreads_available())
 		return pthread_mutex_init(mutex, NULL);
@@ -41,19 +41,19 @@ static inline int mutex_init(__mutex_t *mutex)
 	return 0;
 }
 
-static inline void mutex_destroy(__mutex_t *mutex)
+static inline void __mutex_destroy(__mutex_t *mutex)
 {
 	if (pthreads_available())
 		pthread_mutex_destroy(mutex);
 }
 
-static inline void mutex_lock(__mutex_t *mutex)
+static inline void __mutex_lock(__mutex_t *mutex)
 {
 	if (pthreads_available())
 		pthread_mutex_lock(mutex);
 }
 
-static inline void mutex_unlock(__mutex_t *mutex)
+static inline void __mutex_unlock(__mutex_t *mutex)
 {
 	if (pthreads_available())
 		pthread_mutex_unlock(mutex);
@@ -61,24 +61,24 @@ static inline void mutex_unlock(__mutex_t *mutex)
 #else
 typedef CRITICAL_SECTION __mutex_t;
 
-static inline int mutex_init(__mutex_t *mutex)
+static inline int __mutex_init(__mutex_t *mutex)
 {
 	InitializeCriticalSection(mutex);
 
 	return 0;
 }
 
-static inline void mutex_destroy(__mutex_t *mutex)
+static inline void __mutex_destroy(__mutex_t *mutex)
 {
 	DeleteCriticalSection(mutex);
 }
 
-static inline void mutex_lock(__mutex_t *mutex)
+static inline void __mutex_lock(__mutex_t *mutex)
 {
 	EnterCriticalSection(mutex);
 }
 
-static inline void mutex_unlock(__mutex_t *mutex)
+static inline void __mutex_unlock(__mutex_t *mutex)
 {
 	LeaveCriticalSection(mutex);
 }

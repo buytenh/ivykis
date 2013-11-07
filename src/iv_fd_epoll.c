@@ -258,10 +258,10 @@ static int iv_fd_epoll_event_rx_on(struct iv_state *st)
 	struct epoll_event event;
 	int ret;
 
-	mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	__mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!iv_active_fd_refcount++)
 		iv_active_fd = iv_fd_epoll_create_active_fd();
-	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	__mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	event.data.ptr = st;
 	event.events = 0;
@@ -293,10 +293,10 @@ static void iv_fd_epoll_event_rx_off(struct iv_state *st)
 			 "error %d[%s]", errno, strerror(errno));
 	}
 
-	mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	__mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!--iv_active_fd_refcount)
 		close(iv_active_fd);
-	mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	__mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	st->numobjs--;
 }

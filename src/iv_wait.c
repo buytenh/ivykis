@@ -99,7 +99,7 @@ static int iv_wait_status_dead(int status)
 
 static void iv_wait_got_sigchld(void *_dummy)
 {
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 	while (1) {
 		pid_t pid;
 		int status;
@@ -162,7 +162,7 @@ static void iv_wait_got_sigchld(void *_dummy)
 			p->flags = IV_WAIT_STATUS_DEAD;
 		}
 	}
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 }
 
 struct iv_wait_thr_info {
@@ -193,7 +193,7 @@ static struct iv_tls_user iv_wait_tls_user = {
 static void iv_wait_tls_init(void) __attribute__((constructor));
 static void iv_wait_tls_init(void)
 {
-	mutex_init(&iv_wait_lock);
+	__mutex_init(&iv_wait_lock);
 
 	iv_tls_user_register(&iv_wait_tls_user);
 }
@@ -204,9 +204,9 @@ static void iv_wait_completion(void *_this)
 	struct iv_wait_interest *this = _this;
 	struct iv_list_head events;
 
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 	__iv_list_steal_elements(&this->events_pending, &events);
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 
 	tinfo->handled_wait_interest = this;
 
@@ -254,9 +254,9 @@ void iv_wait_interest_register(struct iv_wait_interest *this)
 
 	__iv_wait_interest_register(tinfo, this);
 
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 	iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 }
 
 static void __iv_wait_interest_unregister(struct iv_wait_thr_info *tinfo,
@@ -288,11 +288,11 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 
 	__iv_wait_interest_register(tinfo, this);
 
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 
 	pid = fork();
 	if (pid < 0) {
-		mutex_unlock(&iv_wait_lock);
+		__mutex_unlock(&iv_wait_lock);
 		__iv_wait_interest_unregister(tinfo, this);
 		return pid;
 	}
@@ -306,7 +306,7 @@ int iv_wait_interest_register_spawn(struct iv_wait_interest *this,
 		iv_avl_tree_insert(&iv_wait_interests, &this->avl_node);
 	}
 
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 
 	return 0;
 }
@@ -315,10 +315,10 @@ void iv_wait_interest_unregister(struct iv_wait_interest *this)
 {
 	struct iv_wait_thr_info *tinfo = iv_tls_user_ptr(&iv_wait_tls_user);
 
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 	if (!(this->flags & IV_WAIT_STATUS_DEAD))
 		iv_avl_tree_delete(&iv_wait_interests, &this->avl_node);
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 
 	__iv_wait_interest_unregister(tinfo, this);
 }
@@ -327,12 +327,12 @@ int iv_wait_interest_kill(const struct iv_wait_interest *this, int sig)
 {
 	int ret;
 
-	mutex_lock(&iv_wait_lock);
+	__mutex_lock(&iv_wait_lock);
 	if (!(this->flags & IV_WAIT_STATUS_DEAD))
 		ret = kill(this->pid, sig);
 	else
 		ret = -ESRCH;
-	mutex_unlock(&iv_wait_lock);
+	__mutex_unlock(&iv_wait_lock);
 
 	return ret;
 }

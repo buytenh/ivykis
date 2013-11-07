@@ -46,10 +46,10 @@ static void __iv_event_run_pending_events(void *_tinfo)
 	struct iv_event_thr_info *tinfo = _tinfo;
 	struct iv_list_head events;
 
-	mutex_lock(&tinfo->list_mutex);
+	__mutex_lock(&tinfo->list_mutex);
 
 	if (iv_list_empty(&tinfo->pending_events)) {
-		mutex_unlock(&tinfo->list_mutex);
+		__mutex_unlock(&tinfo->list_mutex);
 		return;
 	}
 
@@ -62,13 +62,13 @@ static void __iv_event_run_pending_events(void *_tinfo)
 		iv_list_del_init(&ie->list);
 		empty_now = !!iv_list_empty(&events);
 
-		mutex_unlock(&tinfo->list_mutex);
+		__mutex_unlock(&tinfo->list_mutex);
 
 		ie->handler(ie->cookie);
 		if (empty_now)
 			break;
 
-		mutex_lock(&tinfo->list_mutex);
+		__mutex_lock(&tinfo->list_mutex);
 	}
 }
 
@@ -86,7 +86,7 @@ static void iv_event_tls_init_thread(void *_tinfo)
 	tinfo->run_locally_queued.cookie = tinfo;
 	tinfo->run_locally_queued.handler = __iv_event_run_pending_events;
 
-	mutex_init(&tinfo->list_mutex);
+	__mutex_init(&tinfo->list_mutex);
 
 	INIT_IV_LIST_HEAD(&tinfo->pending_events);
 }
@@ -95,7 +95,7 @@ static void iv_event_tls_deinit_thread(void *_tinfo)
 {
 	struct iv_event_thr_info *tinfo = _tinfo;
 
-	mutex_destroy(&tinfo->list_mutex);
+	__mutex_destroy(&tinfo->list_mutex);
 }
 
 static struct iv_tls_user iv_event_tls_user = {
@@ -152,9 +152,9 @@ void iv_event_unregister(struct iv_event *this)
 	struct iv_event_thr_info *tinfo = this->tinfo;
 
 	if (!iv_list_empty(&this->list)) {
-		mutex_lock(&tinfo->list_mutex);
+		__mutex_lock(&tinfo->list_mutex);
 		iv_list_del(&this->list);
-		mutex_unlock(&tinfo->list_mutex);
+		__mutex_unlock(&tinfo->list_mutex);
 	}
 
 	if (!--tinfo->event_count && is_mt_app()) {
@@ -174,13 +174,13 @@ void iv_event_post(struct iv_event *this)
 
 	post = 0;
 
-	mutex_lock(&tinfo->list_mutex);
+	__mutex_lock(&tinfo->list_mutex);
 	if (iv_list_empty(&this->list)) {
 		if (iv_list_empty(&tinfo->pending_events))
 			post = 1;
 		iv_list_add_tail(&this->list, &tinfo->pending_events);
 	}
-	mutex_unlock(&tinfo->list_mutex);
+	__mutex_unlock(&tinfo->list_mutex);
 
 	if (post) {
 		struct iv_event_thr_info *me;
