@@ -131,8 +131,10 @@ static inline void spin_unlock(spinlock_t *lock)
 
 static inline void spin_lock_sigmask(spinlock_t *lock, sigset_t *mask)
 {
-	sigfillset(mask);
-	pthr_sigmask(SIG_BLOCK, mask, mask);
+	sigset_t all;
+
+	sigfillset(&all);
+	pthr_sigmask(SIG_BLOCK, &all, mask);
 
 	spin_lock(lock);
 }
