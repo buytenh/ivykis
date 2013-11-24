@@ -169,7 +169,13 @@ static inline int to_msec(struct iv_state *st, const struct timespec *abs)
 		struct timespec rel;
 
 		to_relative(st, &rel, abs);
-		return 1000 * rel.tv_sec + ((rel.tv_nsec + 999999) / 1000000);
+
+		if (rel.tv_sec < 86400) {
+			return 1000 * rel.tv_sec +
+				((rel.tv_nsec + 999999) / 1000000);
+		}
+
+		return 86400000;
 	}
 
 	return -1;
