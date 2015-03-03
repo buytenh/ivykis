@@ -14,7 +14,7 @@ man3_MANS	= iv_deinit.3				\
 		  iv_fd.3				\
 		  iv_fd_pump.3				\
 		  iv_fd_pump_destroy.3			\
-		  IV_FD_PUMP_INIT.3			\
+		  IV_FD_PUMP_INITIALIZE.3			\
 		  iv_fd_pump_init.3			\
 		  iv_fd_pump_is_done.3			\
 		  iv_fd_pump_pump.3			\
