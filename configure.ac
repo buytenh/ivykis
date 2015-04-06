@@ -168,6 +168,8 @@ AC_CHECK_HEADERS([sys/syscall.h])
 # Older FreeBSDs (6.1) don't include sys/ucontext.h in sys/thr.h.
 AC_CHECK_HEADERS([sys/thr.h], [], [], [#include <sys/ucontext.h>])
 AC_CHECK_HEADERS([thread.h])
+# Check whether the filesystem is case-sensitive
+AC_CHECK_FILES([IV_FD_PUMP_INIT.3, iv_fd_pump_init.3], [$case_sensitive="yes"], [$case_sensitive="no"])
 
 # Check for <linux/netfilter_ipv4.h> header file.
 AC_CACHE_CHECK(for linux/netfilter_ipv4.h, ac_cv_header_linux_netfilter_ipv4_h,
@@ -360,6 +362,7 @@ AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
 AM_CONDITIONAL([HAVE_VERSIONING], [test x$ac_cv_prog_ld_version_script = xyes])
+AM_CONDITIONAL([HAVE_CASE_SUPPORT], [test x$case_sensitive = xyes])
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
