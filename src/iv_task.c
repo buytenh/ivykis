@@ -30,8 +30,12 @@ void iv_task_init(struct iv_state *st)
 void iv_run_tasks(struct iv_state *st)
 {
 	struct iv_list_head tasks;
+	uint32_t epoch;
 
 	__iv_list_steal_elements(&st->tasks, &tasks);
+	epoch = ++st->task_epoch;
+
+	st->tasks_current = &tasks;
 	while (!iv_list_empty(&tasks)) {
 		struct iv_task_ *t;
 
@@ -40,15 +44,19 @@ void iv_run_tasks(struct iv_state *st)
 
 		st->numobjs--;
 
+		t->epoch = epoch;
 		t->handler(t->cookie);
 	}
+	st->tasks_current = NULL;
 }
 
 void IV_TASK_INIT(struct iv_task *_t)
 {
+	struct iv_state *st = iv_get_state();
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	INIT_IV_LIST_HEAD(&t->list);
+	t->epoch = st->task_epoch;
 }
 
 void iv_task_register(struct iv_task *_t)
@@ -60,7 +68,10 @@ void iv_task_register(struct iv_task *_t)
 		iv_fatal("iv_task_register: called with task still on a list");
 
 	st->numobjs++;
-	iv_list_add_tail(&t->list, &st->tasks);
+	if (st->tasks_current == NULL || t->epoch == st->task_epoch)
+		iv_list_add_tail(&t->list, &st->tasks);
+	else
+		iv_list_add_tail(&t->list, st->tasks_current);
 }
 
 void iv_task_unregister(struct iv_task *_t)

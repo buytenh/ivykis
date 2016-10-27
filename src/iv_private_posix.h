@@ -37,6 +37,8 @@ struct iv_state {
 
 	/* iv_task.c  */
 	struct iv_list_head	tasks;
+	struct iv_list_head	*tasks_current;
+	uint32_t		task_epoch;
 
 	/* iv_timer.c  */
 	struct timespec		time;

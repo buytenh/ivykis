@@ -54,6 +54,7 @@ struct iv_task_ {
 	 * Private data.
 	 */
 	struct iv_list_head	list;
+	uint32_t		epoch;
 };
 
 struct iv_timer_ {
