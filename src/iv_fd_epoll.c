@@ -254,7 +254,7 @@ static int iv_fd_epoll_create_active_fd(void)
 	return fd;
 }
 
-static __mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
+static ___mutex_t iv_fd_epoll_active_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int iv_active_fd_refcount;
 static int iv_active_fd;
 
@@ -263,10 +263,10 @@ static int iv_fd_epoll_event_rx_on(struct iv_state *st)
 	struct epoll_event event;
 	int ret;
 
-	__mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	___mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!iv_active_fd_refcount++)
 		iv_active_fd = iv_fd_epoll_create_active_fd();
-	__mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	___mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	event.data.ptr = st;
 	event.events = 0;
@@ -298,10 +298,10 @@ static void iv_fd_epoll_event_rx_off(struct iv_state *st)
 			 "error %d[%s]", errno, strerror(errno));
 	}
 
-	__mutex_lock(&iv_fd_epoll_active_fd_mutex);
+	___mutex_lock(&iv_fd_epoll_active_fd_mutex);
 	if (!--iv_active_fd_refcount)
 		close(iv_active_fd);
-	__mutex_unlock(&iv_fd_epoll_active_fd_mutex);
+	___mutex_unlock(&iv_fd_epoll_active_fd_mutex);
 
 	st->numobjs--;
 }
