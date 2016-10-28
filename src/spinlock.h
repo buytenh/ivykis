@@ -27,6 +27,8 @@ typedef struct {
 
 static inline void fallback_spin_init(fallback_spinlock_t *lock)
 {
+	int ret;
+
 	if (pipe(lock->fd) < 0) {
 		iv_fatal("fallback_spin_init: pipe() returned error %d[%s]",
 			 errno, strerror(errno));
@@ -35,7 +37,9 @@ static inline void fallback_spin_init(fallback_spinlock_t *lock)
 	iv_fd_set_cloexec(lock->fd[0]);
 	iv_fd_set_cloexec(lock->fd[1]);
 
-	write(lock->fd[1], "", 1);
+	do {
+		ret = write(lock->fd[1], "", 1);
+	} while (ret < 0 && errno == EINTR);
 }
 
 static inline void fallback_spin_lock(fallback_spinlock_t *lock)
@@ -57,7 +61,11 @@ static inline void fallback_spin_lock(fallback_spinlock_t *lock)
 
 static inline void fallback_spin_unlock(fallback_spinlock_t *lock)
 {
-	write(lock->fd[1], "", 1);
+	int ret;
+
+	do {
+		ret = write(lock->fd[1], "", 1);
+	} while (ret < 0 && errno == EINTR);
 }
 
 
