@@ -35,7 +35,17 @@ static inline int pthreads_available(void)
 
 
 #ifdef HAVE_PRAGMA_WEAK
+
+/*
+ * On Linux, pthread_atfork() is defined in libpthread_nonshared.a,
+ * a static library, and we want to avoid "#pragma weak" for that
+ * symbol because that causes it to be undefined even if you link
+ * libpthread_nonshared.a in explicitly.
+ */
+#ifndef HAVE_LIBPTHREAD_NONSHARED
 #pragma weak pthread_atfork
+#endif
+
 #pragma weak pthread_create
 #pragma weak pthread_detach
 #pragma weak pthread_getspecific

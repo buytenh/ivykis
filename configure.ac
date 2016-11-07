@@ -123,15 +123,17 @@ ac_c_werror_flag=$ac_save_c_werror_flag
 # which doesn't get pulled in if libpthread.so.0 is pulled in
 # indirectly, e.g. via -lrt, but does get pulled in if you link against
 # -lpthread, as libpthread.so is a linker script that references both
-# libpthread.so.0 and libpthread_nonshared.a.  Therefore, we test for
-# pthread_atfork(), to make sure that libpthread.so really does get
-# pulled in explicitly via -lpthread rather than implicitly via another
-# shared library dependency.
+# libpthread.so.0 and libpthread_nonshared.a.  As we can link in
+# libpthread_nonshared.a without pulling in libpthread.so.0, explicitly
+# link in libpthread_nonshared.a if it is available.
 #
-# However, on FreeBSD, pthread_atfork() is provided by libc.so, and
-# so, testing for pthread_atfork() in AC_SEARCH_LIBS() doesn't end up
-# making the other pthreads functions available in the linking stage.
-# Additionally test for pthread_create() to handle this.
+AC_CHECK_LIB([pthread_nonshared], [pthread_atfork])
+
+#
+# We cannot use pthread_atfork() for our AC_SEARCH_LIBS() test, as on
+# Linux is it provided by a library that does not provide the rest of
+# the pthread functions (libpthread_nonshared.a), and on FreeBSD it is
+# provided by libc.so itself.  Search for pthread_create() instead.
 #
 # On SCO OpenServer Release 6 and SCO UnixWare 7.1.4, the pthread
 # functions appear to live in libthread, so check for that in
@@ -153,9 +155,7 @@ ac_c_werror_flag=$ac_save_c_werror_flag
 # the C library doesn't define stubs for, and we can test for one of
 # those (pthread_trace_notify_np is one of those symbols).
 #
-AC_SEARCH_LIBS([pthread_atfork], [pthread thread], [],
-	AC_MSG_ERROR(pthreads support is required to build ivykis.))
-AC_SEARCH_LIBS([pthread_create], [pthread], [],
+AC_SEARCH_LIBS([pthread_create], [pthread thread], [],
 	AC_SEARCH_LIBS([__pthread_create], [pthread], [],
 	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
 		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
