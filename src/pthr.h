@@ -25,12 +25,12 @@
 #include <signal.h>
 
 #ifdef HAVE_PRAGMA_WEAK
-#pragma weak pthread_once
+#pragma weak pthread_create
 #endif
 
 static inline int pthreads_available(void)
 {
-	return !!(pthread_once != NULL);
+	return !!(pthread_create != NULL);
 }
 
 
