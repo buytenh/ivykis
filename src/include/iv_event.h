@@ -32,7 +32,7 @@ struct iv_event {
 	void			*cookie;
 	void			(*handler)(void *);
 
-	void			*tinfo;
+	void			*owner;
 	struct iv_list_head	list;
 };
 

@@ -28,32 +28,21 @@
 #include "iv_event_private.h"
 #include "mutex.h"
 
-struct iv_event_thr_info {
-	int			event_count;
-	union {
-		struct iv_event_raw	ier;
-		struct iv_state		*st;
-	} u;
-	struct iv_task		run_locally_queued;
-	___mutex_t		list_mutex;
-	struct iv_list_head	pending_events;
-};
-
 static int iv_event_use_event_raw;
 
-static void __iv_event_run_pending_events(void *_tinfo)
+static void __iv_event_run_pending_events(void *_st)
 {
-	struct iv_event_thr_info *tinfo = _tinfo;
+	struct iv_state *st = _st;
 	struct iv_list_head events;
 
-	___mutex_lock(&tinfo->list_mutex);
+	___mutex_lock(&st->event_list_mutex);
 
-	if (iv_list_empty(&tinfo->pending_events)) {
-		___mutex_unlock(&tinfo->list_mutex);
+	if (iv_list_empty(&st->events_pending)) {
+		___mutex_unlock(&st->event_list_mutex);
 		return;
 	}
 
-	__iv_list_steal_elements(&tinfo->pending_events, &events);
+	__iv_list_steal_elements(&st->events_pending, &events);
 	while (1) {
 		struct iv_event *ie;
 		int empty_now;
@@ -62,85 +51,63 @@ static void __iv_event_run_pending_events(void *_tinfo)
 		iv_list_del_init(&ie->list);
 		empty_now = !!iv_list_empty(&events);
 
-		___mutex_unlock(&tinfo->list_mutex);
+		___mutex_unlock(&st->event_list_mutex);
 
 		ie->handler(ie->cookie);
 		if (empty_now)
 			break;
 
-		___mutex_lock(&tinfo->list_mutex);
+		___mutex_lock(&st->event_list_mutex);
 	}
 }
 
-static void iv_event_tls_init_thread(void *_tinfo)
+void iv_event_init(struct iv_state *st)
 {
-	struct iv_event_thr_info *tinfo = _tinfo;
+	st->event_count = 0;
 
-	tinfo->event_count = 0;
+	IV_TASK_INIT(&st->events_local);
+	st->events_local.cookie = st;
+	st->events_local.handler = __iv_event_run_pending_events;
 
-	IV_EVENT_RAW_INIT(&tinfo->u.ier);
-	tinfo->u.ier.cookie = tinfo;
-	tinfo->u.ier.handler = __iv_event_run_pending_events;
+	IV_EVENT_RAW_INIT(&st->events_kick);
+	st->events_kick.cookie = st;
+	st->events_kick.handler = __iv_event_run_pending_events;
 
-	IV_TASK_INIT(&tinfo->run_locally_queued);
-	tinfo->run_locally_queued.cookie = tinfo;
-	tinfo->run_locally_queued.handler = __iv_event_run_pending_events;
+	___mutex_init(&st->event_list_mutex);
 
-	___mutex_init(&tinfo->list_mutex);
-
-	INIT_IV_LIST_HEAD(&tinfo->pending_events);
+	INIT_IV_LIST_HEAD(&st->events_pending);
 }
 
-static void iv_event_tls_deinit_thread(void *_tinfo)
+void iv_event_deinit(struct iv_state *st)
 {
-	struct iv_event_thr_info *tinfo = _tinfo;
-
-	___mutex_destroy(&tinfo->list_mutex);
-}
-
-static struct iv_tls_user iv_event_tls_user = {
-	.sizeof_state	= sizeof(struct iv_event_thr_info),
-	.init_thread	= iv_event_tls_init_thread,
-	.deinit_thread	= iv_event_tls_deinit_thread,
-};
-
-static void iv_event_tls_init(void) __attribute__((constructor));
-static void iv_event_tls_init(void)
-{
-	iv_tls_user_register(&iv_event_tls_user);
+	___mutex_destroy(&st->event_list_mutex);
 }
 
 void iv_event_run_pending_events(void)
 {
-	__iv_event_run_pending_events(iv_tls_user_ptr(&iv_event_tls_user));
+	__iv_event_run_pending_events(iv_get_state());
 }
 
 int iv_event_register(struct iv_event *this)
 {
 	struct iv_state *st = iv_get_state();
-	struct iv_event_thr_info *tinfo =
-		__iv_tls_user_ptr(st, &iv_event_tls_user);
 
-	if (!tinfo->event_count++ && is_mt_app()) {
-		if (!iv_event_use_event_raw) {
-			if (event_rx_on(st) == 0)
-				tinfo->u.st = st;
-			else
-				iv_event_use_event_raw = 1;
-		}
+	if (!st->event_count++ && is_mt_app()) {
+		if (!iv_event_use_event_raw && event_rx_on(st))
+			iv_event_use_event_raw = 1;
 
 		if (iv_event_use_event_raw) {
 			int ret;
 
-			ret = iv_event_raw_register(&tinfo->u.ier);
+			ret = iv_event_raw_register(&st->events_kick);
 			if (ret) {
-				tinfo->event_count--;
+				st->event_count--;
 				return ret;
 			}
 		}
 	}
 
-	this->tinfo = tinfo;
+	this->owner = st;
 
 	INIT_IV_LIST_HEAD(&this->list);
 
@@ -149,50 +116,48 @@ int iv_event_register(struct iv_event *this)
 
 void iv_event_unregister(struct iv_event *this)
 {
-	struct iv_event_thr_info *tinfo = this->tinfo;
+	struct iv_state *st = this->owner;
 
 	if (!iv_list_empty(&this->list)) {
-		___mutex_lock(&tinfo->list_mutex);
+		___mutex_lock(&st->event_list_mutex);
 		iv_list_del(&this->list);
-		___mutex_unlock(&tinfo->list_mutex);
+		___mutex_unlock(&st->event_list_mutex);
 	}
 
-	if (!--tinfo->event_count && is_mt_app()) {
-		if (!iv_event_use_event_raw) {
-			event_rx_off(tinfo->u.st);
-			tinfo->u.st = NULL;
+	if (!--st->event_count && is_mt_app()) {
+		if (iv_event_use_event_raw) {
+			iv_event_raw_unregister(&st->events_kick);
 		} else {
-			iv_event_raw_unregister(&tinfo->u.ier);
+			event_rx_off(st);
 		}
 	}
 }
 
 void iv_event_post(struct iv_event *this)
 {
-	struct iv_event_thr_info *tinfo = this->tinfo;
+	struct iv_state *dst = this->owner;
 	int post;
 
 	post = 0;
 
-	___mutex_lock(&tinfo->list_mutex);
+	___mutex_lock(&dst->event_list_mutex);
 	if (iv_list_empty(&this->list)) {
-		if (iv_list_empty(&tinfo->pending_events))
+		if (iv_list_empty(&dst->events_pending))
 			post = 1;
-		iv_list_add_tail(&this->list, &tinfo->pending_events);
+		iv_list_add_tail(&this->list, &dst->events_pending);
 	}
-	___mutex_unlock(&tinfo->list_mutex);
+	___mutex_unlock(&dst->event_list_mutex);
 
 	if (post) {
-		struct iv_event_thr_info *me;
+		struct iv_state *me = iv_get_state();
 
-		me = iv_tls_user_ptr(&iv_event_tls_user);
-		if (tinfo == me) {
-			if (!iv_task_registered(&me->run_locally_queued))
-				iv_task_register(&me->run_locally_queued);
-		} else if (!iv_event_use_event_raw) {
-			event_send(tinfo->u.st);
+		if (dst == me) {
+			if (!iv_task_registered(&me->events_local))
+				iv_task_register(&me->events_local);
+		} else if (iv_event_use_event_raw) {
+			iv_event_raw_post(&dst->events_kick);
 		} else {
-			iv_event_raw_post(&tinfo->u.ier);
+			event_send(dst);
 		}
 	}
 }

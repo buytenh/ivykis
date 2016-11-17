@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <iv_event_raw.h>
+#include "mutex.h"
 #include "pthr.h"
 
 #define MASKIN		1
@@ -28,6 +30,13 @@ struct iv_state {
 	/* iv_main_posix.c  */
 	int			quit;
 	int			numobjs;
+
+	/* iv_event.c  */
+	int			event_count;
+	struct iv_task		events_local;
+	struct iv_event_raw	events_kick;
+	___mutex_t		event_list_mutex;
+	struct iv_list_head	events_pending;
 
 	/* iv_fd.c  */
 	int			numfds;

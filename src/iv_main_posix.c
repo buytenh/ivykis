@@ -29,6 +29,8 @@ static void __iv_deinit(struct iv_state *st)
 {
 	iv_tls_thread_deinit(st);
 
+	iv_event_deinit(st);
+
 	iv_fd_deinit(st);
 	iv_timer_deinit(st);
 
@@ -62,6 +64,8 @@ void iv_init(void)
 	iv_fd_init(st);
 	iv_task_init(st);
 	iv_timer_init(st);
+
+	iv_event_init(st);
 
 	iv_tls_thread_init(st);
 }
