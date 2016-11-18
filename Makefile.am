@@ -1,4 +1,4 @@
-SUBDIRS = src test
+SUBDIRS = src test test.mt
 if HAVE_POSIX
 SUBDIRS += contrib misc
 if !BUILD_ON_CYGWIN
