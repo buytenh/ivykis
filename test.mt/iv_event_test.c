@@ -32,7 +32,7 @@ static struct iv_timer tim1;
 
 static void got_ev0(void *_dummy)
 {
-	printf("%lu: got ev0, starting tim0\n", iv_thread_get_id());
+	printf("%lu: got ev0, starting tim0\n", iv_get_thread_id());
 
 	iv_validate_now();
 	tim0.expires = iv_now;
@@ -42,14 +42,14 @@ static void got_ev0(void *_dummy)
 
 static void got_tim0(void *_dummy)
 {
-	printf("%lu: tim0 expired, signaling ev1\n", iv_thread_get_id());
+	printf("%lu: tim0 expired, signaling ev1\n", iv_get_thread_id());
 
 	iv_event_post(&ev1);
 }
 
 static void got_ev1(void *_dummy)
 {
-	printf("%lu: got ev1, starting tim1\n", iv_thread_get_id());
+	printf("%lu: got ev1, starting tim1\n", iv_get_thread_id());
 
 	iv_validate_now();
 	tim1.expires = iv_now;
@@ -59,7 +59,7 @@ static void got_ev1(void *_dummy)
 
 static void got_tim1(void *_dummy)
 {
-	printf("%lu: tim1 expired, signaling ev0\n", iv_thread_get_id());
+	printf("%lu: tim1 expired, signaling ev0\n", iv_get_thread_id());
 
 	iv_event_post(&ev0);
 }

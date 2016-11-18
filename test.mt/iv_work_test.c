@@ -36,7 +36,7 @@ static void work(void *cookie)
 	char *task = cookie;
 
 	printf("performing work item %s in thread %lu\n",
-	       task, iv_thread_get_id());
+	       task, iv_get_thread_id());
 
 #ifndef _WIN32
 	sleep(1);
