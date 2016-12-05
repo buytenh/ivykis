@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2013 Lennert Buytenhek
+ * Copyright (C) 2013, 2016 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -51,6 +51,7 @@ static inline int pthreads_available(void)
 #pragma weak pthread_getspecific
 #pragma weak pthread_join
 #pragma weak pthread_key_create
+#pragma weak pthread_once
 #pragma weak pthread_self
 #pragma weak pthread_setspecific
 #pragma weak pthread_sigmask
@@ -60,6 +61,13 @@ typedef union {
 	pthread_key_t	pk;
 	const void	*ptr;
 } pthr_key_t;
+
+typedef struct {
+	int		called;
+	pthread_once_t	po;
+} pthr_once_t;
+
+#define PTHR_ONCE_INIT	{ 0, PTHREAD_ONCE_INIT, }
 
 static inline int
 pthr_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
@@ -111,6 +119,19 @@ static inline int pthr_key_create(pthr_key_t *key, void (*destructor)(void*))
 {
 	if (pthreads_available())
 		return pthread_key_create(&key->pk, destructor);
+
+	return 0;
+}
+
+static inline int pthr_once(pthr_once_t *once, void (*fn)(void))
+{
+	if (pthreads_available())
+		return pthread_once(&once->po, fn);
+
+	if (once->called == 0) {
+		fn();
+		once->called = 1;
+	}
 
 	return 0;
 }
