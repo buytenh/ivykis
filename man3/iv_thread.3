@@ -1,4 +1,4 @@
-.\" This man page is Copyright (C) 2010 Lennert Buytenhek.
+.\" This man page is Copyright (C) 2010, 2013 Lennert Buytenhek.
 .\" Permission is granted to distribute possibly modified copies
 .\" of this page provided the header is included verbatim,
 .\" and in case of nontrivial modification author and date
@@ -39,15 +39,8 @@ Enabling debugging by calling
 with a nonzero argument will print a debug message to standard error
 whenever a thread is created via
 .B iv_thread_create,
-whenever a thread so created terminates normally by returning from
-its
-.B start_routine,
-self-terminates by calling
-.BR pthread_exit (3),
-or is successfully canceled by
-.BR pthread_cancel (3),
-and whenever destruction of such a thread is signaled back to the
-calling thread.
+whenever a thread so created terminates, and whenever destruction of
+such a thread is signaled back to the calling thread.
 .PP
 For inter-thread signaling,
 .B iv_thread
@@ -58,6 +51,4 @@ uses
 .BR ivykis (3),
 .BR iv_event (3),
 .BR exit (3),
-.BR pthread_cancel (3),
-.BR pthread_create (3),
-.BR pthread_exit (3)
+.BR pthread_create (3)

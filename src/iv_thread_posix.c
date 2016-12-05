@@ -1,6 +1,6 @@
 /*
  * ivykis, an event handling library
- * Copyright (C) 2010 Lennert Buytenhek
+ * Copyright (C) 2010, 2013, 2016 Lennert Buytenhek
  * Dedicated to Marija Kulikova.
  *
  * This library is free software; you can redistribute it and/or modify
@@ -27,14 +27,6 @@
 #include <string.h>
 #include "iv_private.h"
 
-#ifdef HAVE_PRAGMA_WEAK
-#pragma weak __pthread_register_cancel
-#pragma weak __pthread_unregister_cancel
-#pragma weak _pthread_cleanup_pop
-#pragma weak _pthread_cleanup_push
-#endif
-
-
 /* data structures and global data ******************************************/
 struct iv_thread {
 	struct iv_list_head	list;
@@ -46,7 +38,29 @@ struct iv_thread {
 	void			*arg;
 };
 
+static pthr_once_t iv_thread_key_allocated = PTHR_ONCE_INIT;
+static pthr_key_t iv_thread_key;
 static int iv_thread_debug;
+
+
+/* thread state handling ****************************************************/
+static void iv_thread_destructor(void *_thr)
+{
+	struct iv_thread *thr = _thr;
+
+	if (iv_thread_debug)
+		fprintf(stderr, "iv_thread: [%s] terminating\n", thr->name);
+
+	iv_event_post(&thr->dead);
+}
+
+static void iv_thread_allocate_key(void)
+{
+	if (pthr_key_create(&iv_thread_key, iv_thread_destructor)) {
+		iv_fatal("iv_thread_tls_init_thread: failed "
+			 "to allocate TLS key");
+	}
+}
 
 
 /* tls **********************************************************************/
@@ -88,31 +102,14 @@ static void iv_thread_tls_init(void)
 
 
 /* callee thread ************************************************************/
-static void iv_thread_cleanup_handler(void *_thr)
-{
-	struct iv_thread *thr = _thr;
-
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] was canceled\n", thr->name);
-
-	iv_event_post(&thr->dead);
-}
-
 static void *iv_thread_handler(void *_thr)
 {
 	struct iv_thread *thr = _thr;
 
+	pthr_setspecific(&iv_thread_key, thr);
 	thr->tid = iv_get_thread_id();
 
-	pthread_cleanup_push(iv_thread_cleanup_handler, thr);
 	thr->start_routine(thr->arg);
-	pthread_cleanup_pop(0);
-
-	if (iv_thread_debug)
-		fprintf(stderr, "iv_thread: [%s] terminating normally\n",
-			thr->name);
-
-	iv_event_post(&thr->dead);
 
 	return NULL;
 }
@@ -139,6 +136,8 @@ int iv_thread_create(const char *name, void (*start_routine)(void *), void *arg)
 	struct iv_thread_thr_info *tinfo = iv_tls_user_ptr(&iv_thread_tls_user);
 	struct iv_thread *thr;
 	int ret;
+
+	pthr_once(&iv_thread_key_allocated, iv_thread_allocate_key);
 
 	thr = malloc(sizeof(*thr));
 	if (thr == NULL)
