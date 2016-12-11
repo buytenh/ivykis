@@ -111,3 +111,8 @@ IVYKIS_0.40 {
 	# iv_timer
 	__iv_now_location_valid;
 } IVYKIS_0.33;
+
+IVYKIS_0.41 {
+	# iv_thread
+	iv_thread_set_name;
+} IVYKIS_0.40;

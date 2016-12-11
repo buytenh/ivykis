@@ -42,6 +42,27 @@ unsigned long iv_thread_get_id(void)
 	return iv_get_thread_id();
 }
 
+void iv_thread_set_name(const char *name)
+{
+	struct iv_thread *me;
+
+	me = iv_thread_get_self();
+	if (me == NULL)
+		return;
+
+	mutex_lock(&iv_thread_lock);
+
+	if (iv_thread_debug) {
+		fprintf(stderr, "iv_thread: [" TID_FORMAT ":%s] renaming "
+				"to [%s]\n", me->tid, me->name, name);
+	}
+
+	free(me->name);
+	me->name = strdup(name);
+
+	mutex_unlock(&iv_thread_lock);
+}
+
 static void
 __iv_thread_dump_thread(FILE *fp, const struct iv_thread *thr, int level)
 {

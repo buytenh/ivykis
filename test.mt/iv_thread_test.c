@@ -101,6 +101,8 @@ static void *thr_noparent(void *cookie)
 static DWORD WINAPI thr_noparent(void *_thr)
 #endif
 {
+	iv_thread_set_name("noparent");
+
 	iv_init();
 
 	iv_thread_create("testing", thr_testing, NULL);
@@ -121,6 +123,8 @@ int main()
 #ifndef _WIN32
 	pthread_t thr;
 #endif
+
+	iv_thread_set_name("main");
 
 	iv_init();
 
