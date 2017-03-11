@@ -284,6 +284,8 @@ AM_CONDITIONAL([HAVE_INOTIFY], [test x$ac_cv_func_inotify_init = xyes])
 AM_CONDITIONAL([HAVE_LINUX_NETFILTER_IPV4_H],
 		[test x$ac_cv_header_linux_netfilter_ipv4_h = xyes])
 AM_CONDITIONAL([HAVE_VERSIONING], [test x$ac_cv_prog_ld_version_script = xyes])
+AM_CONDITIONAL([HAVE_NOCASESUPPORT_FS], [test x"$(uname -s)" = Darwin])
+
 
 AC_CONFIG_FILES([Makefile			\
 		 contrib/Makefile		\
