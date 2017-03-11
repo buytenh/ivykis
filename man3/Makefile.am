@@ -14,7 +14,6 @@ man3_MANS	= iv_deinit.3				\
 		  iv_fd.3				\
 		  iv_fd_pump.3				\
 		  iv_fd_pump_destroy.3			\
-		  IV_FD_PUMP_INIT.3			\
 		  iv_fd_pump_init.3			\
 		  iv_fd_pump_is_done.3			\
 		  iv_fd_pump_pump.3			\
@@ -67,6 +66,10 @@ man3_MANS	= iv_deinit.3				\
 		  iv_work_pool_put.3			\
 		  iv_work_pool_submit_work.3		\
 		  ivykis.3
+
+if HAVE_CASE_SUPPORT
+man3_MANS	+= IV_FD_PUMP_INIT.3
+endif
 
 if HAVE_INOTIFY
 man3_MANS	+= iv_inotify.3				\
