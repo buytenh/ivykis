@@ -12,7 +12,8 @@ TESTS			= avl				\
 			  timer				\
 			  timer_fairness		\
 			  timer_order			\
-			  timer_past
+			  timer_past			\
+			  timer_zero
 
 if HAVE_POSIX
 PROGS			+= client			\
