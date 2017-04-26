@@ -388,6 +388,8 @@ iv_fd_epoll_timerfd_set_poll_timeout(struct iv_state *st,
 	val.it_interval.tv_sec = 0;
 	val.it_interval.tv_nsec = 0;
 	val.it_value = *abs;
+	if (val.it_value.tv_sec == 0 && val.it_value.tv_nsec == 0)
+		val.it_value.tv_nsec = 1;
 
 	ret = timerfd_settime(st->u.epoll.timer_fd,
 			      TFD_TIMER_ABSTIME, &val, NULL);

@@ -296,6 +296,8 @@ iv_fd_port_set_poll_timeout(struct iv_state *st, const struct timespec *abs)
 	val.it_interval.tv_sec = 0;
 	val.it_interval.tv_nsec = 0;
 	val.it_value = *abs;
+	if (val.it_value.tv_sec == 0 && val.it_value.tv_nsec == 0)
+		val.it_value.tv_nsec = 1;
 
 	ret = timer_settime(st->u.port.timer_id, TIMER_ABSTIME, &val, NULL);
 	if (ret < 0) {
