@@ -56,7 +56,7 @@ void IV_TASK_INIT(struct iv_task *_t)
 	struct iv_task_ *t = (struct iv_task_ *)_t;
 
 	INIT_IV_LIST_HEAD(&t->list);
-	t->epoch = st->task_epoch;
+	t->epoch = (st != NULL) ? st->task_epoch : 0;
 }
 
 void iv_task_register(struct iv_task *_t)
