@@ -341,13 +341,13 @@ void iv_timer_unregister(struct iv_timer *_t)
 			pull_up(st, (*p)->index, p);
 			push_down(st, (*p)->index, p);
 		}
+
+		st->numobjs--;
 	} else {
 		iv_list_del(&t->list_expired);
 	}
 
 	t->index = -1;
-
-	st->numobjs--;
 }
 
 int iv_timer_registered(const struct iv_timer *_t)

@@ -11,6 +11,7 @@ TESTS			= avl				\
 			  struct_sizes			\
 			  timer				\
 			  timer_fairness		\
+			  timer_fairness_bug		\
 			  timer_order			\
 			  timer_past			\
 			  timer_zero
