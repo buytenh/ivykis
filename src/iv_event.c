@@ -58,6 +58,11 @@ static void __iv_event_run_pending_events(void *_st)
 			break;
 
 		___mutex_lock(&st->event_list_mutex);
+
+		if (iv_list_empty(&events)) {
+			___mutex_unlock(&st->event_list_mutex);
+			break;
+		}
 	}
 }
 
