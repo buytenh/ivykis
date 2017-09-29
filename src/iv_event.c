@@ -43,22 +43,19 @@ static void __iv_event_run_pending_events(void *_st)
 	}
 
 	__iv_list_steal_elements(&st->events_pending, &events);
-	while (1) {
+	while (!iv_list_empty(&events)) {
 		struct iv_event *ie;
-		int empty_now;
 
 		ie = iv_container_of(events.next, struct iv_event, list);
 		iv_list_del_init(&ie->list);
-		empty_now = !!iv_list_empty(&events);
 
 		___mutex_unlock(&st->event_list_mutex);
 
 		ie->handler(ie->cookie);
-		if (empty_now)
-			break;
 
 		___mutex_lock(&st->event_list_mutex);
 	}
+	___mutex_unlock(&st->event_list_mutex);
 }
 
 void iv_event_init(struct iv_state *st)
