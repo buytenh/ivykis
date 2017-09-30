@@ -7,6 +7,7 @@ LDADD			= $(top_builddir)/src/libivykis.la
 PROGS			= iv_event_raw_bench_timer
 
 TESTS			= avl				\
+			  event_unregister_bug		\
 			  iv_event_raw_test		\
 			  struct_sizes			\
 			  timer				\
