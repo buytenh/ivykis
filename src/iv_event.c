@@ -97,6 +97,8 @@ int iv_event_register(struct iv_event *this)
 {
 	struct iv_state *st = iv_get_state();
 
+	st->numobjs++;
+
 	if (!st->event_count++ && is_mt_app()) {
 		if (!iv_event_use_event_raw && event_rx_on(st))
 			iv_event_use_event_raw = 1;
@@ -136,6 +138,8 @@ void iv_event_unregister(struct iv_event *this)
 			event_rx_off(st);
 		}
 	}
+
+	st->numobjs--;
 }
 
 void iv_event_post(struct iv_event *this)
