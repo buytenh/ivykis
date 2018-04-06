@@ -69,6 +69,12 @@ osf*)
 	#
 	CFLAGS="$CFLAGS -D_BSD -D_POSIX_PII_SOCKET"
 	;;
+solaris*)
+	#
+	# On Solaris, we want -D_REENTRANT, so that we get the
+	# threadsafe version of 'errno'.
+	#
+	CFLAGS="$CFLAGS -D_REENTRANT"
 esac
 
 #
