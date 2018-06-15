@@ -100,6 +100,11 @@ void iv_run_timers(struct iv_state *st)
 	while (st->num_timers) {
 		struct iv_timer_ *t = st->ratnode.first_leaf.child[1];
 
+		if (t->index != 1) {
+			iv_fatal("iv_run_timers: root timer has heap "
+				 "index %d", t->index);
+		}
+
 		if (timespec_gt(&t->expires, &st->time))
 			break;
 		iv_timer_unregister((struct iv_timer *)t);
