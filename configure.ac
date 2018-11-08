@@ -88,6 +88,8 @@ esac
 # link in libpthread_nonshared.a if it is available.
 #
 AC_CHECK_LIB([pthread_nonshared], [pthread_atfork])
+# the lib is gone in glibc 2.28, things are now in c_nonshared
+AC_CHECK_LIB([c_nonshared], [pthread_atfork])
 
 # Checks for header files.
 AC_CHECK_HEADERS([process.h])

@@ -42,7 +42,7 @@ static inline int pthreads_available(void)
  * symbol because that causes it to be undefined even if you link
  * libpthread_nonshared.a in explicitly.
  */
-#ifndef HAVE_LIBPTHREAD_NONSHARED
+#if !defined(HAVE_LIBPTHREAD_NONSHARED) && !defined(HAVE_LIBC_NONSHARED)
 #pragma weak pthread_atfork
 #endif
 
