@@ -76,7 +76,11 @@ static inline void fallback_spin_unlock(fallback_spinlock_t *lock)
 
 static inline int pthread_spinlocks_available(void)
 {
+#ifdef HAVE_PTHREAD_SPIN_TRYLOCK
 	return !!(pthread_spin_trylock != NULL);
+#else
+	return 0;
+#endif
 }
 
 
