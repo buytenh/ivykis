@@ -69,14 +69,18 @@ static inline void fallback_spin_unlock(fallback_spinlock_t *lock)
 }
 
 
-#ifdef HAVE_PTHREAD_SPINLOCK_T
+#ifdef HAVE_PTHREAD_SPIN_TRYLOCK
 #ifdef HAVE_PRAGMA_WEAK
 #pragma weak pthread_spin_trylock
 #endif
 
 static inline int pthread_spinlocks_available(void)
 {
+#ifdef HAVE_PTHREAD_SPIN_TRYLOCK
 	return !!(pthread_spin_trylock != NULL);
+#else
+	return 0;
+#endif
 }
 
 
