@@ -60,7 +60,7 @@ SRC			+= iv_inotify.c
 INC			+= include/iv_inotify.h
 endif
 
-LINKFLAGS	= -version-info 5:5:5
+LINKFLAGS	= -version-info 5:6:5
 if HAVE_VERSIONING
 LINKFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver
 endif
