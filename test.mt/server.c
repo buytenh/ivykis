@@ -53,7 +53,11 @@ static void handler(void *_h)
 		int len;
 
 		len = snprintf(buf, 128, "this is port %d\n", h->port);
-		write(ret, buf, len);
+		int rc = write(ret, buf, len);
+		if (rc != len) {
+			perror("write");
+			exit(1);
+		}
 		close(ret);
 
 		if (!(++conns % 10000))
