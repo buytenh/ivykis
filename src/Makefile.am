@@ -55,6 +55,10 @@ if HAVE_PORT
 SRC			+= iv_fd_port.c
 endif
 
+if HAVE_URING
+SRC			+= iv_fd_uring.c
+endif
+
 if HAVE_INOTIFY
 SRC			+= iv_inotify.c
 INC			+= include/iv_inotify.h
