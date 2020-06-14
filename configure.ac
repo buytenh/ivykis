@@ -106,6 +106,7 @@ AC_CHECK_LIB([c_nonshared], [pthread_atfork],
 AC_CHECK_LIB([pthread_nonshared], [pthread_atfork])
 
 # Checks for header files.
+AC_CHECK_HEADERS([liburing.h])
 AC_CHECK_HEADERS([process.h])
 AC_CHECK_HEADERS([sys/devpoll.h])
 AC_CHECK_HEADERS([sys/eventfd.h])
@@ -211,6 +212,7 @@ fi
 
 # Checks for libraries.
 AC_SEARCH_LIBS([inet_ntop], [nsl])
+AC_SEARCH_LIBS([io_uring_queue_init], [uring])
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([thr_self], [thread])
 
@@ -220,6 +222,7 @@ AC_CHECK_FUNCS([epoll_create1])
 AC_CHECK_FUNCS([eventfd])
 AC_CHECK_FUNCS([gettid])
 AC_CHECK_FUNCS([inotify_init])
+AC_CHECK_FUNCS([io_uring_queue_init])
 AC_CHECK_FUNCS([kqueue])
 AC_CHECK_FUNCS([lwp_gettid])
 AC_CHECK_FUNCS([pipe2])
@@ -299,6 +302,7 @@ AM_CONDITIONAL([HAVE_DEV_POLL], [test x$ac_cv_header_sys_devpoll_h = xyes])
 AM_CONDITIONAL([HAVE_EPOLL], [test x$ac_cv_func_epoll_create = xyes])
 AM_CONDITIONAL([HAVE_KQUEUE], [test x$ac_cv_func_kqueue = xyes])
 AM_CONDITIONAL([HAVE_PORT], [test x$ac_cv_func_port_create = xyes])
+AM_CONDITIONAL([HAVE_URING], [test x$ac_cv_func_io_uring_queue_init = xyes])
 
 # Other conditionals.
 AM_CONDITIONAL([CASE_INSENSITIVE_FS],

@@ -19,6 +19,9 @@
  */
 
 #include <iv_event_raw.h>
+#ifdef HAVE_LIBURING_H
+#include <liburing.h>
+#endif
 #include "mutex.h"
 #include "pthr.h"
 
@@ -99,6 +102,17 @@ struct iv_state {
 			timer_t			timer_id;
 		} port;
 #endif
+
+#ifdef HAVE_IO_URING_QUEUE_INIT
+		struct {
+			struct iv_list_head	notify;
+			struct iv_list_head	active;
+			struct io_uring		ring;
+			int			unsubmitted_sqes;
+			int			timer_expired;
+			struct __kernel_timespec	ts;
+		} uring;
+#endif
 	} u;
 };
 
@@ -162,6 +176,7 @@ struct iv_fd_ {
 		struct iv_avl_node	avl_node;
 #endif
 		int			index;
+		int			sqes_in_flight;
 	} u;
 };
 
@@ -206,6 +221,7 @@ extern const struct iv_fd_poll_method iv_fd_poll_method_poll;
 extern const struct iv_fd_poll_method iv_fd_poll_method_port;
 extern const struct iv_fd_poll_method iv_fd_poll_method_port_timer;
 extern const struct iv_fd_poll_method iv_fd_poll_method_ppoll;
+extern const struct iv_fd_poll_method iv_fd_poll_method_uring;
 
 /* iv_fd.c */
 void iv_fd_init(struct iv_state *st);
