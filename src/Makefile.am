@@ -57,6 +57,7 @@ endif
 
 if HAVE_URING
 SRC			+= iv_fd_uring.c
+INC			+= include/iv_uring.h
 endif
 
 if HAVE_INOTIFY

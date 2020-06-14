@@ -19,10 +19,21 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iv_uring.h>
 #include <liburing.h>
 #include <poll.h>
 #include <string.h>
 #include "iv_private.h"
+
+struct iv_uring_cqe_handler_ {
+	void			*cookie;
+	void			(*handler)(void *cookie, int res,
+					   unsigned int flags);
+
+	struct iv_list_head	list;
+	int			res;
+	unsigned int		flags;
+};
 
 static int uring_support = 1;
 
@@ -88,6 +99,7 @@ static int iv_fd_uring_init(struct iv_state *st)
 		if (iv_fd_uring_create(&st->u.uring.ring)) {
 			INIT_IV_LIST_HEAD(&st->u.uring.notify);
 			INIT_IV_LIST_HEAD(&st->u.uring.active);
+			INIT_IV_LIST_HEAD(&st->u.uring.user_cqe_handlers);
 			st->u.uring.unsubmitted_sqes = 0;
 			st->u.uring.timer_expired = 0;
 
@@ -106,7 +118,7 @@ iv_fd_uring_handle_fd_cqe(struct iv_state *st, struct iv_list_head *active,
 {
 	struct iv_fd_ *fd;
 
-	fd = io_uring_cqe_get_data(cqe);
+	fd = (void *)(uintptr_t)(cqe->user_data & ~1UL);
 
 	if (cqe->res > 0) {
 		if (cqe->res & (POLLIN | POLLERR | POLLHUP))
@@ -136,6 +148,21 @@ iv_fd_uring_handle_fd_cqe(struct iv_state *st, struct iv_list_head *active,
 }
 
 static void
+iv_fd_uring_handle_user_cqe(struct iv_state *st, struct io_uring_cqe *cqe)
+{
+	struct iv_uring_cqe_handler_ *ch;
+
+	ch = io_uring_cqe_get_data(cqe);
+	if (ch != NULL && iv_list_empty(&ch->list)) {
+		iv_list_add_tail(&ch->list, &st->u.uring.user_cqe_handlers);
+		ch->res = cqe->res;
+		ch->flags = cqe->flags;
+	}
+
+	st->numobjs--;
+}
+
+static void
 iv_fd_uring_drain_cqes(struct iv_state *st, struct iv_list_head *active)
 {
 	int count;
@@ -149,8 +176,10 @@ iv_fd_uring_drain_cqes(struct iv_state *st, struct iv_list_head *active)
 		if (cqe->user_data == (unsigned long)&st->time) {
 			if (cqe->res == -ETIME)
 				st->u.uring.timer_expired = 1;
-		} else {
+		} else if (cqe->user_data & 1) {
 			iv_fd_uring_handle_fd_cqe(st, active, cqe);
+		} else {
+			iv_fd_uring_handle_user_cqe(st, cqe);
 		}
 	}
 
@@ -207,16 +236,19 @@ static int bits_to_poll_mask(int bits)
 static void iv_fd_uring_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 {
 	struct io_uring_sqe *sqe;
+	unsigned long fd1;
 
 	iv_list_del_init(&fd->list_notify);
 
 	if (fd->registered_bands == fd->wanted_bands)
 		return;
 
+	fd1 = ((unsigned long)fd) | 1;
+
 	if (fd->registered_bands) {
 		sqe = iv_fd_uring_get_sqe(st);
-		io_uring_prep_poll_remove(sqe, fd);
-		io_uring_sqe_set_data(sqe, fd);
+		io_uring_prep_poll_remove(sqe, (void *)(uintptr_t)fd1);
+		sqe->user_data = fd1;
 		fd->u.sqes_in_flight++;
 	}
 
@@ -224,11 +256,24 @@ static void iv_fd_uring_flush_one(struct iv_state *st, struct iv_fd_ *fd)
 		sqe = iv_fd_uring_get_sqe(st);
 		io_uring_prep_poll_add(sqe, fd->fd,
 				       bits_to_poll_mask(fd->wanted_bands));
-		io_uring_sqe_set_data(sqe, fd);
+		sqe->user_data = fd1;
 		fd->u.sqes_in_flight++;
 	}
 
 	fd->registered_bands = fd->wanted_bands;
+}
+
+static void iv_fd_uring_run_user_cqe_handlers(struct iv_state *st)
+{
+	while (!iv_list_empty(&st->u.uring.user_cqe_handlers)) {
+		struct iv_uring_cqe_handler_ *ch;
+
+		ch = iv_container_of(st->u.uring.user_cqe_handlers.next,
+				     struct iv_uring_cqe_handler_, list);
+		iv_list_del_init(&ch->list);
+
+		ch->handler(ch->cookie, ch->res, ch->flags);
+	}
 }
 
 static void iv_fd_uring_flush_pending(struct iv_state *st)
@@ -285,8 +330,10 @@ static int iv_fd_uring_poll(struct iv_state *st,
 
 	iv_fd_uring_drain_cqes(st, &st->u.uring.active);
 
-	if (!iv_list_empty(&st->u.uring.active)) {
+	if (!iv_list_empty(&st->u.uring.active) ||
+	    !iv_list_empty(&st->u.uring.user_cqe_handlers)) {
 		__iv_list_steal_elements(&st->u.uring.active, active);
+		iv_fd_uring_run_user_cqe_handlers(st);
 		return 1;
 	}
 
@@ -301,6 +348,7 @@ static int iv_fd_uring_poll(struct iv_state *st,
 		if (!timespec_gt(abs, &st->time)) {
 			iv_fd_uring_submit_sqes(st);
 			iv_fd_uring_drain_cqes(st, active);
+			iv_fd_uring_run_user_cqe_handlers(st);
 			return 1;
 		}
 
@@ -317,6 +365,7 @@ static int iv_fd_uring_poll(struct iv_state *st,
 	}
 
 	iv_fd_uring_drain_cqes(st, active);
+	iv_fd_uring_run_user_cqe_handlers(st);
 
 	return st->u.uring.timer_expired;
 }
@@ -369,3 +418,24 @@ const struct iv_fd_poll_method iv_fd_poll_method_uring = {
 	.notify_fd_sync		= iv_fd_uring_notify_fd_sync,
 	.deinit			= iv_fd_uring_deinit,
 };
+
+
+void IV_URING_CQE_HANDLER_INIT(struct iv_uring_cqe_handler *_ch)
+{
+	struct iv_uring_cqe_handler_ *ch = (struct iv_uring_cqe_handler_ *)_ch;
+
+	INIT_IV_LIST_HEAD(&ch->list);
+}
+
+struct io_uring_sqe *iv_uring_get_sqe(void)
+{
+	if (method == &iv_fd_poll_method_uring) {
+		struct iv_state *st = iv_get_state();
+
+		st->numobjs++;
+
+		return iv_fd_uring_get_sqe(st);
+	}
+
+	return NULL;
+}

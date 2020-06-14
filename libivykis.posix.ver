@@ -111,3 +111,9 @@ IVYKIS_0.40 {
 	# iv_timer
 	__iv_now_location_valid;
 } IVYKIS_0.33;
+
+IVYKIS_0.43 {
+	# iv_uring
+	IV_URING_CQE_HANDLER_INIT;
+	iv_uring_get_sqe;
+} IVYKIS_0.40;

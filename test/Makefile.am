@@ -36,6 +36,12 @@ endif
 
 TESTS			+= iv_signal_test
 
+if HAVE_URING
+PROGS			+= uring_cat
+
+TESTS			+= uring_nop			\
+			   uring_wait
+endif
 endif
 
 noinst_PROGRAMS		= $(PROGS) $(TESTS)

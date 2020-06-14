@@ -107,6 +107,7 @@ struct iv_state {
 		struct {
 			struct iv_list_head	notify;
 			struct iv_list_head	active;
+			struct iv_list_head	user_cqe_handlers;
 			struct io_uring		ring;
 			int			unsubmitted_sqes;
 			int			timer_expired;
