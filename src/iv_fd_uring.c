@@ -44,6 +44,7 @@ static int iv_fd_uring_create(struct io_uring *ring)
 	if (io_uring_queue_init(256, ring, 0) < 0)
 		return 0;
 
+#if 0
 	p = io_uring_get_probe_ring(ring);
 	if (p == NULL) {
 		io_uring_queue_exit(ring);
@@ -89,6 +90,7 @@ static int iv_fd_uring_create(struct io_uring *ring)
 	}
 
 	free(p);
+#endif
 
 	return 1;
 }
