@@ -196,7 +196,6 @@ static inline struct iv_state *iv_get_state(void)
 }
 
 
-extern int maxfd;
 extern const struct iv_fd_poll_method *method;
 
 extern const struct iv_fd_poll_method iv_fd_poll_method_dev_poll;

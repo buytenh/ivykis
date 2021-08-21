@@ -21,43 +21,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/resource.h>
 #include "iv_private.h"
 
 /* internal use *************************************************************/
-int				maxfd;
-const struct iv_fd_poll_method	*method;
+const struct iv_fd_poll_method *method;
 
 static void sanitise_nofile_rlimit(int euid)
 {
 	struct rlimit lim;
 
 	getrlimit(RLIMIT_NOFILE, &lim);
-	maxfd = lim.rlim_cur;
+	if (lim.rlim_cur >= INT_MAX)
+		return;
 
-	if (euid) {
-		if (lim.rlim_cur < lim.rlim_max) {
-			lim.rlim_cur = (unsigned int)lim.rlim_max & 0x7FFFFFFF;
-			if (lim.rlim_cur > 131072)
-				lim.rlim_cur = 131072;
+	if (euid == 0) {
+		int rlim_initial;
 
-			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0)
-				maxfd = lim.rlim_cur;
-		}
-	} else {
+		rlim_initial = lim.rlim_cur;
 		lim.rlim_cur = 131072;
 		lim.rlim_max = 131072;
-		while (lim.rlim_cur > maxfd) {
-			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
-				maxfd = lim.rlim_cur;
+
+		while (lim.rlim_cur > rlim_initial) {
+			if (setrlimit(RLIMIT_NOFILE, &lim) >= 0)
 				break;
-			}
 
 			lim.rlim_cur /= 2;
 			lim.rlim_max /= 2;
 		}
+	} else if (lim.rlim_cur < lim.rlim_max) {
+		lim.rlim_cur = lim.rlim_max & 0x7fffffff;
+		if (lim.rlim_cur > 131072)
+			lim.rlim_cur = 131072;
+		setrlimit(RLIMIT_NOFILE, &lim);
 	}
 }
 
@@ -310,10 +309,8 @@ static void iv_fd_register_prologue(struct iv_state *st, struct iv_fd_ *fd)
 			 "still registered");
 	}
 
-	if (fd->fd < 0 || fd->fd >= maxfd) {
-		iv_fatal("iv_fd_register: called with invalid fd %d "
-			 "(maxfd=%d)", fd->fd, maxfd);
-	}
+	if (fd->fd < 0)
+		iv_fatal("iv_fd_register: called with invalid fd %d", fd->fd);
 
 	fd->registered = 1;
 	INIT_IV_LIST_HEAD(&fd->list_active);
