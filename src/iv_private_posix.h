@@ -32,22 +32,22 @@ struct iv_state {
 	int			numobjs;
 
 	/* iv_event.c  */
-	int			event_count;
 	struct iv_task		events_local;
 	struct iv_event_raw	events_kick;
 	___mutex_t		event_list_mutex;
 	struct iv_list_head	events_pending;
+	int			event_count;
 
 	/* iv_fd.c  */
 	int			numfds;
 	struct iv_fd_		*handled_fd;
-	int			last_abs_count;
 	struct timespec		last_abs;
+	int			last_abs_count;
 
 	/* iv_task.c  */
+	uint32_t		task_epoch;
 	struct iv_list_head	tasks;
 	struct iv_list_head	*tasks_current;
-	uint32_t		task_epoch;
 
 	/* iv_timer.c  */
 	struct timespec		time;
