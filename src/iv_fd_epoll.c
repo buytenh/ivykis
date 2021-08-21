@@ -143,6 +143,32 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 	}
 }
 
+#ifdef __NR_epoll_pwait2
+static int epoll_pwait2_support = 1;
+#endif
+
+static int iv_fd_epoll_wait(struct iv_state *st, struct epoll_event *events,
+			    int maxevents, const struct timespec *abs)
+{
+	int epfd = st->u.epoll.epoll_fd;
+
+#ifdef __NR_epoll_pwait2
+	if (epoll_pwait2_support) {
+		struct timespec rel;
+		int ret;
+
+		ret = syscall(__NR_epoll_pwait2, epfd, events, maxevents,
+			      to_relative(st, &rel, abs), NULL);
+		if (ret == 0 || errno != ENOSYS)
+			return ret;
+
+		epoll_pwait2_support = 0;
+	}
+#endif
+
+	return epoll_wait(epfd, events, maxevents, to_msec(st, abs));
+}
+
 static int iv_fd_epoll_poll(struct iv_state *st,
 			    struct iv_list_head *active,
 			    const struct timespec *abs)
@@ -154,8 +180,7 @@ static int iv_fd_epoll_poll(struct iv_state *st,
 
 	iv_fd_epoll_flush_pending(st);
 
-	ret = epoll_wait(st->u.epoll.epoll_fd, batch, ARRAY_SIZE(batch),
-			 to_msec(st, abs));
+	ret = iv_fd_epoll_wait(st, batch, ARRAY_SIZE(batch), abs);
 
 	__iv_invalidate_now(st);
 
@@ -433,8 +458,7 @@ static int iv_fd_epoll_timerfd_poll(struct iv_state *st,
 
 	run_timers = !!(abs != NULL);
 
-	ret = epoll_wait(st->u.epoll.epoll_fd, batch, ARRAY_SIZE(batch),
-			 to_msec(st, abs));
+	ret = iv_fd_epoll_wait(st, batch, ARRAY_SIZE(batch), abs);
 
 	__iv_invalidate_now(st);
 
