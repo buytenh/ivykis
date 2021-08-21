@@ -30,7 +30,7 @@
 
 static int epoll_support = 2;
 
-static int epollfd_grab(int maxfd)
+static int epollfd_grab(void)
 {
 #if (defined(__NR_epoll_create1) || defined(HAVE_EPOLL_CREATE1)) && \
      defined(EPOLL_CLOEXEC)
@@ -52,7 +52,7 @@ static int epollfd_grab(int maxfd)
 	if (epoll_support) {
 		int ret;
 
-		ret = epoll_create(maxfd);
+		ret = epoll_create(1);
 		if (ret >= 0 || errno != ENOSYS) {
 			if (ret >= 0)
 				iv_fd_set_cloexec(ret);
@@ -69,7 +69,7 @@ static int iv_fd_epoll_init(struct iv_state *st)
 {
 	int fd;
 
-	fd = epollfd_grab(maxfd);
+	fd = epollfd_grab();
 	if (fd < 0)
 		return -1;
 
