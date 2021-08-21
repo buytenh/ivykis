@@ -93,8 +93,8 @@ int main()
 	nsec = 1000000000ULL * (tim_end.tv_sec - tim_start.tv_sec) +
 		(tim_end.tv_nsec - tim_start.tv_nsec);
 
-	printf("%s: %d in %ld nsec => %d/sec\n",
-	       iv_poll_method_name(), ev_received, (long)nsec,
+	printf("%s: %d in %lld nsec => %d/sec\n",
+	       iv_poll_method_name(), ev_received, nsec,
 	       (int)(1000000000ULL * ev_received / nsec));
 
 	return 0;
