@@ -24,13 +24,15 @@
 #include <poll.h>
 #include "iv_private.h"
 
+#define IV_FD_POLL_MAXFD	65536
+
 static int iv_fd_poll_init(struct iv_state *st)
 {
-	st->u.poll.pfds = malloc(maxfd * sizeof(struct pollfd));
+	st->u.poll.pfds = malloc(IV_FD_POLL_MAXFD * sizeof(struct pollfd));
 	if (st->u.poll.pfds == NULL)
 		return -1;
 
-	st->u.poll.fds = malloc(maxfd * sizeof(struct iv_fd_ *));
+	st->u.poll.fds = malloc(IV_FD_POLL_MAXFD * sizeof(struct iv_fd_ *));
 	if (st->u.poll.fds == NULL) {
 		free(st->u.poll.pfds);
 		return -1;
@@ -97,6 +99,11 @@ static int iv_fd_poll_poll(struct iv_state *st,
 
 static void iv_fd_poll_register_fd(struct iv_state *st, struct iv_fd_ *fd)
 {
+	if (fd->fd >= IV_FD_POLL_MAXFD) {
+		iv_fatal("iv_fd_poll_register_fd: called with fd %d "
+			 "(maxfd = %d)", fd->fd, IV_FD_POLL_MAXFD);
+	}
+
 	fd->u.index = -1;
 }
 
