@@ -5,7 +5,7 @@
 .\" of the modification is added to the header.
 .TH iv_work 3 2010-09-14 "ivykis" "ivykis programmer's manual"
 .SH NAME
-IV_WORK_POOL_INIT, iv_work_pool_create, iv_work_pool_put, IV_WORK_ITEM_INIT, iv_work_pool_submit_work \- ivykis
+IV_WORK_POOL_INIT, iv_work_pool_create, iv_work_pool_put, IV_WORK_ITEM_INIT, iv_work_pool_submit_work, iv_work_pool_submit_continuation \- ivykis
 worker thread management
 .SH SYNOPSIS
 .B #include <iv_work.h>
@@ -34,6 +34,8 @@ struct iv_work_item {
 .BI "void IV_WORK_ITEM_INIT(struct iv_work_item *" work ");"
 .br
 .BI "int iv_work_pool_submit_work(struct iv_work_pool *" this ", struct iv_work_item *" work ");"
+.br
+.BI "int iv_work_pool_submit_continuation(struct iv_work_pool *" this ", struct iv_work_item *" work ");"
 .br
 .SH DESCRIPTION
 Calling
@@ -81,6 +83,20 @@ as its sole argument, in the thread that
 .B iv_work_pool_create
 was called in for this pool object.
 .PP
+Calling
+.B iv_work_pool_submit_continuation
+from a worker thread allows submitting a work item similarly to
+.B iv_work_pool_submit_work.
+But while 
+.B iv_work_pool_submit_work
+can only be called from the thread owning 
+.B iv_work, 
+.B iv_work_pool_submit_continuation
+can be called from any of the worker threads. The
+.B ->completion
+callback of these jobs will be executed from the thread owning
+.B iv_work.
+.PP
 As a special case, calling
 .B iv_work_pool_submit_work
 with a
@@ -117,6 +133,8 @@ are also not explicitly serialised.
 can only be called from the thread that
 .B iv_work_pool_create
 for this pool object was called in.
+.B iv_work_pool_submit_continuation
+can called from any of the worker threads.
 .PP
 There is no way to cancel submitted work items.
 .PP

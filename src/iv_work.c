@@ -34,7 +34,9 @@
 struct work_pool_priv {
 	___mutex_t		lock;
 	struct iv_event		ev;
+	struct iv_event		thread_needed;
 	int			shutting_down;
+	int			max_threads;
 	int			started_threads;
 	struct iv_list_head	idle_threads;
 	void			*cookie;
@@ -44,6 +46,7 @@ struct work_pool_priv {
 	uint32_t		seq_tail;
 	struct iv_list_head	work_items;
 	struct iv_list_head	work_done;
+	unsigned long		tid;
 };
 
 struct work_pool_thread {
@@ -213,11 +216,29 @@ static void iv_work_event(void *_pool)
 			___mutex_unlock(&pool->lock);
 			___mutex_destroy(&pool->lock);
 			iv_event_unregister(&pool->ev);
+			iv_event_unregister(&pool->thread_needed);
 			free(pool);
 			return;
 		}
 		___mutex_unlock(&pool->lock);
 	}
+}
+
+static int iv_work_start_thread(struct work_pool_priv *pool);
+
+static void iv_work_thread_needed(void *_pool)
+{
+	struct work_pool_priv *pool = _pool;
+
+	___mutex_lock(&pool->lock);
+
+	if (iv_list_empty(&pool->idle_threads) && 
+	    pool->started_threads < pool->max_threads) {
+		iv_work_start_thread(pool);
+	}
+
+	___mutex_unlock(&pool->lock);
+
 }
 
 int iv_work_pool_create(struct iv_work_pool *this)
@@ -240,6 +261,12 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	pool->ev.handler = iv_work_event;
 	iv_event_register(&pool->ev);
 
+	IV_EVENT_INIT(&pool->thread_needed);
+	pool->thread_needed.cookie = pool;
+	pool->thread_needed.handler = iv_work_thread_needed;
+	iv_event_register(&pool->thread_needed);
+
+	pool->max_threads = this->max_threads;
 	pool->shutting_down = 0;
 	pool->started_threads = 0;
 	INIT_IV_LIST_HEAD(&pool->idle_threads);
@@ -250,6 +277,8 @@ int iv_work_pool_create(struct iv_work_pool *this)
 	pool->seq_tail = 0;
 	INIT_IV_LIST_HEAD(&pool->work_items);
 	INIT_IV_LIST_HEAD(&pool->work_done);
+	
+	pool->tid = iv_get_thread_id();
 
 	this->priv = pool;
 
@@ -308,9 +337,13 @@ static int iv_work_start_thread(struct work_pool_priv *pool)
 }
 
 static void
-iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
+iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work, int continuation)
 {
 	struct work_pool_priv *pool = this->priv;
+	int called_from_owner_thread = (pool->tid == iv_get_thread_id());
+
+	if (!continuation && !called_from_owner_thread)
+		iv_fatal("iv_work_submit_pool: work items can only be submitted from the owning thread");
 
 	___mutex_lock(&pool->lock);
 
@@ -325,7 +358,10 @@ iv_work_submit_pool(struct iv_work_pool *this, struct iv_work_item *work)
 		thr->kicked = 1;
 		iv_event_post(&thr->kick);
 	} else if (pool->started_threads < this->max_threads) {
-		iv_work_start_thread(pool);
+		if (called_from_owner_thread)
+			iv_work_start_thread(pool);
+		else
+			iv_event_post(&pool->thread_needed);
 	}
 
 	___mutex_unlock(&pool->lock);
@@ -391,7 +427,16 @@ void
 iv_work_pool_submit_work(struct iv_work_pool *this, struct iv_work_item *work)
 {
 	if (this != NULL)
-		iv_work_submit_pool(this, work);
+		iv_work_submit_pool(this, work, 0);
+	else
+		iv_work_submit_local(work);
+}
+
+void
+iv_work_pool_submit_continuation(struct iv_work_pool *this, struct iv_work_item *work)
+{
+	if (this != NULL)
+		iv_work_submit_pool(this, work, 1);
 	else
 		iv_work_submit_local(work);
 }
