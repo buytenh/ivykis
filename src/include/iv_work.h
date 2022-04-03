@@ -59,6 +59,8 @@ int iv_work_pool_create(struct iv_work_pool *this);
 void iv_work_pool_put(struct iv_work_pool *this);
 void iv_work_pool_submit_work(struct iv_work_pool *this,
 			      struct iv_work_item *work);
+void iv_work_pool_submit_continuation(struct iv_work_pool *this,
+                                      struct iv_work_item *work);
 
 #ifdef __cplusplus
 }
