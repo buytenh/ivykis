@@ -142,9 +142,9 @@ ac_c_werror_flag=$ac_save_c_werror_flag
 # those (pthread_trace_notify_np is one of those symbols).
 #
 AC_SEARCH_LIBS([pthread_create], [pthread thread], [],
-	AC_SEARCH_LIBS([__pthread_create], [pthread], [],
-	AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
-		AC_MSG_ERROR(pthreads support is required to build ivykis.))))
+	[AC_SEARCH_LIBS([__pthread_create], [pthread], [],
+	[AC_SEARCH_LIBS([pthread_trace_notify_np], [pthread], [],
+		[AC_MSG_ERROR(pthreads support is required to build ivykis.)])])])
 
 # Checks for libraries.
 AC_SEARCH_LIBS([socket], [socket])
