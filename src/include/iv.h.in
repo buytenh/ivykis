@@ -54,7 +54,7 @@ unsigned long iv_get_thread_id(void);
 /*
  * Time handling.
  */
-const struct timespec *__iv_now_location_valid();
+const struct timespec *__iv_now_location_valid(void);
 
 #define iv_now			(*__iv_now_location_valid())
 #define iv_validate_now()
