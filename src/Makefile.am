@@ -62,7 +62,8 @@ endif
 
 LINKFLAGS	= -version-info 5:6:5
 if HAVE_VERSIONING
-LINKFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver
+LINKFLAGS	+= -Wl,--version-script,$(top_srcdir)/libivykis.posix.ver \
+		   -Wl,-undefined-version
 endif
 
 endif
