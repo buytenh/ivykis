@@ -159,7 +159,7 @@ static int iv_fd_epoll_wait(struct iv_state *st, struct epoll_event *events,
 
 		ret = syscall(__NR_epoll_pwait2, epfd, events, maxevents,
 			      to_relative(st, &rel, abs), NULL);
-		if (ret == 0 || errno != ENOSYS)
+		if (ret == 0 || (errno != ENOSYS && errno != EPERM))
 			return ret;
 
 		epoll_pwait2_support = 0;
