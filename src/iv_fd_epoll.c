@@ -159,7 +159,16 @@ static int iv_fd_epoll_wait(struct iv_state *st, struct epoll_event *events,
 
 		ret = syscall(__NR_epoll_pwait2, epfd, events, maxevents,
 			      to_relative(st, &rel, abs), NULL);
-		if (ret == 0 || errno != ENOSYS)
+
+		/*
+		 * Some container technologies (at least podman on CentOS
+		 * 7 and docker on Debian Buster, according to reports)
+		 * cause epoll_pwait2() to return -EPERM.  It is unclear
+		 * what security benefits this provides, but we'll have to
+		 * handle this by falling back to epoll_wait() just as if
+		 * -ENOSYS had been returned.
+		 */
+		if (ret == 0 || (errno != EPERM && errno != ENOSYS))
 			return ret;
 
 		epoll_pwait2_support = 0;
