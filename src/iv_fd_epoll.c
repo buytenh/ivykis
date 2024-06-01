@@ -143,7 +143,7 @@ static void iv_fd_epoll_flush_pending(struct iv_state *st)
 	}
 }
 
-#ifdef __NR_epoll_pwait2
+#ifdef HAVE_EPOLL_PWAIT2
 static int epoll_pwait2_support = 1;
 #endif
 
@@ -152,13 +152,13 @@ static int iv_fd_epoll_wait(struct iv_state *st, struct epoll_event *events,
 {
 	int epfd = st->u.epoll.epoll_fd;
 
-#ifdef __NR_epoll_pwait2
+#ifdef HAVE_EPOLL_PWAIT2
 	if (epoll_pwait2_support) {
 		struct timespec rel;
 		int ret;
 
-		ret = syscall(__NR_epoll_pwait2, epfd, events, maxevents,
-			      to_relative(st, &rel, abs), NULL);
+		ret = epoll_pwait2(epfd, events, maxevents,
+				   to_relative(st, &rel, abs), NULL);
 
 		/*
 		 * Some container technologies (at least podman on CentOS

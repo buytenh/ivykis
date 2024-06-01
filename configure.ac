@@ -220,6 +220,7 @@ AC_SEARCH_LIBS([thr_self], [thread])
 # Checks for library functions.
 AC_CHECK_FUNCS([epoll_create])
 AC_CHECK_FUNCS([epoll_create1])
+AC_CHECK_FUNCS([epoll_pwait2])
 AC_CHECK_FUNCS([eventfd])
 AC_CHECK_FUNCS([gettid])
 AC_CHECK_FUNCS([inotify_init])
