@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([ivykis], [0.43], [libivykis-discuss@lists.sourceforge.net])
+AC_INIT([ivykis], [0.43.1], [libivykis-discuss@lists.sourceforge.net])
 AC_CONFIG_SRCDIR([src/iv_avl.c])
 AC_CONFIG_SUBDIRS([test.mt])
 AC_CONFIG_HEADER(config.h)
