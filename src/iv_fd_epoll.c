@@ -168,7 +168,7 @@ static int iv_fd_epoll_wait(struct iv_state *st, struct epoll_event *events,
 		 * handle this by falling back to epoll_wait() just as if
 		 * -ENOSYS had been returned.
 		 */
-		if (ret == 0 || (errno != EPERM && errno != ENOSYS))
+		if (ret >= 0 || (errno != EPERM && errno != ENOSYS))
 			return ret;
 
 		epoll_pwait2_support = 0;
