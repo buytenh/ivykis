@@ -33,6 +33,7 @@ ltmain.sh
 config.h
 config.status
 config.log
+man3/IV_FD_PUMP_INIT.3
 misc/ivykis.pc
 src/include/iv.h
 stamp-h1

@@ -67,8 +67,18 @@ man3_MANS	= iv_deinit.3				\
 		  iv_work_pool_submit_work.3		\
 		  ivykis.3
 
+# IV_FD_PUMP_INIT.3 differs from iv_fd_pump_init.3 only in case, so
+# generate it at build time instead of keeping it in the source tree,
+# where it would collide with iv_fd_pump_init.3 on case insensitive
+# filesystems.  On those, the name refers to iv_fd_pump_init.3, so
+# neither the rule nor "make clean" may touch it there.
 if !CASE_INSENSITIVE_FS
-man3_MANS	+= IV_FD_PUMP_INIT.3
+nodist_man3_MANS	= IV_FD_PUMP_INIT.3
+
+IV_FD_PUMP_INIT.3:
+	echo ".so man3/iv_fd_pump.3" > $@
+
+CLEANFILES	= IV_FD_PUMP_INIT.3
 endif
 
 if HAVE_INOTIFY
